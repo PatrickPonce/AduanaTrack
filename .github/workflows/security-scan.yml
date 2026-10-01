@@ -53,7 +53,7 @@ jobs:
         with:
           sarif_file: semgrep.sarif
           category: semgrep
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: sarif-semgrep
@@ -88,7 +88,7 @@ jobs:
         with:
           sarif_file: gitleaks.sarif
           category: gitleaks
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: sarif-gitleaks
@@ -117,7 +117,7 @@ jobs:
         with:
           sarif_file: trivy.sarif
           category: trivy
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: sarif-trivy
@@ -152,7 +152,7 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: snyk test --all-projects --sarif-file-output=snyk.sarif
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: sarif-snyk
@@ -172,15 +172,21 @@ jobs:
           path: sarif
           merge-multiple: true
       - name: Generar reporte Markdown
+        id: rep
+        env:
+          ETIQUETA: ${{ github.event.inputs.etiqueta }}
         run: |
+          # Nombre de artefacto sin "/" (en PRs github.ref_name es "N/merge")
+          base="${ETIQUETA:-${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}}"
+          echo "nombre=reporte-vulnerabilidades-$(echo "$base" | tr '/:"<>|*?\\' '-')-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
           python3 .github/scripts/sarif_to_md.py \
             --out reporte-vulnerabilidades.md \
             --summary-json resumen.json \
             sarif/*.sarif
           cat reporte-vulnerabilidades.md >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
-          name: reporte-vulnerabilidades-${{ github.event.inputs.etiqueta || github.ref_name }}-${{ github.run_number }}
+          name: ${{ steps.rep.outputs.nombre }}
           path: |
             reporte-vulnerabilidades.md
             resumen.json
