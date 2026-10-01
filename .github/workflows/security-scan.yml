@@ -53,7 +53,7 @@ jobs:
         with:
           sarif_file: semgrep.sarif
           category: semgrep
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: sarif-semgrep
@@ -88,7 +88,7 @@ jobs:
         with:
           sarif_file: gitleaks.sarif
           category: gitleaks
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: sarif-gitleaks
@@ -117,7 +117,7 @@ jobs:
         with:
           sarif_file: trivy.sarif
           category: trivy
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: sarif-trivy
@@ -152,7 +152,7 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: snyk test --all-projects --sarif-file-output=snyk.sarif
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: sarif-snyk
@@ -184,7 +184,7 @@ jobs:
             --summary-json resumen.json \
             sarif/*.sarif
           cat reporte-vulnerabilidades.md >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.rep.outputs.nombre }}
           path: |
