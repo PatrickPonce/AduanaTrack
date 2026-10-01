@@ -1,0 +1,74 @@
+# Integración continua: compila y ejecuta las pruebas del módulo que exista.
+# Detecta automáticamente Maven, Gradle, Node.js o Python en backend/ y frontend/.
+name: CI
+
+on:
+  push:
+    branches: [main, develop, "feature/**", "fix/**", "hotfix/**"]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: Build y pruebas · ${{ matrix.modulo }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        modulo: [backend, frontend]
+    defaults:
+      run:
+        working-directory: ${{ matrix.modulo }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detectar tecnología
+        id: stack
+        run: |
+          if   [ -f pom.xml ];          then echo "tipo=maven"  >> "$GITHUB_OUTPUT"
+          elif [ -f build.gradle ] || [ -f build.gradle.kts ]; then echo "tipo=gradle" >> "$GITHUB_OUTPUT"
+          elif [ -f package.json ];     then echo "tipo=node"   >> "$GITHUB_OUTPUT"
+          elif [ -f requirements.txt ] || [ -f pyproject.toml ]; then echo "tipo=python" >> "$GITHUB_OUTPUT"
+          else echo "tipo=ninguno" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Sin código todavía
+        if: steps.stack.outputs.tipo == 'ninguno'
+        run: echo "::notice::${{ matrix.modulo }} aún no tiene código; se omite build/pruebas."
+
+      # Java
+      - uses: actions/setup-java@v4
+        if: steps.stack.outputs.tipo == 'maven' || steps.stack.outputs.tipo == 'gradle'
+        with:
+          distribution: temurin
+          java-version: "21"
+      - if: steps.stack.outputs.tipo == 'maven'
+        run: mvn -B -ntp verify
+      - if: steps.stack.outputs.tipo == 'gradle'
+        run: chmod +x gradlew && ./gradlew build
+
+      # Node.js
+      - uses: actions/setup-node@v4
+        if: steps.stack.outputs.tipo == 'node'
+        with:
+          node-version: "20"
+      - if: steps.stack.outputs.tipo == 'node'
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+          npm run build --if-present
+          npm test --if-present
+
+      # Python
+      - uses: actions/setup-python@v5
+        if: steps.stack.outputs.tipo == 'python'
+        with:
+          python-version: "3.12"
+      - if: steps.stack.outputs.tipo == 'python'
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; else pip install .; fi
+          pip install pytest
+          pytest -q || [ $? -eq 5 ]  # 5 = no se encontraron pruebas

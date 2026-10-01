@@ -1,0 +1,199 @@
+# Revisión de vulnerabilidades — AduanaTrack
+# Ejecuta SAST (Semgrep), detección de secretos (Gitleaks) y SCA/IaC (Trivy),
+# publica los hallazgos en Security > Code scanning y genera el artefacto
+# "reporte-vulnerabilidades" (Markdown + SARIF) para presentarlo al docente.
+name: Security Scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: "0 13 * * 1" # lunes 08:00 hora Perú
+  workflow_dispatch:
+    inputs:
+      etiqueta:
+        description: "Etiqueta del reporte (ej. sprint-1-inicial, sprint-1-correcciones)"
+        required: false
+        default: "manual"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  semgrep:
+    name: SAST · Semgrep
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar Semgrep
+        run: pip install --quiet semgrep
+      - name: Ejecutar Semgrep (OWASP Top 10 + reglas por defecto)
+        run: |
+          semgrep scan \
+            --config p/default \
+            --config p/owasp-top-ten \
+            --config p/secrets \
+            --metrics=off \
+            --sarif --output semgrep.sarif
+      - name: Publicar en Code scanning
+        if: always() && hashFiles('semgrep.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sarif-semgrep
+          path: semgrep.sarif
+          if-no-files-found: ignore
+
+  gitleaks:
+    name: Secretos · Gitleaks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    env:
+      GITLEAKS_VERSION: "8.21.2"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # revisa todo el historial de commits
+      - name: Instalar Gitleaks
+        run: |
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+      - name: Ejecutar Gitleaks
+        run: |
+          gitleaks detect --source . --redact \
+            --report-format sarif --report-path gitleaks.sarif \
+            --exit-code 0
+      - name: Publicar en Code scanning
+        if: always() && hashFiles('gitleaks.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: gitleaks.sarif
+          category: gitleaks
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sarif-gitleaks
+          path: gitleaks.sarif
+          if-no-files-found: ignore
+
+  trivy:
+    name: Dependencias e IaC · Trivy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ejecutar Trivy (vulnerabilidades, secretos y configuraciones)
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src aquasec/trivy:latest fs \
+            --scanners vuln,secret,misconfig \
+            --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL \
+            --format sarif --output /src/trivy.sarif \
+            --exit-code 0 /src
+          sudo chown "$(id -u)":"$(id -g)" trivy.sarif
+      - name: Publicar en Code scanning
+        if: always() && hashFiles('trivy.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy.sarif
+          category: trivy
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sarif-trivy
+          path: trivy.sarif
+          if-no-files-found: ignore
+
+  # --- Opcionales: se activan creando la variable de repositorio indicada ---
+  sonarcloud:
+    name: Calidad · SonarQube Cloud (opcional)
+    if: vars.ENABLE_SONAR == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  snyk:
+    name: Dependencias · Snyk (opcional)
+    if: vars.ENABLE_SNYK == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: snyk/actions/setup@master
+      - name: Ejecutar Snyk
+        continue-on-error: true # falla si aún no hay manifiestos de dependencias
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk test --all-projects --sarif-file-output=snyk.sarif
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sarif-snyk
+          path: snyk.sarif
+          if-no-files-found: ignore
+
+  reporte:
+    name: Reporte consolidado
+    needs: [semgrep, gitleaks, trivy]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: sarif-*
+          path: sarif
+          merge-multiple: true
+      - name: Generar reporte Markdown
+        run: |
+          python3 .github/scripts/sarif_to_md.py \
+            --out reporte-vulnerabilidades.md \
+            --summary-json resumen.json \
+            sarif/*.sarif
+          cat reporte-vulnerabilidades.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reporte-vulnerabilidades-${{ github.event.inputs.etiqueta || github.ref_name }}-${{ github.run_number }}
+          path: |
+            reporte-vulnerabilidades.md
+            resumen.json
+            sarif/*.sarif
+          retention-days: 90
+      - name: Quality Gate (0 críticas / 0 altas)
+        run: |
+          python3 - <<'EOF'
+          import json, sys
+          r = json.load(open("resumen.json", encoding="utf-8"))
+          t = r["total"]
+          print(f"Críticas: {t['Crítica']} · Altas: {t['Alta']} · Medias: {t['Media']} · Bajas: {t['Baja']}")
+          if not r["gate_ok"]:
+              print("::error::Quality Gate NO aprobado: corregir hallazgos críticos/altos antes de integrar.")
+              sys.exit(1)
+          EOF
