@@ -172,7 +172,13 @@ jobs:
           path: sarif
           merge-multiple: true
       - name: Generar reporte Markdown
+        id: rep
+        env:
+          ETIQUETA: ${{ github.event.inputs.etiqueta }}
         run: |
+          # Nombre de artefacto sin "/" (en PRs github.ref_name es "N/merge")
+          base="${ETIQUETA:-${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}}"
+          echo "nombre=reporte-vulnerabilidades-$(echo "$base" | tr '/:"<>|*?\\' '-')-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
           python3 .github/scripts/sarif_to_md.py \
             --out reporte-vulnerabilidades.md \
             --summary-json resumen.json \
@@ -180,7 +186,7 @@ jobs:
           cat reporte-vulnerabilidades.md >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
-          name: reporte-vulnerabilidades-${{ github.event.inputs.etiqueta || github.ref_name }}-${{ github.run_number }}
+          name: ${{ steps.rep.outputs.nombre }}
           path: |
             reporte-vulnerabilidades.md
             resumen.json
