@@ -31,7 +31,7 @@ Diseño e Implementación de Sistemas · **Grupo 2** · Docente: Mg. Juan Manuel
 
 ## Sprint actual
 
-**Sprint 1 (S7–S10) · 23 SP** — *Habilitar el flujo base de apertura y seguimiento inicial de despachos de importación marítima: acceso seguro al sistema, registro de clientes/importadores, apertura de un nuevo despacho y registro de la información de embarque (BL), con visibilidad centralizada del estado de los despachos en el Dashboard.*
+**Sprint 1 (S7–S10, 14/09 – 10/10; S8 parciales) · 23 SP** — *Habilitar el flujo base de apertura y seguimiento inicial de despachos de importación marítima: acceso seguro al sistema, registro de clientes/importadores, apertura de un nuevo despacho y registro de la información de embarque (BL), con visibilidad centralizada del estado de los despachos en el Dashboard.*
 
 | HU | Historia | SP | Rama | Jira |
 |---|---|---|---|---|
@@ -42,6 +42,16 @@ Diseño e Implementación de Sistemas · **Grupo 2** · Docente: Mg. Juan Manuel
 | HU-05 | Registro de información del embarque marítimo (BL) | 5 | `feature/HU-05-registro-embarque-bl` | SCRUM-12 |
 
 Detalle: [`docs/product-backlog.md`](docs/product-backlog.md) · [`docs/sprint-1/sprint-backlog.md`](docs/sprint-1/sprint-backlog.md)
+
+### Calendario de sprints
+
+| Sprint | Semanas | Fechas | Sprint Planning | Review · Retro · Demo |
+|---|---|---|---|---|
+| Sprint 1 | S7, S9, S10 (S8 = parciales) | 14/09 – 10/10/2026 | S7 | S10 |
+| Sprint 2 | S11 – S13 | 12/10 – 31/10/2026 | S11 | S13 |
+| Sprint 3 | S14 – S16 | 02/11 – 21/11/2026 | S14 | S16 |
+
+Daily Scrum: un video por semana.
 
 ## Estructura del repositorio
 

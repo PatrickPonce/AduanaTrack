@@ -1,6 +1,7 @@
 # Sprint 1 — Sprint Backlog
 
-- **Duración:** S7–S10 (21/09/2026 – 16/10/2026) · Sprint Planning 21/09/2026
+- **Duración:** S7–S10 (14/09/2026 – 10/10/2026) · Sprint Planning 14/09/2026
+- **Semanas de trabajo:** S7 (14–19/09), S9 (28/09–03/10) y S10 (05–10/10). La S8 (21–26/09) es semana de exámenes parciales: sin trabajo de sprint.
 - **Sprint Goal:** Habilitar el flujo base de apertura y seguimiento inicial de despachos de importación marítima: acceso seguro al sistema, registro de clientes/importadores, apertura de un nuevo despacho y registro de la información de embarque (BL), con visibilidad centralizada del estado de los despachos en el Dashboard.
 - **Compromiso:** 5 HU · 23 SP · 31 tareas · 109 h estimadas (capacidad neta ≈ 101 h)
 - **Tablero:** https://grupo2dis.atlassian.net/jira/software/projects/SCRUM/boards/1
