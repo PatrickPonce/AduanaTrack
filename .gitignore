@@ -1,0 +1,45 @@
+# --- Entorno / secretos ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+
+# --- IDEs y SO ---
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# --- Java (Maven / Gradle) ---
+target/
+build/
+.gradle/
+*.class
+*.log
+
+# --- Node / frontend ---
+node_modules/
+dist/
+coverage/
+.next/
+npm-debug.log*
+yarn-error.log*
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# --- Docker / BD local ---
+pgdata/
+*.sqlite3
+
+# --- Reportes generados localmente (los oficiales van en docs/seguridad/) ---
+*.sarif
+reporte-vulnerabilidades.md
