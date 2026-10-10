@@ -1,0 +1,8 @@
+# Hallazgos aceptados tras su análisis (docs/seguridad/sprint-1/02-hallazgos-y-correcciones.md).
+# Revisar en cada sprint: al vencer la fecha (exp) Trivy vuelve a reportarlos.
+
+# spring-webmvc 6.2.19: solo se corrigen en Spring Framework 7 (Spring Boot 4), fuera de la
+# arquitectura aprobada (Spring Boot 3.5). No aplican: la API REST responde JSON y no usa
+# XsltView (CVE-2026-47884) ni vistas con Server-Sent Events (CVE-2026-47890).
+CVE-2026-47884 exp:2026-12-31
+CVE-2026-47890 exp:2026-12-31
