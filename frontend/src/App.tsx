@@ -1,4 +1,4 @@
-import { Box, CircularProgress, Typography } from '@mui/material'
+import { Box, CircularProgress } from '@mui/material'
 import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router'
 
@@ -7,6 +7,7 @@ import { Layout } from './components/Layout'
 
 // Cada pantalla se descarga al visitarla por primera vez.
 const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })))
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })))
 const ClientesPage = lazy(() => import('./pages/ClientesPage').then((m) => ({ default: m.ClientesPage })))
 const ClienteFormPage = lazy(() => import('./pages/ClienteFormPage').then((m) => ({ default: m.ClienteFormPage })))
 const DespachoFormPage = lazy(() => import('./pages/DespachoFormPage').then((m) => ({ default: m.DespachoFormPage })))
@@ -27,14 +28,7 @@ export function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
-            <Route
-              path="/dashboard"
-              element={
-                <Typography variant="h5" component="h1">
-                  Panel de seguimiento de despachos
-                </Typography>
-              }
-            />
+            <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/clientes" element={<ClientesPage />} />
             <Route path="/clientes/nuevo" element={<ClienteFormPage />} />
             <Route path="/clientes/:id" element={<ClienteFormPage />} />
