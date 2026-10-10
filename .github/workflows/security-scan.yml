@@ -103,9 +103,21 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v4
+      # Trivy resuelve backend/pom.xml contra Maven Central y recibe 429 (límite de peticiones):
+      # se descargan antes las dependencias con caché y Trivy usa ese repositorio local.
+      - uses: actions/setup-java@v6
+        if: hashFiles('backend/pom.xml') != ''
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Resolver dependencias Maven para Trivy
+        if: hashFiles('backend/pom.xml') != ''
+        run: mvn -B -ntp -q -f backend/pom.xml dependency:go-offline
       - name: Ejecutar Trivy (vulnerabilidades, secretos y configuraciones)
         run: |
-          docker run --rm -v "$PWD:/src" -w /src aquasec/trivy:latest fs \
+          mkdir -p "$HOME/.m2"
+          docker run --rm -v "$PWD:/src" -v "$HOME/.m2:/root/.m2" -w /src aquasec/trivy:latest fs \
             --scanners vuln,secret,misconfig \
             --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL \
             --format sarif --output /src/trivy.sarif \
