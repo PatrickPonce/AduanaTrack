@@ -1,6 +1,5 @@
 # Análisis estático CodeQL (gratuito en repositorios públicos).
-# Cuando el equipo defina el stack, agregar el lenguaje en la matriz:
-#   java-kotlin · javascript-typescript · python · csharp · go
+# Lenguajes del proyecto: workflows (actions), backend (java-kotlin) y frontend (javascript-typescript).
 name: CodeQL
 
 on:
@@ -26,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [actions] # + java-kotlin / javascript-typescript / python
+        language: [actions, java-kotlin, javascript-typescript]
     steps:
       - uses: actions/checkout@v4
       - uses: github/codeql-action/init@v3
