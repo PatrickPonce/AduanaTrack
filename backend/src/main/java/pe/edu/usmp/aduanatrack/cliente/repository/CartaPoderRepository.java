@@ -12,6 +12,8 @@ import pe.edu.usmp.aduanatrack.cliente.entity.CartaPoder;
 
 public interface CartaPoderRepository extends JpaRepository<CartaPoder, Long> {
 
+    boolean existsByClienteIdAndFechaVencimientoGreaterThanEqual(Long clienteId, LocalDate fecha);
+
     /** Vencimiento más lejano entre las cartas del cliente (la que define su estado), o nulo si no tiene. */
     @Query("select max(c.fechaVencimiento) from CartaPoder c where c.clienteId = :clienteId")
     LocalDate maximoVencimiento(@Param("clienteId") Long clienteId);
