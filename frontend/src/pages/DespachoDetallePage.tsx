@@ -6,6 +6,7 @@ import { Link as RouterLink, useLocation, useParams } from 'react-router'
 import { obtenerDespacho } from '../api/despachos'
 import { mensajeDeError } from '../api/http'
 import { CartaPoderChip } from '../components/CartaPoderChip'
+import { EmbarqueForm } from '../components/EmbarqueForm'
 import { EstadoDespachoChip } from '../components/EstadoDespachoChip'
 import type { Despacho } from '../types'
 import { formatoFecha } from '../utils/formato'
@@ -118,7 +119,7 @@ export function DespachoDetallePage() {
             Confirme el despacho con «Guardar y continuar» antes de registrar la información de embarque.
           </Alert>
         ) : (
-          <Alert severity="info">El registro del embarque y el BL se agrega con HU-05.</Alert>
+          <EmbarqueForm despachoId={despacho.id} />
         ))}
     </Stack>
   )

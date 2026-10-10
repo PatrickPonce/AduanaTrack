@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { validarArchivoCartaPoder, validarRuc } from './validaciones'
+import { validarArchivoCartaPoder, validarContenedor, validarRuc } from './validaciones'
 
 describe('validarRuc', () => {
   it.each(['20787789324', '20230972151', '20923478826', '10688126342'])('acepta el RUC de prueba %s', (ruc) => {
@@ -13,6 +13,20 @@ describe('validarRuc', () => {
 
   it('rechaza un dígito verificador errado', () => {
     expect(validarRuc('20787789325')).toMatch(/dígito verificador/)
+  })
+})
+
+describe('validarContenedor (ISO 6346)', () => {
+  it.each(['CSQU3054383', 'MSKU1234565', 'TGHU9876542', 'csqu3054383'])('acepta %s', (numero) => {
+    expect(validarContenedor(numero)).toBeNull()
+  })
+
+  it('rechaza un dígito de control errado', () => {
+    expect(validarContenedor('CSQU3054384')).toMatch(/control/)
+  })
+
+  it('rechaza un formato incompleto', () => {
+    expect(validarContenedor('CSQ3054383')).toMatch(/Formato/)
   })
 })
 
