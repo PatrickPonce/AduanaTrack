@@ -21,6 +21,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import jakarta.servlet.http.Cookie;
+import pe.edu.usmp.aduanatrack.dashboard.dto.IndicadoresResponse;
+import pe.edu.usmp.aduanatrack.dashboard.service.IndicadoresService;
 import pe.edu.usmp.aduanatrack.dashboard.service.TableroExcelService;
 import pe.edu.usmp.aduanatrack.dashboard.service.TableroService;
 import pe.edu.usmp.aduanatrack.seguridad.JwtService;
@@ -39,10 +41,36 @@ class DashboardControllerTest {
     private JwtService jwtService;
 
     @MockitoBean
+    private IndicadoresService indicadoresService;
+
+    @MockitoBean
     private TableroService tableroService;
 
     @MockitoBean
     private TableroExcelService excelService;
+
+    @Test
+    void indicadores_respondeLosCuatroCamposConLosFiltros() throws Exception {
+        when(indicadoresService.indicadores(118L, 7L)).thenReturn(new IndicadoresResponse(12, 3, 4, 2));
+
+        mvc.perform(get("/api/v1/dashboard/indicadores").param("aduanaId", "118").param("clienteId", "7")
+                .cookie(sesion()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(4))
+                .andExpect(jsonPath("$.despachosActivos").value(12))
+                .andExpect(jsonPath("$.enCanalNaranjaRojo").value(3))
+                .andExpect(jsonPath("$.conLevante").value(4))
+                .andExpect(jsonPath("$.conAlertasCriticas").value(2));
+    }
+
+    @Test
+    void indicadores_sinFiltros_pasaNulos() throws Exception {
+        when(indicadoresService.indicadores(null, null)).thenReturn(new IndicadoresResponse(0, 0, 0, 0));
+
+        mvc.perform(get("/api/v1/dashboard/indicadores").cookie(sesion()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.despachosActivos").value(0));
+    }
 
     @Test
     void despachos_pasaLosFiltros() throws Exception {

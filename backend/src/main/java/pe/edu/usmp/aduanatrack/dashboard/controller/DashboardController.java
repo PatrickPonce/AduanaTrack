@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import pe.edu.usmp.aduanatrack.dashboard.dto.DespachoTableroResponse;
+import pe.edu.usmp.aduanatrack.dashboard.dto.IndicadoresResponse;
+import pe.edu.usmp.aduanatrack.dashboard.service.IndicadoresService;
 import pe.edu.usmp.aduanatrack.dashboard.service.TableroExcelService;
 import pe.edu.usmp.aduanatrack.dashboard.service.TableroService;
 
@@ -25,14 +27,24 @@ public class DashboardController {
     static final MediaType XLSX =
             MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
+    private final IndicadoresService indicadoresService;
     private final TableroService tableroService;
     private final TableroExcelService excelService;
     private final Clock clock;
 
-    public DashboardController(TableroService tableroService, TableroExcelService excelService, Clock clock) {
+    public DashboardController(IndicadoresService indicadoresService, TableroService tableroService,
+            TableroExcelService excelService, Clock clock) {
+        this.indicadoresService = indicadoresService;
         this.tableroService = tableroService;
         this.excelService = excelService;
         this.clock = clock;
+    }
+
+    /** Mismos filtros que la tabla. */
+    @GetMapping("/indicadores")
+    public IndicadoresResponse indicadores(@RequestParam(required = false) Long aduanaId,
+            @RequestParam(required = false) Long clienteId) {
+        return indicadoresService.indicadores(aduanaId, clienteId);
     }
 
     @GetMapping("/despachos")

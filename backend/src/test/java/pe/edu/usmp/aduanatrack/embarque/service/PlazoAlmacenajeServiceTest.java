@@ -58,4 +58,18 @@ class PlazoAlmacenajeServiceTest {
         assertThat(plazo.diasRestantes()).isEqualTo(-6);
         assertThat(plazo.alerta()).isTrue();
     }
+
+    /** La fecha de corte que usan los indicadores coincide con la alerta día por día. */
+    @Test
+    void fechaLimiteEnAlerta_equivaleALaAlertaDelPlazo() {
+        LocalDate corte = servicio.fechaLimiteEnAlerta();
+
+        assertThat(corte).isEqualTo(LocalDate.of(2026, 11, 19));
+        for (int dias = -5; dias <= 8; dias++) {
+            LocalDate fechaLimite = LocalDate.of(2026, 11, 16).plusDays(dias);
+            assertThat(!fechaLimite.isAfter(corte))
+                    .as("quedan %d días", dias)
+                    .isEqualTo(servicio.plazo(fechaLimite).alerta());
+        }
+    }
 }
