@@ -13,6 +13,7 @@ public final class CodigoError {
     public static final String FORMATO_NO_PERMITIDO = "FORMATO_NO_PERMITIDO";
     public static final String CARTA_PODER_NO_VIGENTE = "CARTA_PODER_NO_VIGENTE";
     public static final String CUENTA_BLOQUEADA = "CUENTA_BLOQUEADA";
+    public static final String DESPACHO_EN_BORRADOR = "DESPACHO_EN_BORRADOR";
     public static final String ERROR_INTERNO = "ERROR_INTERNO";
 
     private CodigoError() {
