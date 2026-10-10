@@ -32,6 +32,7 @@ Errores en formato único: `{"codigo", "mensaje", "campos"}`.
 | GET | `/clientes/{id}` | HU-04 · T-04.1 | Cliente con `estadoCartaPoder` (`VIGENTE`, `POR_VENCER`, `VENCIDA`, `SIN_CARTA`) |
 | POST / PUT | `/clientes`, `/clientes/{id}` | HU-04 · T-04.1 | 201 / 200; 400 `VALIDACION` (RUC 11 dígitos + módulo 11); 409 `CLIENTE_DUPLICADO` con `clienteId` y `razonSocial` |
 | GET | `/clientes/{id}/historial` | HU-04 · T-04.3 | `[{campo, valorAnterior, valorNuevo, usuario, fecha}]`, más reciente primero |
+| POST | `/clientes/{id}/carta-poder` multipart `archivo`, `fechaEmision`, `fechaVencimiento` | HU-04 · T-04.2 | 201 con la carta y `estadoCartaPoder`; 400 con los `campos`; 413 `ARCHIVO_MUY_GRANDE` (> 10 MB); 415 `FORMATO_NO_PERMITIDO` (no empieza con `%PDF-`). Se guarda en `/data/cartas-poder/{uuid}.pdf`; alerta diaria a las 7:00 (Lima) |
 | POST / PUT | `/despachos`, `/despachos/{id}` `{clienteId, regimenId, aduanaId, referenciaCliente, descripcionMercancia, borrador}` | HU-03 · T-03.1 / T-03.3 | `borrador=true` → BORRADOR sin número; `false` → `DESP-AAAA-####` y APERTURA; 400 con los `campos` vacíos; 422 `CARTA_PODER_NO_VIGENTE` |
 | GET | `/despachos/{id}` | HU-03 · T-03.1 | Detalle con cliente, régimen, aduana, estado, número y agente |
 | GET | `/catalogos/regimenes`, `/catalogos/aduanas` | HU-03 · T-03.2 | Solo activos, por código: `[{id, codigo, descripcion}]` y `[{id, codigo, nombre}]` |
