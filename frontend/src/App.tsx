@@ -7,6 +7,8 @@ import { Layout } from './components/Layout'
 
 // Cada pantalla se descarga al visitarla por primera vez.
 const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })))
+const ClientesPage = lazy(() => import('./pages/ClientesPage').then((m) => ({ default: m.ClientesPage })))
+const ClienteFormPage = lazy(() => import('./pages/ClienteFormPage').then((m) => ({ default: m.ClienteFormPage })))
 
 const cargando = (
   <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
@@ -29,6 +31,9 @@ export function App() {
                 </Typography>
               }
             />
+            <Route path="/clientes" element={<ClientesPage />} />
+            <Route path="/clientes/nuevo" element={<ClienteFormPage />} />
+            <Route path="/clientes/:id" element={<ClienteFormPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
