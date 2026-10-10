@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: aduanatrack
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/aduanatrack}
+    username: ${SPRING_DATASOURCE_USERNAME:aduanatrack}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
+  jackson:
+    time-zone: America/Lima
+
+server:
+  port: 8080
+  # IP real del cliente detrás de nginx (X-Forwarded-For) para la auditoría de accesos.
+  forward-headers-strategy: native
+
+aduanatrack:
+  zona-horaria: America/Lima
+  seguridad:
+    # Secreto HS256 de al menos 32 caracteres; se inyecta desde .env (nunca en el repositorio).
+    jwt-secret: ${JWT_SECRET}
+    # En local se sirve por HTTP; en un entorno con HTTPS debe ser true.
+    cookie-secure: ${COOKIE_SECURE:false}
