@@ -34,6 +34,7 @@ Errores en formato único: `{"codigo", "mensaje", "campos"}`.
 | GET | `/clientes/{id}/historial` | HU-04 · T-04.3 | `[{campo, valorAnterior, valorNuevo, usuario, fecha}]`, más reciente primero |
 | POST / PUT | `/despachos`, `/despachos/{id}` `{clienteId, regimenId, aduanaId, referenciaCliente, descripcionMercancia, borrador}` | HU-03 · T-03.1 / T-03.3 | `borrador=true` → BORRADOR sin número; `false` → `DESP-AAAA-####` y APERTURA; 400 con los `campos` vacíos; 422 `CARTA_PODER_NO_VIGENTE` |
 | GET | `/despachos/{id}` | HU-03 · T-03.1 | Detalle con cliente, régimen, aduana, estado, número y agente |
+| GET | `/catalogos/regimenes`, `/catalogos/aduanas` | HU-03 · T-03.2 | Solo activos, por código: `[{id, codigo, descripcion}]` y `[{id, codigo, nombre}]` |
 | GET / PUT | `/despachos/{id}/embarque` | HU-05 · T-05.1 / T-05.3 | BL + contenedores + `fechaLimiteAlmacenaje`, `diasRestantes`, `alertaAlmacenaje`, `etaModificada`, `etaAnterior`; 400 con la fila del contenedor (`contenedores[i].numero`); 409 `DESPACHO_EN_BORRADOR` |
 | GET | `/dashboard/despachos?aduanaId=&clienteId=` | HU-02 · T-02.2 | Despachos no borradores por ETA ascendente (sin ETA al final) con `diasAlmacenaje`, `alertaCritica` |
 | GET | `/dashboard/despachos/excel?aduanaId=&clienteId=` | HU-02 · T-02.2 | `despachos-AAAAMMDD.xlsx` con las mismas filas |
