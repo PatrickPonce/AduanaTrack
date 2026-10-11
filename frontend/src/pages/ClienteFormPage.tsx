@@ -1,11 +1,10 @@
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import {
   Alert,
   Box,
   Button,
   CircularProgress,
-  Divider,
-  Paper,
   Stack,
   Tab,
   Table,
@@ -30,6 +29,8 @@ import {
 } from '../api/clientes'
 import { leerError, mensajeDeError } from '../api/http'
 import { CartaPoderChip } from '../components/CartaPoderChip'
+import { useEncabezado } from '../components/Encabezado'
+import { rejilla, Seccion, Tarjeta } from '../components/Tarjeta'
 import type { CambioCliente, Cliente, ClienteRequest } from '../types'
 import { formatoFecha, formatoFechaHora } from '../utils/formato'
 import { validarArchivoCartaPoder, validarRuc } from '../utils/validaciones'
@@ -63,6 +64,7 @@ export function ClienteFormPage() {
   const { id } = useParams()
   const clienteId = id ? Number(id) : null
   const esEdicion = clienteId !== null
+  useEncabezado('HU-04', 'Clientes', esEdicion ? 'Editar' : 'Nuevo')
   const navegar = useNavigate()
   const ubicacion = useLocation()
 
@@ -219,12 +221,19 @@ export function ClienteFormPage() {
   }
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2.5}>
       <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-        <Typography variant="h5" component="h1">
-          {esEdicion ? cliente?.razonSocial ?? 'Cliente' : 'Nuevo cliente'}
-        </Typography>
-        <Button component={RouterLink} to="/clientes">
+        {esEdicion && cliente ? (
+          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+            <Typography variant="h5" component="h2">
+              {cliente.razonSocial}
+            </Typography>
+            <Typography color="text.secondary">RUC {cliente.ruc}</Typography>
+          </Stack>
+        ) : (
+          <span />
+        )}
+        <Button component={RouterLink} to="/clientes" startIcon={<ArrowBackIcon />}>
           Volver a clientes
         </Button>
       </Stack>
@@ -233,14 +242,14 @@ export function ClienteFormPage() {
       {error && <Alert severity="error">{error}</Alert>}
 
       {esEdicion && (
-        <Tabs value={pestana} onChange={(_, v: number) => setPestana(v)}>
+        <Tabs value={pestana} onChange={(_, v: number) => setPestana(v)} sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tab label="Datos del cliente" />
           <Tab label="Historial de cambios" />
         </Tabs>
       )}
 
       {pestana === 0 && (
-        <Paper component="form" onSubmit={guardar} noValidate sx={{ p: 3 }}>
+        <Tarjeta component="form" onSubmit={guardar} noValidate titulo="Información del importador">
           <Stack spacing={2.5}>
             {duplicado && (
               <Alert
@@ -255,7 +264,15 @@ export function ClienteFormPage() {
               </Alert>
             )}
 
-            <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 2fr' } }}>
+            <Box sx={rejilla}>
+              <TextField
+                label="Razón social"
+                value={form.razonSocial}
+                onChange={cambiar('razonSocial')}
+                required
+                error={Boolean(errores.razonSocial)}
+                helperText={errores.razonSocial}
+              />
               <TextField
                 label="RUC"
                 value={form.ruc}
@@ -267,22 +284,12 @@ export function ClienteFormPage() {
                 slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 11, pattern: '\\d*' } }}
               />
               <TextField
-                label="Razón social"
-                value={form.razonSocial}
-                onChange={cambiar('razonSocial')}
-                required
-                error={Boolean(errores.razonSocial)}
-                helperText={errores.razonSocial}
+                label="Dirección"
+                value={form.direccion}
+                onChange={cambiar('direccion')}
+                error={Boolean(errores.direccion)}
+                helperText={errores.direccion}
               />
-            </Box>
-            <TextField
-              label="Dirección"
-              value={form.direccion}
-              onChange={cambiar('direccion')}
-              error={Boolean(errores.direccion)}
-              helperText={errores.direccion}
-            />
-            <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' } }}>
               <TextField
                 label="Correo"
                 type="email"
@@ -308,71 +315,87 @@ export function ClienteFormPage() {
               />
             </Box>
 
-            <Divider />
-
-            <Stack spacing={2}>
-              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 600 }}>
-                  Carta poder / autorización vigente
-                </Typography>
-                {cliente && <CartaPoderChip estado={cliente.estadoCartaPoder} />}
-              </Stack>
-              {cliente?.estadoCartaPoder === 'POR_VENCER' && (
-                <Alert severity="warning">La carta poder vence en 15 días o menos. Actualícela.</Alert>
-              )}
-              {cliente?.estadoCartaPoder === 'VENCIDA' && (
-                <Alert severity="error">La carta poder está vencida. No se podrán abrir despachos.</Alert>
-              )}
-              <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr' } }}>
-                <Box>
-                  <Button component="label" variant="outlined" startIcon={<UploadFileIcon />}>
-                    Seleccionar PDF
-                    <input hidden type="file" accept="application/pdf" onChange={seleccionarArchivo} aria-label="Archivo de carta poder" />
-                  </Button>
-                  <Typography
-                    variant="body2"
-                    sx={{ mt: 0.5 }}
-                    color={erroresCarta.archivo ? 'error' : 'text.secondary'}
-                  >
-                    {erroresCarta.archivo || (carta.archivo ? carta.archivo.name : 'Solo PDF, máximo 10 MB')}
-                  </Typography>
+            <Box sx={{ pt: 1 }}>
+              <Seccion
+                titulo="Carta poder / autorización vigente"
+                acciones={cliente && <CartaPoderChip estado={cliente.estadoCartaPoder} />}
+              />
+              <Stack spacing={2}>
+                {cliente?.estadoCartaPoder === 'POR_VENCER' && (
+                  <Alert severity="warning">La carta poder vence en 15 días o menos. Actualícela.</Alert>
+                )}
+                {cliente?.estadoCartaPoder === 'VENCIDA' && (
+                  <Alert severity="error">La carta poder está vencida. No se podrán abrir despachos.</Alert>
+                )}
+                <Box
+                  sx={{
+                    display: 'grid',
+                    columnGap: 3,
+                    rowGap: 2,
+                    alignItems: 'start',
+                    gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr' },
+                  }}
+                >
+                  <Box>
+                    <Typography
+                      component="span"
+                      sx={{ display: 'block', mb: 0.75, fontSize: '0.8rem', fontWeight: 600, color: '#475569' }}
+                    >
+                      Documento (PDF)
+                    </Typography>
+                    <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+                      <Button component="label" variant="outlined" startIcon={<UploadFileIcon />} sx={{ flexShrink: 0 }}>
+                        Seleccionar PDF
+                        <input
+                          hidden
+                          type="file"
+                          accept="application/pdf"
+                          onChange={seleccionarArchivo}
+                          aria-label="Archivo de carta poder"
+                        />
+                      </Button>
+                      <Typography
+                        variant="body2"
+                        sx={{ minWidth: 0, overflowWrap: 'anywhere' }}
+                        color={erroresCarta.archivo ? 'error' : 'text.secondary'}
+                      >
+                        {erroresCarta.archivo || (carta.archivo ? carta.archivo.name : 'Solo PDF, máximo 10 MB')}
+                      </Typography>
+                    </Stack>
+                  </Box>
+                  <TextField
+                    label="Fecha de emisión"
+                    type="date"
+                    value={carta.fechaEmision}
+                    onChange={(e) => setCarta((c) => ({ ...c, fechaEmision: e.target.value }))}
+                    error={Boolean(erroresCarta.fechaEmision)}
+                    helperText={erroresCarta.fechaEmision}
+                  />
+                  <TextField
+                    label="Fecha de vigencia"
+                    type="date"
+                    value={carta.fechaVencimiento}
+                    onChange={(e) => setCarta((c) => ({ ...c, fechaVencimiento: e.target.value }))}
+                    error={Boolean(erroresCarta.fechaVencimiento)}
+                    helperText={erroresCarta.fechaVencimiento}
+                  />
                 </Box>
-                <TextField
-                  label="Fecha de emisión"
-                  type="date"
-                  value={carta.fechaEmision}
-                  onChange={(e) => setCarta((c) => ({ ...c, fechaEmision: e.target.value }))}
-                  error={Boolean(erroresCarta.fechaEmision)}
-                  helperText={erroresCarta.fechaEmision}
-                  slotProps={{ inputLabel: { shrink: true } }}
-                />
-                <TextField
-                  label="Fecha de vigencia"
-                  type="date"
-                  value={carta.fechaVencimiento}
-                  onChange={(e) => setCarta((c) => ({ ...c, fechaVencimiento: e.target.value }))}
-                  error={Boolean(erroresCarta.fechaVencimiento)}
-                  helperText={erroresCarta.fechaVencimiento}
-                  slotProps={{ inputLabel: { shrink: true } }}
-                />
-              </Box>
-            </Stack>
+              </Stack>
+            </Box>
 
             <Box>
-              <Button type="submit" variant="contained" disabled={guardando}>
+              <Button type="submit" variant="contained" size="large" disabled={guardando}>
                 {guardando ? 'Guardando…' : 'Guardar cliente'}
               </Button>
             </Box>
           </Stack>
-        </Paper>
+        </Tarjeta>
       )}
 
       {pestana === 1 && (
-        <Paper sx={{ p: 2 }}>
+        <Tarjeta titulo="Historial de cambios">
           {historial.length === 0 ? (
-            <Typography color="text.secondary" sx={{ p: 2 }}>
-              Sin cambios registrados.
-            </Typography>
+            <Typography color="text.secondary">Sin cambios registrados.</Typography>
           ) : (
             <Table size="small">
               <TableHead>
@@ -398,11 +421,11 @@ export function ClienteFormPage() {
             </Table>
           )}
           {cliente && (
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, px: 1 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
               Registrado el {formatoFecha(cliente.creadoEn)}
             </Typography>
           )}
-        </Paper>
+        </Tarjeta>
       )}
     </Stack>
   )

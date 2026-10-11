@@ -1,5 +1,5 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import { Alert, Box, Button, CircularProgress, Paper, Stack, Tab, Tabs, Typography } from '@mui/material'
+import { Alert, Box, Button, CircularProgress, Stack, Tab, Tabs, Typography } from '@mui/material'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link as RouterLink, useLocation, useParams } from 'react-router'
 
@@ -7,7 +7,9 @@ import { obtenerDespacho } from '../api/despachos'
 import { mensajeDeError } from '../api/http'
 import { CartaPoderChip } from '../components/CartaPoderChip'
 import { EmbarqueForm } from '../components/EmbarqueForm'
+import { useEncabezado } from '../components/Encabezado'
 import { EstadoDespachoChip } from '../components/EstadoDespachoChip'
+import { Tarjeta } from '../components/Tarjeta'
 import type { Despacho } from '../types'
 import { formatoFecha } from '../utils/formato'
 
@@ -25,6 +27,9 @@ export function DespachoDetallePage() {
   const [despacho, setDespacho] = useState<Despacho | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pestana, setPestana] = useState(0)
+  // La pestaña «Embarque / BL» corresponde a HU-05; los datos generales, a HU-03.
+  const numero = despacho ? (despacho.numero ?? 'Borrador') : '…'
+  useEncabezado(pestana === 1 ? 'HU-05' : 'HU-03', pestana === 1 ? 'Embarques' : 'Despachos', numero)
 
   useEffect(() => {
     setDespacho(null)
@@ -59,13 +64,13 @@ export function DespachoDetallePage() {
   const esBorrador = despacho.estado === 'BORRADOR'
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2.5}>
       <Box>{volver}</Box>
       {navegacion.mensaje && <Alert severity="success">{navegacion.mensaje}</Alert>}
 
-      <Paper sx={{ p: 3 }}>
-        <Stack direction="row" spacing={2} sx={{ alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
-          <Typography variant="h5" component="h1">
+      <Tarjeta>
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1, mb: 2.5 }}>
+          <Typography variant="h5" component="h2">
             {despacho.numero ?? 'Despacho en borrador'}
           </Typography>
           <EstadoDespachoChip estado={despacho.estado} size="medium" />
@@ -75,7 +80,7 @@ export function DespachoDetallePage() {
             </Button>
           )}
         </Stack>
-        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' } }}>
+        <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' } }}>
           <Dato titulo="Cliente / Importador">
             {despacho.cliente.razonSocial}
             <Typography variant="caption" sx={{ display: 'block' }} color="text.secondary">
@@ -90,16 +95,16 @@ export function DespachoDetallePage() {
           </Dato>
           <Dato titulo={esBorrador ? 'Fecha de registro' : 'Fecha de apertura'}>{formatoFecha(despacho.creadoEn)}</Dato>
         </Box>
-      </Paper>
+      </Tarjeta>
 
-      <Tabs value={pestana} onChange={(_, v: number) => setPestana(v)}>
+      <Tabs value={pestana} onChange={(_, v: number) => setPestana(v)} sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tab label="Datos generales" />
         <Tab label="Embarque / BL" />
       </Tabs>
 
       {pestana === 0 && (
-        <Paper sx={{ p: 3 }}>
-          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+        <Tarjeta titulo="Datos generales del despacho">
+          <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
             <Dato titulo="Referencia del cliente">{despacho.referenciaCliente ?? '—'}</Dato>
             <Dato titulo="Agente responsable">{despacho.agente}</Dato>
             <Dato titulo="Carta poder del cliente">
@@ -110,7 +115,7 @@ export function DespachoDetallePage() {
               <Dato titulo="Descripción general de la mercancía">{despacho.descripcionMercancia ?? '—'}</Dato>
             </Box>
           </Box>
-        </Paper>
+        </Tarjeta>
       )}
 
       {pestana === 1 &&
@@ -128,7 +133,7 @@ export function DespachoDetallePage() {
 function Dato({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <Box>
-      <Typography variant="caption" color="text.secondary" component="div">
+      <Typography variant="caption" component="div" sx={{ fontWeight: 600, color: '#475569', mb: 0.25 }}>
         {titulo}
       </Typography>
       <Typography component="div">{children}</Typography>

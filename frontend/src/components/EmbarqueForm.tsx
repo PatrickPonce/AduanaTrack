@@ -7,16 +7,15 @@ import {
   CircularProgress,
   IconButton,
   MenuItem,
-  Paper,
   Stack,
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableRow,
   TextField,
   Tooltip,
-  Typography,
 } from '@mui/material'
 import { useEffect, useState, type FormEvent } from 'react'
 
@@ -25,6 +24,7 @@ import { leerError, mensajeDeError } from '../api/http'
 import type { Contenedor, Embarque, EmbarqueRequest } from '../types'
 import { formatoFecha } from '../utils/formato'
 import { validarContenedor } from '../utils/validaciones'
+import { rejilla, Seccion, soloLectura, Tarjeta } from './Tarjeta'
 
 export const TIPOS_CONTENEDOR = ['20GP', '40GP', '40HC']
 
@@ -170,12 +170,11 @@ export function EmbarqueForm({ despachoId }: { despachoId: number }) {
       type={extra.type}
       error={Boolean(errores[campo])}
       helperText={errores[campo]}
-      slotProps={extra.type === 'date' ? { inputLabel: { shrink: true } } : undefined}
     />
   )
 
   return (
-    <Paper component="form" onSubmit={guardar} noValidate sx={{ p: 3 }}>
+    <Tarjeta component="form" onSubmit={guardar} noValidate titulo="Datos del conocimiento de embarque (BL)">
       <Stack spacing={2.5}>
         {mensaje && <Alert severity={embarque?.etaModificada ? 'info' : 'success'}>{mensaje}</Alert>}
         {error && <Alert severity="error">{error}</Alert>}
@@ -187,7 +186,7 @@ export function EmbarqueForm({ despachoId }: { despachoId: number }) {
           </Alert>
         )}
 
-        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' } }}>
+        <Box sx={rejilla}>
           {texto('numeroBl', 'N° de BL / House BL', { required: true })}
           <TextField
             select
@@ -197,12 +196,14 @@ export function EmbarqueForm({ despachoId }: { despachoId: number }) {
             required
             error={Boolean(errores.tipoBl)}
             helperText={errores.tipoBl}
+            slotProps={{ select: { displayEmpty: true } }}
           >
+            <MenuItem value="" disabled>
+              Seleccione el tipo
+            </MenuItem>
             <MenuItem value="MASTER">Master BL</MenuItem>
             <MenuItem value="HOUSE">House BL</MenuItem>
           </TextField>
-        </Box>
-        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
           {texto('naviera', 'Naviera', { required: true })}
           {texto('buque', 'Buque')}
           {texto('puertoEmbarque', 'Puerto de embarque', { required: true })}
@@ -211,110 +212,113 @@ export function EmbarqueForm({ despachoId }: { despachoId: number }) {
           {texto('fechaEta', 'Fecha ETA (arribo estimado)', { required: true, type: 'date' })}
         </Box>
 
-        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
-          <TextField
-            label="Fecha límite de almacenaje"
-            value={embarque ? formatoFecha(embarque.fechaLimiteAlmacenaje) : 'Se calculará al guardar'}
-            disabled
-            slotProps={{ htmlInput: { readOnly: true } }}
-          />
-          <TextField
-            label="Días restantes"
-            value={embarque?.diasRestantes ?? '—'}
-            disabled
-            color={embarque?.alertaAlmacenaje ? 'warning' : undefined}
-            focused={embarque?.alertaAlmacenaje || undefined}
-            slotProps={{ htmlInput: { readOnly: true } }}
-          />
+        <Box sx={{ pt: 1 }}>
+          <Seccion titulo="Plazo de almacenaje" />
+          <Box sx={rejilla}>
+            <TextField
+              label="Fecha límite de almacenaje"
+              value={embarque ? formatoFecha(embarque.fechaLimiteAlmacenaje) : 'Se calculará al guardar'}
+              sx={soloLectura}
+              slotProps={{ htmlInput: { readOnly: true } }}
+            />
+            <TextField
+              label="Días restantes"
+              value={embarque?.diasRestantes ?? '—'}
+              color={embarque?.alertaAlmacenaje ? 'warning' : undefined}
+              focused={embarque?.alertaAlmacenaje || undefined}
+              sx={soloLectura}
+              slotProps={{ htmlInput: { readOnly: true } }}
+            />
+          </Box>
         </Box>
 
-        <Box>
-          <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-            <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 600 }}>
-              Contenedores asociados
-            </Typography>
-            <Button
-              startIcon={<AddIcon />}
-              onClick={() => setForm((f) => ({ ...f, contenedores: [...f.contenedores, { ...FILA_VACIA }] }))}
-            >
-              Agregar contenedor
-            </Button>
-          </Stack>
+        <Box sx={{ pt: 1 }}>
+          <Seccion
+            titulo="Contenedores asociados"
+            acciones={
+              <Button
+                startIcon={<AddIcon />}
+                onClick={() => setForm((f) => ({ ...f, contenedores: [...f.contenedores, { ...FILA_VACIA }] }))}
+              >
+                Agregar contenedor
+              </Button>
+            }
+          />
           {errores.contenedores && (
-            <Alert severity="error" sx={{ mb: 1 }}>
+            <Alert severity="error" sx={{ mb: 1.5 }}>
               {errores.contenedores}
             </Alert>
           )}
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ width: 40 }}>#</TableCell>
-                <TableCell>N° de contenedor</TableCell>
-                <TableCell sx={{ width: 140 }}>Tipo</TableCell>
-                <TableCell>Precinto</TableCell>
-                <TableCell sx={{ width: 56 }} />
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {form.contenedores.map((c, i) => (
-                <TableRow key={i}>
-                  <TableCell>{i + 1}</TableCell>
-                  <TableCell>
-                    <TextField
-                      size="small"
-                      fullWidth
-                      value={c.numero}
-                      placeholder="CSQU3054383"
-                      onChange={(e) => cambiarContenedor(i, 'numero', e.target.value)}
-                      error={Boolean(errores[`contenedores[${i}].numero`])}
-                      helperText={errores[`contenedores[${i}].numero`]}
-                      slotProps={{ htmlInput: { maxLength: 11, 'aria-label': `Número del contenedor ${i + 1}` } }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      select
-                      size="small"
-                      fullWidth
-                      value={c.tipo}
-                      onChange={(e) => cambiarContenedor(i, 'tipo', e.target.value)}
-                      slotProps={{ htmlInput: { 'aria-label': `Tipo del contenedor ${i + 1}` } }}
-                    >
-                      {TIPOS_CONTENEDOR.map((t) => (
-                        <MenuItem key={t} value={t}>
-                          {t}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      size="small"
-                      fullWidth
-                      value={c.precinto}
-                      onChange={(e) => cambiarContenedor(i, 'precinto', e.target.value)}
-                      slotProps={{ htmlInput: { maxLength: 30, 'aria-label': `Precinto del contenedor ${i + 1}` } }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Tooltip title="Quitar contenedor">
-                      <IconButton aria-label={`Quitar contenedor ${i + 1}`} onClick={() => quitarContenedor(i)}>
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ width: 40 }}>#</TableCell>
+                  <TableCell>N° de contenedor</TableCell>
+                  <TableCell sx={{ width: 150 }}>Tipo</TableCell>
+                  <TableCell>Precinto</TableCell>
+                  <TableCell sx={{ width: 56 }} />
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHead>
+              <TableBody>
+                {form.contenedores.map((c, i) => (
+                  <TableRow key={i} sx={{ '& td': { verticalAlign: 'top', py: 1.25 } }}>
+                    <TableCell sx={{ pt: '18px !important' }}>{i + 1}</TableCell>
+                    <TableCell>
+                      <TextField
+                        value={c.numero}
+                        placeholder="CSQU3054383"
+                        onChange={(e) => cambiarContenedor(i, 'numero', e.target.value)}
+                        error={Boolean(errores[`contenedores[${i}].numero`])}
+                        helperText={errores[`contenedores[${i}].numero`]}
+                        slotProps={{ htmlInput: { maxLength: 11, 'aria-label': `Número del contenedor ${i + 1}` } }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <TextField
+                        select
+                        value={c.tipo}
+                        onChange={(e) => cambiarContenedor(i, 'tipo', e.target.value)}
+                        slotProps={{ htmlInput: { 'aria-label': `Tipo del contenedor ${i + 1}` }, select: { displayEmpty: true } }}
+                      >
+                        <MenuItem value="">
+                          <em>Sin tipo</em>
+                        </MenuItem>
+                        {TIPOS_CONTENEDOR.map((t) => (
+                          <MenuItem key={t} value={t}>
+                            {t}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </TableCell>
+                    <TableCell>
+                      <TextField
+                        value={c.precinto}
+                        placeholder="Opcional"
+                        onChange={(e) => cambiarContenedor(i, 'precinto', e.target.value)}
+                        slotProps={{ htmlInput: { maxLength: 30, 'aria-label': `Precinto del contenedor ${i + 1}` } }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Tooltip title="Quitar contenedor">
+                        <IconButton aria-label={`Quitar contenedor ${i + 1}`} onClick={() => quitarContenedor(i)}>
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </Box>
 
         <Box>
-          <Button type="submit" variant="contained" disabled={guardando}>
+          <Button type="submit" variant="contained" size="large" disabled={guardando}>
             {guardando ? 'Guardando…' : 'Guardar información de embarque'}
           </Button>
         </Box>
       </Stack>
-    </Paper>
+    </Tarjeta>
   )
 }

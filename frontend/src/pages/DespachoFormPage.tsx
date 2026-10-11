@@ -1,23 +1,16 @@
-import {
-  Alert,
-  Box,
-  Button,
-  CircularProgress,
-  Link,
-  MenuItem,
-  Paper,
-  Stack,
-  TextField,
-  Typography,
-} from '@mui/material'
+import { Alert, Box, Button, CircularProgress, Link, MenuItem, Stack, TextField } from '@mui/material'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link as RouterLink, useNavigate, useParams } from 'react-router'
 
 import { listarAduanas, listarRegimenes } from '../api/catalogos'
 import { actualizarDespacho, crearDespacho, obtenerDespacho } from '../api/despachos'
 import { leerError, mensajeDeError } from '../api/http'
+import { useAuth } from '../auth/AuthContext'
 import { ClienteAutocomplete } from '../components/ClienteAutocomplete'
+import { useEncabezado } from '../components/Encabezado'
+import { rejilla, soloLectura, Tarjeta } from '../components/Tarjeta'
 import type { Aduana, ClienteResumen, Regimen } from '../types'
+import { formatoFecha } from '../utils/formato'
 
 type Campo = 'clienteId' | 'regimenId' | 'aduanaId' | 'descripcionMercancia'
 
@@ -31,7 +24,10 @@ const ORDEN_CAMPOS: Campo[] = ['clienteId', 'regimenId', 'aduanaId', 'descripcio
 export function DespachoFormPage() {
   const { id } = useParams()
   const despachoId = id ? Number(id) : null
+  useEncabezado('HU-03', 'Despachos', despachoId !== null ? 'Completar borrador' : 'Nuevo')
   const navegar = useNavigate()
+  const { usuario } = useAuth()
+  const [agente, setAgente] = useState<string | null>(null)
 
   const [cliente, setCliente] = useState<ClienteResumen | null>(null)
   const [regimenId, setRegimenId] = useState<number | ''>('')
@@ -79,6 +75,7 @@ export function DespachoFormPage() {
         setReferencia(d.referenciaCliente ?? '')
         setDescripcion(d.descripcionMercancia ?? '')
         setNumero(d.numero)
+        setAgente(d.agente)
       })
       .catch((e) => setError(mensajeDeError(e, 'No se pudo cargar el despacho.')))
       .finally(() => setCargando(false))
@@ -154,10 +151,6 @@ export function DespachoFormPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography variant="h5" component="h1">
-        {despachoId !== null ? 'Completar despacho' : 'Nuevo despacho de importación'}
-      </Typography>
-
       {errorCatalogos && <Alert severity="warning">{errorCatalogos}</Alert>}
       {error && <Alert severity="error">{error}</Alert>}
       {restriccion && (
@@ -171,35 +164,29 @@ export function DespachoFormPage() {
         </Alert>
       )}
 
-      <Paper component="form" onSubmit={enviar} noValidate sx={{ p: 3 }}>
+      <Tarjeta component="form" onSubmit={enviar} noValidate titulo="Datos generales del despacho">
         <Stack spacing={2.5}>
-          <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 600 }}>
-            Datos generales del despacho
-          </Typography>
-
-          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' } }}>
-            <Box ref={refs.clienteId}>
-            <ClienteAutocomplete
-              label="Cliente / Importador"
-              value={cliente}
-              onChange={(c) => {
-                setCliente(c)
-                setErrores((e) => ({ ...e, clienteId: undefined }))
-                setRestriccion(null)
-              }}
-              required
-              error={errores.clienteId}
-            />
-            </Box>
+          <Box sx={rejilla}>
             <TextField
               label="N° de Despacho"
               value={numero ?? 'Se generará al guardar'}
+              helperText="Autogenerado (DESP-AAAA-####)"
+              sx={soloLectura}
               slotProps={{ htmlInput: { readOnly: true } }}
-              disabled
             />
-          </Box>
-
-          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+            <Box ref={refs.clienteId}>
+              <ClienteAutocomplete
+                label="Cliente / Importador"
+                value={cliente}
+                onChange={(c) => {
+                  setCliente(c)
+                  setErrores((e) => ({ ...e, clienteId: undefined }))
+                  setRestriccion(null)
+                }}
+                required
+                error={errores.clienteId}
+              />
+            </Box>
             <TextField
               select
               label="Régimen aduanero"
@@ -212,7 +199,11 @@ export function DespachoFormPage() {
               error={Boolean(errores.regimenId)}
               helperText={errores.regimenId}
               ref={refs.regimenId}
+              slotProps={{ select: { displayEmpty: true } }}
             >
+              <MenuItem value="" disabled>
+                Seleccione el régimen
+              </MenuItem>
               {regimenes.map((r) => (
                 <MenuItem key={r.id} value={r.id}>
                   {r.codigo} - {r.descripcion}
@@ -231,21 +222,38 @@ export function DespachoFormPage() {
               error={Boolean(errores.aduanaId)}
               helperText={errores.aduanaId}
               ref={refs.aduanaId}
+              slotProps={{ select: { displayEmpty: true } }}
             >
+              <MenuItem value="" disabled>
+                Seleccione la aduana
+              </MenuItem>
               {aduanas.map((a) => (
                 <MenuItem key={a.id} value={a.id}>
                   {a.codigo} - {a.nombre}
                 </MenuItem>
               ))}
             </TextField>
+            <TextField
+              label="Fecha de apertura"
+              value={formatoFecha(new Date().toLocaleDateString('sv-SE'))}
+              sx={soloLectura}
+              slotProps={{ htmlInput: { readOnly: true } }}
+            />
+            <TextField
+              label="Agente responsable"
+              value={agente ?? usuario?.nombre ?? ''}
+              sx={soloLectura}
+              slotProps={{ htmlInput: { readOnly: true } }}
+            />
+            <TextField
+              label="Referencia del cliente"
+              value={referencia}
+              onChange={(e) => setReferencia(e.target.value)}
+              placeholder="Ej. PO-2026-118"
+              slotProps={{ htmlInput: { maxLength: 100 } }}
+            />
           </Box>
 
-          <TextField
-            label="Referencia del cliente"
-            value={referencia}
-            onChange={(e) => setReferencia(e.target.value)}
-            slotProps={{ htmlInput: { maxLength: 100 } }}
-          />
           <TextField
             label="Descripción general de la mercancía"
             value={descripcion}
@@ -262,16 +270,16 @@ export function DespachoFormPage() {
             slotProps={{ htmlInput: { maxLength: 1000 } }}
           />
 
-          <Stack direction="row" spacing={2} sx={{ justifyContent: 'flex-end' }}>
-            <Button variant="outlined" disabled={guardando} onClick={() => void guardar(true)}>
-              Guardar como borrador
-            </Button>
-            <Button type="submit" variant="contained" disabled={guardando}>
+          <Stack direction="row" spacing={1.5} sx={{ flexWrap: 'wrap', rowGap: 1 }}>
+            <Button type="submit" variant="contained" size="large" disabled={guardando}>
               Guardar y continuar
+            </Button>
+            <Button variant="outlined" size="large" disabled={guardando} onClick={() => void guardar(true)}>
+              Guardar como borrador
             </Button>
           </Stack>
         </Stack>
-      </Paper>
+      </Tarjeta>
     </Stack>
   )
 }

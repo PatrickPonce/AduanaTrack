@@ -4,8 +4,6 @@ import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
   MenuItem,
   Paper,
   Stack,
@@ -27,12 +25,14 @@ import { obtenerCliente } from '../api/clientes'
 import { exportarExcel, listarDespachosTablero, obtenerIndicadores } from '../api/dashboard'
 import { mensajeDeError } from '../api/http'
 import { ClienteAutocomplete } from '../components/ClienteAutocomplete'
+import { useEncabezado } from '../components/Encabezado'
 import { EstadoDespachoChip } from '../components/EstadoDespachoChip'
+import { Tarjeta } from '../components/Tarjeta'
 import type { Aduana, ClienteResumen, DespachoTablero, FiltrosTablero, Indicadores } from '../types'
 import { formatoFecha } from '../utils/formato'
 
 const TARJETAS: { clave: keyof Indicadores; titulo: string; color: string }[] = [
-  { clave: 'despachosActivos', titulo: 'Despachos activos', color: 'primary.main' },
+  { clave: 'despachosActivos', titulo: 'Despachos activos', color: '#0f2a47' },
   { clave: 'enCanalNaranjaRojo', titulo: 'En canal naranja/rojo', color: 'warning.main' },
   { clave: 'conLevante', titulo: 'Con levante registrado', color: 'success.main' },
   { clave: 'conAlertasCriticas', titulo: 'Con alertas críticas', color: 'error.main' },
@@ -49,6 +49,7 @@ function leerFiltros(params: URLSearchParams): FiltrosTablero {
 
 /** HU-02 · T-02.3 / T-02.4: panel de seguimiento con indicadores, filtros y tabla de despachos. */
 export function DashboardPage() {
+  useEncabezado('HU-02', 'Dashboard')
   const navegar = useNavigate()
   const ubicacion = useLocation()
   const [params, setParams] = useSearchParams()
@@ -136,33 +137,27 @@ export function DashboardPage() {
 
   return (
     <Stack spacing={3}>
-      <Typography variant="h5" component="h1">
-        Panel de seguimiento de despachos
-      </Typography>
-
       <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' } }}>
         {TARJETAS.map((t) => (
-          <Card key={t.clave} sx={{ borderTop: 4, borderColor: t.color }}>
-            <CardContent>
-              <Typography variant="body2" color="text.secondary">
-                {t.titulo}
-              </Typography>
-              <Typography variant="h4" component="p" sx={{ fontWeight: 700 }} aria-label={t.titulo}>
-                {indicadores ? indicadores[t.clave] : '—'}
-              </Typography>
-            </CardContent>
-          </Card>
+          <Paper key={t.clave} variant="outlined" sx={{ px: 2.5, py: 2 }}>
+            <Typography variant="h4" component="p" sx={{ fontWeight: 700, color: t.color }} aria-label={t.titulo}>
+              {indicadores ? indicadores[t.clave] : '—'}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {t.titulo}
+            </Typography>
+          </Paper>
         ))}
       </Box>
 
-      <Paper sx={{ p: 2 }}>
-        <Box sx={{ display: 'grid', gap: 2, alignItems: 'start', gridTemplateColumns: { xs: '1fr', md: '1fr 2fr auto' } }}>
+      <Tarjeta sx={{ py: 2 }}>
+        <Box sx={{ display: 'grid', gap: 2, alignItems: 'end', gridTemplateColumns: { xs: '1fr', md: '1fr 2fr auto' } }}>
           <TextField
             select
             label="Aduana"
-            size="small"
             value={aduanaSel}
             onChange={(e) => setAduanaSel(e.target.value === '' ? '' : Number(e.target.value))}
+            slotProps={{ select: { displayEmpty: true } }}
           >
             <MenuItem value="">Todas</MenuItem>
             {aduanas.map((a) => (
@@ -176,16 +171,16 @@ export function DashboardPage() {
             <Button variant="contained" onClick={aplicar}>
               Aplicar filtro
             </Button>
-            <Button onClick={limpiar}>Limpiar</Button>
+            <Button variant="outlined" onClick={limpiar}>
+              Limpiar
+            </Button>
           </Stack>
         </Box>
-      </Paper>
+      </Tarjeta>
 
-      <Box>
-        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <Typography variant="h6" component="h2">
-            Despachos recientes
-          </Typography>
+      <Tarjeta
+        titulo="Despachos recientes"
+        acciones={
           <Button
             variant="outlined"
             startIcon={<FileDownloadIcon />}
@@ -194,13 +189,14 @@ export function DashboardPage() {
           >
             Exportar a Excel
           </Button>
-        </Stack>
+        }
+      >
         {error && (
-          <Alert severity="error" sx={{ mb: 1 }}>
+          <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
-        <TableContainer component={Paper}>
+        <TableContainer>
           <Table size="small">
             <TableHead>
               <TableRow>
@@ -221,9 +217,9 @@ export function DashboardPage() {
                   tabIndex={0}
                   onClick={() => abrir(d.id)}
                   onKeyDown={(e) => e.key === 'Enter' && abrir(d.id)}
-                  sx={{ cursor: 'pointer', '&:focus-visible': { outline: 2, outlineColor: 'primary.main' } }}
+                  sx={{ cursor: 'pointer', '& td': { py: 1.25 }, '&:focus-visible': { outline: 2, outlineColor: 'primary.main' } }}
                 >
-                  <TableCell sx={{ fontWeight: 600 }}>{d.numero}</TableCell>
+                  <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{d.numero}</TableCell>
                   <TableCell>{d.cliente}</TableCell>
                   <TableCell>{d.aduana ? `${d.aduanaCodigo} - ${d.aduana}` : '—'}</TableCell>
                   <TableCell>{d.numeroBl ?? '—'}</TableCell>
@@ -260,7 +256,7 @@ export function DashboardPage() {
             </TableBody>
           </Table>
         </TableContainer>
-      </Box>
+      </Tarjeta>
     </Stack>
   )
 }
