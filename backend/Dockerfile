@@ -7,7 +7,7 @@ COPY src ./src
 RUN mvn -B -ntp -DskipTests package && cp target/aduanatrack-*.jar app.jar
 
 # --- Etapa 2: ejecución (solo JRE, usuario sin privilegios) ---
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:24-jre
 WORKDIR /app
 RUN groupadd --system aduana && useradd --system --gid aduana --no-create-home aduana \
     && mkdir -p /data/cartas-poder && chown -R aduana:aduana /data
