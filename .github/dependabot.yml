@@ -6,6 +6,8 @@ updates:
     target-branch: develop
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     labels: [dependencias, seguridad]
 
   - package-ecosystem: maven # backend (Spring Boot)
@@ -13,6 +15,8 @@ updates:
     target-branch: develop
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     labels: [dependencias, seguridad]
 
   - package-ecosystem: npm # frontend (React)
@@ -20,6 +24,8 @@ updates:
     target-branch: develop
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     labels: [dependencias, seguridad]
 
   - package-ecosystem: docker # imágenes base de los Dockerfile
@@ -27,4 +33,6 @@ updates:
     target-branch: develop
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     labels: [dependencias, seguridad]

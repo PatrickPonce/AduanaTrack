@@ -47,11 +47,23 @@ jobs:
             --config p/secrets \
             --metrics=off \
             --sarif --output semgrep.sarif
-      - name: Publicar en Code scanning
+      - name: Excluir hallazgos suprimidos (nosemgrep) del SARIF de Code scanning
         if: always() && hashFiles('semgrep.sarif') != ''
+        run: |
+          python - <<'PY'
+          import json
+          with open("semgrep.sarif", encoding="utf-8") as f:
+              sarif = json.load(f)
+          for run in sarif.get("runs", []):
+              run["results"] = [r for r in run.get("results", []) if not r.get("suppressions")]
+          with open("semgrep-code-scanning.sarif", "w", encoding="utf-8") as f:
+              json.dump(sarif, f)
+          PY
+      - name: Publicar en Code scanning
+        if: always() && hashFiles('semgrep-code-scanning.sarif') != ''
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: semgrep.sarif
+          sarif_file: semgrep-code-scanning.sarif
           category: semgrep
       - uses: actions/upload-artifact@v7
         if: always()
