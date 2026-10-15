@@ -32,6 +32,18 @@ public class PlazoAlmacenajeService {
         return plazo(fechaLimite, LocalDate.now(clock), parametros.entero(ParametroService.DIAS_ALERTA_ALMACENAJE));
     }
 
+    /**
+     * Última fecha límite que ya está en alerta: {@code plazo(f).alerta()} equivale a que
+     * {@code f} no sea posterior a esta fecha. Permite contar las alertas en una consulta.
+     */
+    public LocalDate fechaLimiteEnAlerta() {
+        return fechaLimiteEnAlerta(LocalDate.now(clock), parametros.entero(ParametroService.DIAS_ALERTA_ALMACENAJE));
+    }
+
+    public static LocalDate fechaLimiteEnAlerta(LocalDate hoy, int diasAlerta) {
+        return hoy.plusDays(diasAlerta);
+    }
+
     public static Plazo plazo(LocalDate fechaLimite, LocalDate hoy, int diasAlerta) {
         if (fechaLimite == null) {
             return new Plazo(null, false);

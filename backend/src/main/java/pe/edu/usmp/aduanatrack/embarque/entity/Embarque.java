@@ -1,5 +1,6 @@
 package pe.edu.usmp.aduanatrack.embarque.entity;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -50,6 +51,9 @@ public class Embarque {
 
     private String buque;
 
+    @Column(name = "numero_viaje")
+    private String numeroViaje;
+
     @Column(name = "puerto_embarque", nullable = false)
     private String puertoEmbarque;
 
@@ -91,16 +95,18 @@ public class Embarque {
             DatosContenedor d = porNumero.get(c.getNumero());
             c.setTipo(d.tipo());
             c.setPrecinto(d.precinto());
+            c.setPesoBrutoKg(d.pesoBrutoKg());
         }
         porNumero.values().stream().filter(d -> !existentes.contains(d.numero())).forEach(d -> {
             Contenedor nuevo = new Contenedor(this, d.numero());
             nuevo.setTipo(d.tipo());
             nuevo.setPrecinto(d.precinto());
+            nuevo.setPesoBrutoKg(d.pesoBrutoKg());
             contenedores.add(nuevo);
         });
     }
 
-    public record DatosContenedor(String numero, String tipo, String precinto) {
+    public record DatosContenedor(String numero, String tipo, String precinto, BigDecimal pesoBrutoKg) {
     }
 
     public Long getId() {
@@ -141,6 +147,14 @@ public class Embarque {
 
     public void setBuque(String buque) {
         this.buque = buque;
+    }
+
+    public String getNumeroViaje() {
+        return numeroViaje;
+    }
+
+    public void setNumeroViaje(String numeroViaje) {
+        this.numeroViaje = numeroViaje;
     }
 
     public String getPuertoEmbarque() {

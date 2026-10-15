@@ -24,6 +24,8 @@ import pe.edu.usmp.aduanatrack.common.ErrorResponse;
 public class SecurityConfig {
 
     public static final String RUTA_LOGIN = "/api/v1/auth/login";
+    private static final String[] RUTAS_REGISTRO = { "/api/v1/clientes/**", "/api/v1/despachos/**" };
+    private static final String[] ROLES_REGISTRO = { "ADMIN", "AGENTE" };
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtCookieFilter jwtCookieFilter,
@@ -39,6 +41,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, RUTA_LOGIN).permitAll()
                         .requestMatchers("/error").permitAll()
+                        // HU-03, HU-04 y HU-05: solo el administrador y el agente de aduana registran
+                        // clientes, cartas poder, despachos y embarques; el perfil Cliente solo consulta.
+                        .requestMatchers(HttpMethod.POST, RUTAS_REGISTRO).hasAnyRole(ROLES_REGISTRO)
+                        .requestMatchers(HttpMethod.PUT, RUTAS_REGISTRO).hasAnyRole(ROLES_REGISTRO)
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, e) -> escribirError(response, objectMapper,

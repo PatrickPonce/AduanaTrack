@@ -13,7 +13,10 @@ public record DespachoTableroFila(
         String aduanaCodigo,
         String aduana,
         String numeroBl,
+        String contenedor,
+        Long totalContenedores,
         LocalDate fechaEta,
         LocalDate fechaLimiteAlmacenaje,
-        EstadoDespacho estado) {
+        EstadoDespacho estado,
+        String canalControl) {
 }

@@ -16,6 +16,7 @@ public record EmbarqueRequest(
         @NotNull(message = "Seleccione el tipo de BL") TipoBl tipoBl,
         @NotBlank(message = "Ingrese la naviera") @Size(max = 100) String naviera,
         @Size(max = 100) String buque,
+        @Size(max = 30) String numeroViaje,
         @NotBlank(message = "Ingrese el puerto de embarque") @Size(max = 100) String puertoEmbarque,
         @Size(max = 100) String puertoDescarga,
         LocalDate fechaEmbarque,

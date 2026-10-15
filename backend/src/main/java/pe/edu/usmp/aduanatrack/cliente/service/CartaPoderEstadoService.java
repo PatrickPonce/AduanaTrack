@@ -54,6 +54,20 @@ public class CartaPoderEstadoService {
         return resultado;
     }
 
+    /**
+     * Vencimiento más lejano con el que la carta todavía es crítica (VENCIDA o POR_VENCER):
+     * {@code estado.esCritico()} equivale a que el vencimiento no sea posterior a esta fecha.
+     * Permite contar las alertas en una consulta.
+     */
+    @Transactional(readOnly = true)
+    public LocalDate vencimientoCritico() {
+        return vencimientoCritico(LocalDate.now(clock), parametros.entero(ParametroService.DIAS_ALERTA_CARTA_PODER));
+    }
+
+    static LocalDate vencimientoCritico(LocalDate hoy, int diasAlerta) {
+        return hoy.plusDays(diasAlerta);
+    }
+
     static EstadoCartaPoder calcular(LocalDate vencimiento, LocalDate hoy, int diasAlerta) {
         if (vencimiento == null) {
             return EstadoCartaPoder.SIN_CARTA;

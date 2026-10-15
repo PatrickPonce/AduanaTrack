@@ -67,6 +67,18 @@ class EmbarqueControllerTest {
                 .andExpect(jsonPath("$.campos['contenedores[1].numero']").exists());
     }
 
+    @Test
+    void contenedorConDigitoDeControlErrado_indicaLaFilaConError() throws Exception {
+        guardar("""
+                {"numeroBl":"HBL-1","tipoBl":"HOUSE","naviera":"Maersk","puertoEmbarque":"Shanghai",
+                 "fechaEta":"2026-10-20","contenedores":[{"numero":"CSQU3054383"},{"numero":"CSQU3054384"}]}
+                """)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.campos['contenedores[0].numero']").doesNotExist())
+                .andExpect(jsonPath("$.campos['contenedores[1].numero']")
+                        .value("Número de contenedor no válido: revise el dígito de control ISO 6346"));
+    }
+
     private org.springframework.test.web.servlet.ResultActions guardar(String json) throws Exception {
         String token = jwtService.generar(new UsuarioAutenticado(9L, "agente", "Agente", "AGENTE"),
                 Duration.ofHours(2));

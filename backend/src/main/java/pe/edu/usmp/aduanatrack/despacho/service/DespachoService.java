@@ -151,6 +151,8 @@ public class DespachoService {
         despacho.setAduana(aduana);
         despacho.setReferenciaCliente(limpiar(s.referenciaCliente()));
         despacho.setDescripcionMercancia(limpiar(s.descripcionMercancia()));
+        despacho.setTipoOperacion(s.tipoOperacion());
+        despacho.setModalidadDespacho(s.modalidadDespacho());
     }
 
     private Despacho buscar(Long id) {

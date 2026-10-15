@@ -72,7 +72,8 @@ class TableroServiceTest {
 
     private static DespachoTableroFila fila(Long id, Long clienteId, LocalDate eta) {
         return new DespachoTableroFila(id, "DESP-2026-000" + id, clienteId, "Cliente " + clienteId, "118",
-                "Marítima del Callao", eta == null ? null : "HBL-" + id, eta, eta == null ? null : eta.plusDays(30),
-                EstadoDespacho.APERTURA);
+                "Marítima del Callao", eta == null ? null : "HBL-" + id, null, 0L, eta,
+                eta == null ? null : eta.plusDays(30),
+                EstadoDespacho.APERTURA, null);
     }
 }

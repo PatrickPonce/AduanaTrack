@@ -66,6 +66,7 @@ public class EmbarqueService {
         embarque.setTipoBl(solicitud.tipoBl());
         embarque.setNaviera(solicitud.naviera().trim());
         embarque.setBuque(limpiar(solicitud.buque()));
+        embarque.setNumeroViaje(limpiar(solicitud.numeroViaje()));
         embarque.setPuertoEmbarque(solicitud.puertoEmbarque().trim());
         embarque.setPuertoDescarga(limpiar(solicitud.puertoDescarga()));
         embarque.setFechaEmbarque(solicitud.fechaEmbarque());
@@ -91,7 +92,7 @@ public class EmbarqueService {
             if (!vistos.add(numero)) {
                 campos.put("contenedores[" + i + "].numero", "Contenedor repetido en este embarque");
             }
-            datos.add(new DatosContenedor(numero, limpiar(fila.tipo()), limpiar(fila.precinto())));
+            datos.add(new DatosContenedor(numero, limpiar(fila.tipo()), limpiar(fila.precinto()), fila.pesoBrutoKg()));
         }
         if (solicitud.fechaEmbarque() != null && solicitud.fechaEmbarque().isAfter(solicitud.fechaEta())) {
             campos.put("fechaEmbarque", "La fecha de embarque debe ser anterior o igual a la ETA");

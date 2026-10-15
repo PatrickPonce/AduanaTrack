@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -61,13 +62,15 @@ class EmbarqueServiceTest {
     @Test
     void guardar_asociaElBlAlDespachoConDosContenedores() {
         EmbarqueResponse r = servicio.guardar(1L, solicitud(ETA,
-                new ContenedorRequest("csqu3054383", "40HC", "PR-1"),
-                new ContenedorRequest("MSKU1234565", "20GP", null)));
+                new ContenedorRequest("csqu3054383", "40HC", "PR-1", new BigDecimal("18540.00")),
+                new ContenedorRequest("MSKU1234565", "20GP", null, null)));
 
         assertThat(r.despachoId()).isEqualTo(1L);
         assertThat(r.numeroDespacho()).isEqualTo("DESP-2026-0001");
         assertThat(r.numeroBl()).isEqualTo("HBL-2026-00125");
         assertThat(r.fechaLimiteAlmacenaje()).isEqualTo(LocalDate.of(2026, 11, 19));
+        assertThat(r.numeroViaje()).isEqualTo("V.226E");
+        assertThat(r.contenedores().get(0).pesoBrutoKg()).isEqualByComparingTo("18540");
         assertThat(r.contenedores()).extracting(EmbarqueResponse.ContenedorResponse::numero)
                 .containsExactly("CSQU3054383", "MSKU1234565");
         assertThat(r.etaModificada()).isFalse();
@@ -78,11 +81,11 @@ class EmbarqueServiceTest {
         Embarque existente = new Embarque(despacho);
         ReflectionTestUtils.setField(existente, "id", 3L);
         existente.setFechaEta(ETA);
-        existente.sincronizarContenedores(List.of(new Embarque.DatosContenedor("CSQU3054383", "40HC", null)));
+        existente.sincronizarContenedores(List.of(new Embarque.DatosContenedor("CSQU3054383", "40HC", null, null)));
         when(embarqueRepository.buscarPorDespacho(1L)).thenReturn(Optional.of(existente));
 
         EmbarqueResponse r = servicio.guardar(1L, solicitud(LocalDate.of(2026, 10, 25),
-                new ContenedorRequest("CSQU3054383", "40HC", null)));
+                new ContenedorRequest("CSQU3054383", "40HC", null, null)));
 
         assertThat(r.fechaLimiteAlmacenaje()).isEqualTo(LocalDate.of(2026, 11, 24));
         assertThat(r.etaModificada()).isTrue();
@@ -92,8 +95,8 @@ class EmbarqueServiceTest {
     @Test
     void contenedorRepetido_responde400IndicandoLaFila() {
         assertThatThrownBy(() -> servicio.guardar(1L, solicitud(ETA,
-                new ContenedorRequest("CSQU3054383", null, null),
-                new ContenedorRequest("csqu3054383 ", null, null))))
+                new ContenedorRequest("CSQU3054383", null, null, null),
+                new ContenedorRequest("csqu3054383 ", null, null, null))))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCampos()).containsOnlyKeys("contenedores[1].numero"));
         verify(embarqueRepository, never()).saveAndFlush(any());
@@ -101,8 +104,8 @@ class EmbarqueServiceTest {
 
     @Test
     void fechaEmbarquePosteriorALaEta_responde400() {
-        EmbarqueRequest s = new EmbarqueRequest("HBL-1", TipoBl.HOUSE, "Maersk", null, "Shanghai", null,
-                ETA.plusDays(1), ETA, List.of(new ContenedorRequest("CSQU3054383", null, null)));
+        EmbarqueRequest s = new EmbarqueRequest("HBL-1", TipoBl.HOUSE, "Maersk", null, null, "Shanghai", null,
+                ETA.plusDays(1), ETA, List.of(new ContenedorRequest("CSQU3054383", null, null, null)));
 
         assertThatThrownBy(() -> servicio.guardar(1L, s)).isInstanceOfSatisfying(ApiException.class,
                 e -> assertThat(e.getCampos()).containsKey("fechaEmbarque"));
@@ -113,7 +116,7 @@ class EmbarqueServiceTest {
         Despacho borrador = new Despacho(new Cliente("20787789324", LocalDateTime.now()), null, LocalDateTime.now());
         when(despachoRepository.findById(2L)).thenReturn(Optional.of(borrador));
 
-        assertThatThrownBy(() -> servicio.guardar(2L, solicitud(ETA, new ContenedorRequest("CSQU3054383", null, null))))
+        assertThatThrownBy(() -> servicio.guardar(2L, solicitud(ETA, new ContenedorRequest("CSQU3054383", null, null, null))))
                 .isInstanceOfSatisfying(ApiException.class, e -> {
                     assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT);
                     assertThat(e.getCodigo()).isEqualTo(CodigoError.DESPACHO_EN_BORRADOR);
@@ -124,7 +127,7 @@ class EmbarqueServiceTest {
     void despachoInexistente_responde404() {
         when(despachoRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> servicio.guardar(99L, solicitud(ETA, new ContenedorRequest("CSQU3054383", null, null))))
+        assertThatThrownBy(() -> servicio.guardar(99L, solicitud(ETA, new ContenedorRequest("CSQU3054383", null, null, null))))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
@@ -133,13 +136,13 @@ class EmbarqueServiceTest {
     void sincronizar_conservaLosQueSiguenQuitaLosDemasYAgregaNuevos() {
         Embarque e = new Embarque(despacho);
         e.sincronizarContenedores(List.of(
-                new Embarque.DatosContenedor("CSQU3054383", "40HC", null),
-                new Embarque.DatosContenedor("MSKU1234565", "20GP", null)));
+                new Embarque.DatosContenedor("CSQU3054383", "40HC", null, null),
+                new Embarque.DatosContenedor("MSKU1234565", "20GP", null, null)));
         var original = e.getContenedores().get(0);
 
         e.sincronizarContenedores(List.of(
-                new Embarque.DatosContenedor("CSQU3054383", "40GP", "P-9"),
-                new Embarque.DatosContenedor("TGHU9876542", "40HC", null)));
+                new Embarque.DatosContenedor("CSQU3054383", "40GP", "P-9", null),
+                new Embarque.DatosContenedor("TGHU9876542", "40HC", null, null)));
 
         assertThat(e.getContenedores()).extracting(c -> c.getNumero())
                 .containsExactly("CSQU3054383", "TGHU9876542");
@@ -148,7 +151,7 @@ class EmbarqueServiceTest {
     }
 
     private static EmbarqueRequest solicitud(LocalDate eta, ContenedorRequest... contenedores) {
-        return new EmbarqueRequest("HBL-2026-00125", TipoBl.HOUSE, "Maersk Line", "MSC Aurora", "Shanghai",
+        return new EmbarqueRequest("HBL-2026-00125", TipoBl.HOUSE, "Maersk Line", "MSC Aurora", "V.226E", "Shanghai",
                 "Callao", eta.minusDays(25), eta, List.of(contenedores));
     }
 }

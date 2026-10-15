@@ -41,6 +41,8 @@ import pe.edu.usmp.aduanatrack.despacho.dto.DespachoRequest;
 import pe.edu.usmp.aduanatrack.despacho.dto.DespachoResponse;
 import pe.edu.usmp.aduanatrack.despacho.entity.Despacho;
 import pe.edu.usmp.aduanatrack.despacho.entity.EstadoDespacho;
+import pe.edu.usmp.aduanatrack.despacho.entity.ModalidadDespacho;
+import pe.edu.usmp.aduanatrack.despacho.entity.TipoOperacion;
 import pe.edu.usmp.aduanatrack.despacho.repository.CorrelativoDespachoRepository;
 import pe.edu.usmp.aduanatrack.despacho.repository.DespachoRepository;
 
@@ -99,11 +101,13 @@ class DespachoServiceTest {
         assertThat(primero.estado()).isEqualTo(EstadoDespacho.APERTURA);
         assertThat(primero.aduana().codigo()).isEqualTo("118");
         assertThat(primero.agente()).isEqualTo("Agente Demo");
+        assertThat(primero.tipoOperacion()).isEqualTo(TipoOperacion.IMPORTACION_DEFINITIVA);
+        assertThat(primero.modalidadDespacho()).isEqualTo(ModalidadDespacho.ANTICIPADO);
     }
 
     @Test
     void borrador_noConsumeNumeroNiValidaCartaPoder() {
-        DespachoResponse borrador = servicio.crear(new DespachoRequest(1L, null, null, null, null, true), 9L);
+        DespachoResponse borrador = servicio.crear(new DespachoRequest(1L, null, null, null, null, true, null, null), 9L);
 
         assertThat(borrador.numero()).isNull();
         assertThat(borrador.estado()).isEqualTo(EstadoDespacho.BORRADOR);
@@ -113,14 +117,14 @@ class DespachoServiceTest {
 
     @Test
     void borradorSinCliente_responde400() {
-        assertThatThrownBy(() -> servicio.crear(new DespachoRequest(null, null, null, null, null, true), 9L))
+        assertThatThrownBy(() -> servicio.crear(new DespachoRequest(null, null, null, null, null, true, null, null), 9L))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCampos()).containsOnlyKeys("clienteId"));
     }
 
     @Test
     void obligatoriosVacios_responde400ConTodosLosCampos() {
-        assertThatThrownBy(() -> servicio.crear(new DespachoRequest(1L, null, null, null, " ", false), 9L))
+        assertThatThrownBy(() -> servicio.crear(new DespachoRequest(1L, null, null, null, " ", false, null, null), 9L))
                 .isInstanceOfSatisfying(ApiException.class, e -> {
                     assertThat(e.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
                     assertThat(e.getCampos()).containsOnlyKeys("regimenId", "aduanaId", "descripcionMercancia");
@@ -142,7 +146,7 @@ class DespachoServiceTest {
 
     @Test
     void clienteInexistente_responde400EnElCampoCliente() {
-        assertThatThrownBy(() -> servicio.crear(new DespachoRequest(2L, 10L, 118L, null, "Repuestos", false), 9L))
+        assertThatThrownBy(() -> servicio.crear(new DespachoRequest(2L, 10L, 118L, null, "Repuestos", false, null, null), 9L))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCampos()).containsKey("clienteId"));
     }
@@ -183,6 +187,7 @@ class DespachoServiceTest {
     }
 
     private static DespachoRequest completo(boolean borrador) {
-        return new DespachoRequest(1L, 10L, 118L, "PO-4471", "Repuestos automotrices", borrador);
+        return new DespachoRequest(1L, 10L, 118L, "PO-4471", "Repuestos automotrices", borrador,
+                TipoOperacion.IMPORTACION_DEFINITIVA, ModalidadDespacho.ANTICIPADO);
     }
 }

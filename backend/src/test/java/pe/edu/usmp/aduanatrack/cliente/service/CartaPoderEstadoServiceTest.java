@@ -42,4 +42,17 @@ class CartaPoderEstadoServiceTest {
         assertThat(CartaPoderEstadoService.calcular(HOY.minusDays(1), HOY, DIAS_ALERTA))
                 .isEqualTo(EstadoCartaPoder.VENCIDA);
     }
+
+    /** La fecha de corte que usan los indicadores coincide con esCritico() día por día. */
+    @Test
+    void vencimientoCritico_equivaleAEsCritico() {
+        LocalDate corte = CartaPoderEstadoService.vencimientoCritico(HOY, DIAS_ALERTA);
+
+        for (int dias = -5; dias <= DIAS_ALERTA + 5; dias++) {
+            LocalDate vencimiento = HOY.plusDays(dias);
+            assertThat(!vencimiento.isAfter(corte))
+                    .as("vence en %d días", dias)
+                    .isEqualTo(CartaPoderEstadoService.calcular(vencimiento, HOY, DIAS_ALERTA).esCritico());
+        }
+    }
 }

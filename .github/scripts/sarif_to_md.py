@@ -8,6 +8,11 @@ Clasifica cada hallazgo en Crítica / Alta / Media / Baja usando, en este orden:
   1. properties.security-severity de la regla (escala CVSS 0-10)
   2. el nivel SARIF del resultado (error / warning / note)
 Los secretos detectados por Gitleaks se consideran siempre de severidad Alta.
+
+Los resultados que la herramienta marca como suprimidos en el código (propiedad SARIF
+"suppressions", p. ej. un comentario nosemgrep) no cuentan para el Quality Gate, pero se
+listan aparte para que cada excepción quede a la vista y se justifique en
+docs/seguridad/sprint-N/02-hallazgos-y-correcciones.md.
 """
 import argparse
 import datetime as dt
@@ -75,6 +80,7 @@ def hallazgos(sarif):
                 "regla": res.get("ruleId", "-"),
                 "ubicacion": f"{archivo}:{linea}" if linea else archivo,
                 "mensaje": mensaje.replace("|", "\\|"),
+                "suprimido": bool(res.get("suppressions")),
             }
 
 
@@ -98,6 +104,9 @@ def main():
             if nombre not in [h for h, _ in herramientas]:
                 herramientas.append((nombre, version))
         todos.extend(hallazgos(sarif))
+
+    suprimidos = [f for f in todos if f["suprimido"]]
+    todos = [f for f in todos if not f["suprimido"]]
 
     conteo = {h: {s: 0 for s in ORDEN} for h, _ in herramientas}
     for f in todos:
@@ -144,6 +153,19 @@ def main():
             L.append(
                 f"| {i} | {f['severidad']} | {f['herramienta']} | `{f['regla']}` | `{f['ubicacion']}` | {f['mensaje']} |"
             )
+    if suprimidos:
+        L.append("\n## Hallazgos aceptados (suprimidos en el código)\n")
+        L.append(
+            "No cuentan para el Quality Gate. Cada uno debe estar justificado en "
+            "`docs/seguridad/sprint-N/02-hallazgos-y-correcciones.md`.\n"
+        )
+        L.append("| # | Severidad | Herramienta | Regla | Ubicación | Descripción |")
+        L.append("|---:|---|---|---|---|---|")
+        orden = sorted(suprimidos, key=lambda f: (ORDEN.index(f["severidad"]), f["herramienta"], f["ubicacion"]))
+        for i, f in enumerate(orden, 1):
+            L.append(
+                f"| {i} | {f['severidad']} | {f['herramienta']} | `{f['regla']}` | `{f['ubicacion']}` | {f['mensaje']} |"
+            )
     L.append(
         "\n> Registrar cada hallazgo Crítico/Alto en Jira (`fix/SCRUM-NN`), corregirlo y volver a ejecutar el escaneo para evidenciar la corrección."
     )
@@ -151,7 +173,11 @@ def main():
     Path(args.out).write_text("\n".join(L) + "\n", encoding="utf-8")
     if args.summary_json:
         Path(args.summary_json).write_text(
-            json.dumps({"total": total, "por_herramienta": conteo, "gate_ok": gate_ok}, ensure_ascii=False, indent=2),
+            json.dumps(
+                {"total": total, "por_herramienta": conteo, "suprimidos": len(suprimidos), "gate_ok": gate_ok},
+                ensure_ascii=False,
+                indent=2,
+            ),
             encoding="utf-8",
         )
     print(f"Reporte generado: {args.out} · {sum(total.values())} hallazgos · gate {'OK' if gate_ok else 'FALLA'}")
