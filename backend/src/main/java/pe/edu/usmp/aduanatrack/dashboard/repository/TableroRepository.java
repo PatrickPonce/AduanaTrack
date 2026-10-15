@@ -20,8 +20,10 @@ public interface TableroRepository extends Repository<Despacho, Long> {
      */
     @Query("""
             select new pe.edu.usmp.aduanatrack.dashboard.dto.DespachoTableroFila(
-                d.id, d.numero, c.id, c.razonSocial, a.codigo, a.nombre,
-                e.numeroBl, e.fechaEta, e.fechaLimiteAlmacenaje, d.estado)
+                d.id, d.numero, c.id, c.razonSocial, a.codigo, a.nombre, e.numeroBl,
+                (select min(ct.numero) from Contenedor ct where ct.embarque = e),
+                (select count(ct) from Contenedor ct where ct.embarque = e),
+                e.fechaEta, e.fechaLimiteAlmacenaje, d.estado, d.canalControl)
             from Despacho d
             join d.cliente c
             left join d.aduana a

@@ -20,8 +20,8 @@ import pe.edu.usmp.aduanatrack.dashboard.dto.DespachoTableroResponse;
 public class TableroExcelService {
 
     static final String[] ENCABEZADOS = { "N° despacho", "Cliente", "Aduana", "N° BL", "ETA", "Estado",
-            "Días de almacenaje", "Alerta crítica" };
-    private static final int[] ANCHOS = { 18, 40, 30, 20, 12, 12, 18, 14 };
+            "Días de almacenaje", "Alerta crítica", "Contenedor", "Canal" };
+    private static final int[] ANCHOS = { 18, 40, 30, 20, 12, 12, 18, 14, 18, 10 };
 
     public byte[] generar(List<DespachoTableroResponse> filas) {
         try (XSSFWorkbook libro = new XSSFWorkbook(); ByteArrayOutputStream salida = new ByteArrayOutputStream()) {
@@ -57,6 +57,8 @@ public class TableroExcelService {
                     fila.createCell(6).setCellValue(d.diasAlmacenaje());
                 }
                 fila.createCell(7).setCellValue(d.alertaCritica() ? "Sí" : "No");
+                fila.createCell(8).setCellValue(contenedores(d));
+                fila.createCell(9).setCellValue(d.canalControl() == null ? "" : d.canalControl());
             }
             // Anchos fijos (en caracteres): autoSizeColumn necesita fuentes que la imagen JRE no trae.
             for (int i = 0; i < ANCHOS.length; i++) {
@@ -69,5 +71,13 @@ public class TableroExcelService {
         } catch (IOException e) {
             throw new UncheckedIOException("No se pudo generar el Excel del Dashboard", e);
         }
+    }
+
+    /** "MSCU7841205" o "MSCU7841205 (+1)" si el BL tiene más contenedores, como en la tabla. */
+    static String contenedores(DespachoTableroResponse d) {
+        if (d.contenedor() == null) {
+            return "";
+        }
+        return d.totalContenedores() > 1 ? d.contenedor() + " (+" + (d.totalContenedores() - 1) + ")" : d.contenedor();
     }
 }

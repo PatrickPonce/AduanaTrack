@@ -32,14 +32,18 @@ Errores en formato único: `{"codigo", "mensaje", "campos"}`.
 | GET | `/clientes/{id}` | HU-04 · T-04.1 | Cliente con `estadoCartaPoder` (`VIGENTE`, `POR_VENCER`, `VENCIDA`, `SIN_CARTA`) |
 | POST / PUT | `/clientes`, `/clientes/{id}` | HU-04 · T-04.1 | 201 / 200; 400 `VALIDACION` (RUC 11 dígitos + módulo 11); 409 `CLIENTE_DUPLICADO` con `clienteId` y `razonSocial` |
 | GET | `/clientes/{id}/historial` | HU-04 · T-04.3 | `[{campo, valorAnterior, valorNuevo, usuario, fecha}]`, más reciente primero |
+| GET | `/clientes/{id}/carta-poder` | HU-04 (prototipo) | `[{id, fechaEmision, fechaVencimiento, nombreArchivo, tamanoBytes, estado}]`, vencimiento más lejano primero; `estado` según la fecha de cada carta |
+| GET | `/clientes/{id}/carta-poder/{cartaId}/archivo` | HU-04 · T-04.2 | PDF (`Content-Disposition: attachment` con el nombre original); 404 si la carta es de otro cliente o el archivo no está |
 | POST | `/clientes/{id}/carta-poder` multipart `archivo`, `fechaEmision`, `fechaVencimiento` | HU-04 · T-04.2 | 201 con la carta y `estadoCartaPoder`; 400 con los `campos`; 413 `ARCHIVO_MUY_GRANDE` (> 10 MB); 415 `FORMATO_NO_PERMITIDO` (no empieza con `%PDF-`). Se guarda en `/data/cartas-poder/{uuid}.pdf`; alerta diaria a las 7:00 (Lima) |
-| POST / PUT | `/despachos`, `/despachos/{id}` `{clienteId, regimenId, aduanaId, referenciaCliente, descripcionMercancia, borrador}` | HU-03 · T-03.1 / T-03.3 | `borrador=true` → BORRADOR sin número; `false` → `DESP-AAAA-####` y APERTURA; 400 con los `campos` vacíos; 422 `CARTA_PODER_NO_VIGENTE` |
+| POST / PUT | `/despachos`, `/despachos/{id}` `{clienteId, regimenId, aduanaId, referenciaCliente, descripcionMercancia, borrador, tipoOperacion, modalidadDespacho}` | HU-03 · T-03.1 / T-03.3 | `borrador=true` → BORRADOR sin número; `false` → `DESP-AAAA-####` y APERTURA; 400 con los `campos` vacíos; 422 `CARTA_PODER_NO_VIGENTE` |
 | GET | `/despachos/{id}` | HU-03 · T-03.1 | Detalle con cliente, régimen, aduana, estado, número y agente |
 | GET | `/catalogos/regimenes`, `/catalogos/aduanas` | HU-03 · T-03.2 | Solo activos, por código: `[{id, codigo, descripcion}]` y `[{id, codigo, nombre}]` |
-| GET / PUT | `/despachos/{id}/embarque` | HU-05 · T-05.1 / T-05.3 | BL + contenedores + `fechaLimiteAlmacenaje`, `diasRestantes`, `alertaAlmacenaje`, `etaModificada`, `etaAnterior`; 400 con la fila del contenedor (`contenedores[i].numero`); 409 `DESPACHO_EN_BORRADOR` |
-| GET | `/dashboard/despachos?aduanaId=&clienteId=` | HU-02 · T-02.2 | Despachos no borradores por ETA ascendente (sin ETA al final) con `diasAlmacenaje`, `alertaCritica` |
+| GET / PUT | `/despachos/{id}/embarque` | HU-05 · T-05.1 / T-05.3 | BL (con `numeroViaje`) + contenedores (con `pesoBrutoKg`) + `fechaLimiteAlmacenaje`, `diasRestantes`, `alertaAlmacenaje`, `etaModificada`, `etaAnterior`; 400 con la fila del contenedor (`contenedores[i].numero`); 409 `DESPACHO_EN_BORRADOR` |
+| GET | `/dashboard/despachos?aduanaId=&clienteId=` | HU-02 · T-02.2 | Despachos no borradores por ETA ascendente (sin ETA al final) con `contenedor`, `totalContenedores`, `canalControl`, `diasAlmacenaje`, `alertaCritica` |
 | GET | `/dashboard/despachos/excel?aduanaId=&clienteId=` | HU-02 · T-02.2 | `despachos-AAAAMMDD.xlsx` con las mismas filas |
 | GET | `/dashboard/indicadores?aduanaId=&clienteId=` | HU-02 · T-02.1 | `{despachosActivos, enCanalNaranjaRojo, conLevante, conAlertasCriticas}` sobre los despachos no borradores; activos = sin levante; alertas críticas = filas con `alertaCritica` |
+
+Permisos por rol: `POST` y `PUT` sobre `/clientes/**` y `/despachos/**` solo para `ADMIN` y `AGENTE` (403 `ACCESO_DENEGADO` para `CLIENTE`); las consultas son para los tres perfiles.
 
 Reglas configurables leídas de `parametro_sistema`: `DIAS_ALMACENAJE` (30), `DIAS_ALERTA_ALMACENAJE` (3), `DIAS_ALERTA_CARTA_PODER` (15).
 

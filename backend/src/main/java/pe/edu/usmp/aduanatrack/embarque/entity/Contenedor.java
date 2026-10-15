@@ -1,5 +1,7 @@
 package pe.edu.usmp.aduanatrack.embarque.entity;
 
+import java.math.BigDecimal;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -29,6 +31,9 @@ public class Contenedor {
     private String tipo;
 
     private String precinto;
+
+    @Column(name = "peso_bruto_kg", precision = 12, scale = 2)
+    private BigDecimal pesoBrutoKg;
 
     protected Contenedor() {
     }
@@ -64,5 +69,13 @@ public class Contenedor {
 
     public void setPrecinto(String precinto) {
         this.precinto = precinto;
+    }
+
+    public BigDecimal getPesoBrutoKg() {
+        return pesoBrutoKg;
+    }
+
+    public void setPesoBrutoKg(BigDecimal pesoBrutoKg) {
+        this.pesoBrutoKg = pesoBrutoKg;
     }
 }

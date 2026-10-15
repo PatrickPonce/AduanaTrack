@@ -3,6 +3,7 @@ package pe.edu.usmp.aduanatrack.cliente.repository;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -13,6 +14,11 @@ import pe.edu.usmp.aduanatrack.cliente.entity.CartaPoder;
 public interface CartaPoderRepository extends JpaRepository<CartaPoder, Long> {
 
     boolean existsByClienteIdAndFechaVencimientoGreaterThanEqual(Long clienteId, LocalDate fecha);
+
+    /** Cartas del cliente, la de vencimiento más lejano primero. */
+    List<CartaPoder> findByClienteIdOrderByFechaVencimientoDescIdDesc(Long clienteId);
+
+    Optional<CartaPoder> findByIdAndClienteId(Long id, Long clienteId);
 
     /** Vencimiento más lejano entre las cartas del cliente (la que define su estado), o nulo si no tiene. */
     @Query("select max(c.fechaVencimiento) from CartaPoder c where c.clienteId = :clienteId")

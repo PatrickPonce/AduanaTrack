@@ -95,8 +95,25 @@ class ClienteControllerTest {
         mvc.perform(get("/api/v1/clientes")).andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void perfilCliente_noPuedeRegistrarClientes_responde403() throws Exception {
+        mvc.perform(autenticado(post("/api/v1/clientes"), "CLIENTE")
+                .content("{\"ruc\":\"20787789324\",\"razonSocial\":\"Importadora Andina SAC\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.codigo").value(CodigoError.ACCESO_DENEGADO));
+    }
+
+    @Test
+    void perfilCliente_puedeConsultar() throws Exception {
+        mvc.perform(autenticado(get("/api/v1/clientes"), "CLIENTE")).andExpect(status().isOk());
+    }
+
     private MockHttpServletRequestBuilder autenticado(MockHttpServletRequestBuilder solicitud) {
-        String token = jwtService.generar(new UsuarioAutenticado(9L, "agente", "Agente", "AGENTE"),
+        return autenticado(solicitud, "AGENTE");
+    }
+
+    private MockHttpServletRequestBuilder autenticado(MockHttpServletRequestBuilder solicitud, String rol) {
+        String token = jwtService.generar(new UsuarioAutenticado(9L, "usuario", "Usuario", rol),
                 Duration.ofHours(2));
         return solicitud.with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .cookie(new Cookie(SesionCookieService.NOMBRE_COOKIE, token));

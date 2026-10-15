@@ -51,6 +51,14 @@ public class Despacho {
     private String descripcionMercancia;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_operacion")
+    private TipoOperacion tipoOperacion;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "modalidad_despacho")
+    private ModalidadDespacho modalidadDespacho;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private EstadoDespacho estado;
 
@@ -135,6 +143,22 @@ public class Despacho {
 
     public void setDescripcionMercancia(String descripcionMercancia) {
         this.descripcionMercancia = descripcionMercancia;
+    }
+
+    public TipoOperacion getTipoOperacion() {
+        return tipoOperacion;
+    }
+
+    public void setTipoOperacion(TipoOperacion tipoOperacion) {
+        this.tipoOperacion = tipoOperacion;
+    }
+
+    public ModalidadDespacho getModalidadDespacho() {
+        return modalidadDespacho;
+    }
+
+    public void setModalidadDespacho(ModalidadDespacho modalidadDespacho) {
+        this.modalidadDespacho = modalidadDespacho;
     }
 
     public EstadoDespacho getEstado() {

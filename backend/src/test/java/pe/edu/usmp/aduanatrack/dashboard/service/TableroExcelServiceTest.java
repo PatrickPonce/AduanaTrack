@@ -21,10 +21,10 @@ class TableroExcelServiceTest {
     void generaLasMismasFilasQueLaTablaConEncabezadosEnNegrita() throws Exception {
         List<DespachoTableroResponse> filas = List.of(
                 new DespachoTableroResponse(1L, "DESP-2026-0001", 1L, "Importadora Andina SAC", "118",
-                        "Marítima del Callao", "HBL-2026-00125", LocalDate.of(2026, 10, 15), EstadoDespacho.APERTURA,
-                        36L, false, EstadoCartaPoder.VIGENTE, false),
-                new DespachoTableroResponse(2L, "DESP-2026-0002", 2L, "Comercial Lima SA", null, null, null, null,
-                        EstadoDespacho.APERTURA, null, false, EstadoCartaPoder.VENCIDA, true));
+                        "Marítima del Callao", "HBL-2026-00125", "CSQU3054383", 2, LocalDate.of(2026, 10, 15),
+                        EstadoDespacho.APERTURA, null, 36L, false, EstadoCartaPoder.VIGENTE, false),
+                new DespachoTableroResponse(2L, "DESP-2026-0002", 2L, "Comercial Lima SA", null, null, null, null, 0,
+                        null, EstadoDespacho.APERTURA, "ROJO", null, false, EstadoCartaPoder.VENCIDA, true));
 
         byte[] archivo = new TableroExcelService().generar(filas);
 
@@ -42,6 +42,8 @@ class TableroExcelServiceTest {
                     .isEqualTo(LocalDate.of(2026, 10, 15));
             assertThat(primera.getCell(6).getNumericCellValue()).isEqualTo(36);
             assertThat(hoja.getRow(2).getCell(7).getStringCellValue()).isEqualTo("Sí");
+            assertThat(primera.getCell(8).getStringCellValue()).isEqualTo("CSQU3054383 (+1)");
+            assertThat(hoja.getRow(2).getCell(9).getStringCellValue()).isEqualTo("ROJO");
         }
     }
 }

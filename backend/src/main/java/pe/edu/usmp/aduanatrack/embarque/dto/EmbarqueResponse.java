@@ -1,5 +1,6 @@
 package pe.edu.usmp.aduanatrack.embarque.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -20,6 +21,7 @@ public record EmbarqueResponse(
         TipoBl tipoBl,
         String naviera,
         String buque,
+        String numeroViaje,
         String puertoEmbarque,
         String puertoDescarga,
         LocalDate fechaEmbarque,
@@ -31,10 +33,10 @@ public record EmbarqueResponse(
         LocalDate etaAnterior,
         List<ContenedorResponse> contenedores) {
 
-    public record ContenedorResponse(Long id, String numero, String tipo, String precinto) {
+    public record ContenedorResponse(Long id, String numero, String tipo, String precinto, BigDecimal pesoBrutoKg) {
 
         static ContenedorResponse de(Contenedor c) {
-            return new ContenedorResponse(c.getId(), c.getNumero(), c.getTipo(), c.getPrecinto());
+            return new ContenedorResponse(c.getId(), c.getNumero(), c.getTipo(), c.getPrecinto(), c.getPesoBrutoKg());
         }
     }
 
@@ -47,6 +49,7 @@ public record EmbarqueResponse(
                 e.getTipoBl(),
                 e.getNaviera(),
                 e.getBuque(),
+                e.getNumeroViaje(),
                 e.getPuertoEmbarque(),
                 e.getPuertoDescarga(),
                 e.getFechaEmbarque(),

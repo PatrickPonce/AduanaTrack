@@ -43,8 +43,9 @@ public class TableroService {
     private DespachoTableroResponse fila(DespachoTableroFila f, EstadoCartaPoder carta) {
         Plazo plazo = plazoAlmacenaje.plazo(f.fechaLimiteAlmacenaje());
         boolean alertaCritica = plazo.alerta() || (carta != null && carta.esCritico());
+        long totalContenedores = f.totalContenedores() == null ? 0 : f.totalContenedores();
         return new DespachoTableroResponse(f.id(), f.numero(), f.clienteId(), f.cliente(), f.aduanaCodigo(),
-                f.aduana(), f.numeroBl(), f.fechaEta(), f.estado(), plazo.diasRestantes(), plazo.alerta(), carta,
-                alertaCritica);
+                f.aduana(), f.numeroBl(), f.contenedor(), totalContenedores, f.fechaEta(), f.estado(),
+                f.canalControl(), plazo.diasRestantes(), plazo.alerta(), carta, alertaCritica);
     }
 }

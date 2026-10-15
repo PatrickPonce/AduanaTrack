@@ -9,6 +9,8 @@ import pe.edu.usmp.aduanatrack.cliente.dto.EstadoCartaPoder;
 import pe.edu.usmp.aduanatrack.cliente.entity.Cliente;
 import pe.edu.usmp.aduanatrack.despacho.entity.Despacho;
 import pe.edu.usmp.aduanatrack.despacho.entity.EstadoDespacho;
+import pe.edu.usmp.aduanatrack.despacho.entity.ModalidadDespacho;
+import pe.edu.usmp.aduanatrack.despacho.entity.TipoOperacion;
 
 /** Detalle del despacho (cabecera de /despachos/{id}, T-02.4 y T-03.5). */
 public record DespachoResponse(
@@ -20,6 +22,8 @@ public record DespachoResponse(
         CatalogoRef aduana,
         String referenciaCliente,
         String descripcionMercancia,
+        TipoOperacion tipoOperacion,
+        ModalidadDespacho modalidadDespacho,
         String canalControl,
         LocalDate fechaLevante,
         String agente,
@@ -44,6 +48,8 @@ public record DespachoResponse(
                 a == null ? null : new CatalogoRef(a.getId(), a.getCodigo(), a.getNombre()),
                 d.getReferenciaCliente(),
                 d.getDescripcionMercancia(),
+                d.getTipoOperacion(),
+                d.getModalidadDespacho(),
                 d.getCanalControl(),
                 d.getFechaLevante(),
                 d.getAgente().getNombre(),
