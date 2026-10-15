@@ -14,6 +14,8 @@ const DespachoFormPage = lazy(() => import('./pages/DespachoFormPage').then((m) 
 const DespachoDetallePage = lazy(() =>
   import('./pages/DespachoDetallePage').then((m) => ({ default: m.DespachoDetallePage })),
 )
+const EmbarquesPage = lazy(() => import('./pages/EmbarquesPage').then((m) => ({ default: m.EmbarquesPage })))
+const EmbarquePage = lazy(() => import('./pages/EmbarquePage').then((m) => ({ default: m.EmbarquePage })))
 
 const cargando = (
   <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
@@ -35,6 +37,8 @@ export function App() {
             <Route path="/despachos/nuevo" element={<DespachoFormPage />} />
             <Route path="/despachos/:id/editar" element={<DespachoFormPage />} />
             <Route path="/despachos/:id" element={<DespachoDetallePage />} />
+            <Route path="/embarques" element={<EmbarquesPage />} />
+            <Route path="/embarques/:despachoId" element={<EmbarquePage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -40,7 +40,7 @@ export function ClienteAutocomplete({ label, value, onChange, error, required, s
       options={value && !opciones.some((o) => o.id === value.id) ? [value, ...opciones] : opciones}
       loading={cargando}
       filterOptions={(x) => x}
-      getOptionLabel={(c) => `${c.ruc} · ${c.razonSocial}`}
+      getOptionLabel={(c) => `${c.razonSocial} — RUC ${c.ruc}`}
       isOptionEqualToValue={(a, b) => a.id === b.id}
       noOptionsText="Sin coincidencias"
       loadingText="Buscando…"

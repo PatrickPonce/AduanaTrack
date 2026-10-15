@@ -28,6 +28,13 @@ export async function obtenerEmbarque(despachoId: number): Promise<Embarque | nu
 }
 
 export async function guardarEmbarque(despachoId: number, embarque: EmbarqueRequest): Promise<Embarque> {
-  const { data } = await http.put<Embarque>(`/despachos/${despachoId}/embarque`, embarque)
+  const cuerpo = {
+    ...embarque,
+    contenedores: embarque.contenedores.map((c) => ({
+      ...c,
+      pesoBrutoKg: c.pesoBrutoKg.trim() ? Number(c.pesoBrutoKg.replace(',', '.')) : null,
+    })),
+  }
+  const { data } = await http.put<Embarque>(`/despachos/${despachoId}/embarque`, cuerpo)
   return data
 }

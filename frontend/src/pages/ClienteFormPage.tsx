@@ -1,10 +1,11 @@
+import DownloadIcon from '@mui/icons-material/FileDownloadOutlined'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import {
   Alert,
   Box,
   Button,
   CircularProgress,
-  Divider,
+  IconButton,
   Paper,
   Stack,
   Tab,
@@ -15,6 +16,8 @@ import {
   TableRow,
   Tabs,
   TextField,
+  type TextFieldProps,
+  Tooltip,
   Typography,
 } from '@mui/material'
 import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
@@ -25,13 +28,18 @@ import {
   crearCliente,
   existeRuc,
   historialCliente,
+  listarCartasPoder,
   obtenerCliente,
   subirCartaPoder,
+  urlArchivoCartaPoder,
 } from '../api/clientes'
 import { leerError, mensajeDeError } from '../api/http'
 import { CartaPoderChip } from '../components/CartaPoderChip'
-import type { CambioCliente, Cliente, ClienteRequest } from '../types'
+import { useEncabezado } from '../components/Encabezado'
+import { DOS_COLUMNAS, TituloSeccion } from '../components/Seccion'
+import type { CambioCliente, CartaPoderResumen, Cliente, ClienteRequest } from '../types'
 import { formatoFecha, formatoFechaHora } from '../utils/formato'
+import { tipoContribuyente } from '../utils/opciones'
 import { validarArchivoCartaPoder, validarRuc } from '../utils/validaciones'
 
 const VACIO: ClienteRequest = { ruc: '', razonSocial: '', direccion: '', correo: '', telefono: '', contacto: '' }
@@ -39,10 +47,10 @@ const VACIO: ClienteRequest = { ruc: '', razonSocial: '', direccion: '', correo:
 const ETIQUETAS: Record<string, string> = {
   ruc: 'RUC',
   razonSocial: 'Razón social',
-  direccion: 'Dirección',
-  correo: 'Correo',
+  direccion: 'Dirección fiscal',
+  correo: 'Correo de contacto',
   telefono: 'Teléfono',
-  contacto: 'Contacto',
+  contacto: 'Representante / contacto operativo',
 }
 
 interface Duplicado {
@@ -72,12 +80,18 @@ export function ClienteFormPage() {
   const [duplicado, setDuplicado] = useState<Duplicado | null>(null)
   const [carta, setCarta] = useState<CartaPoderForm>(CARTA_VACIA)
   const [erroresCarta, setErroresCarta] = useState<Record<string, string>>({})
+  const [cartas, setCartas] = useState<CartaPoderResumen[]>([])
   const [historial, setHistorial] = useState<CambioCliente[]>([])
   const [pestana, setPestana] = useState(0)
   const [cargando, setCargando] = useState(esEdicion)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [mensaje, setMensaje] = useState<string | null>(null)
+
+  useEncabezado(
+    esEdicion ? `Clientes / ${cliente?.ruc ?? ''}` : 'Clientes / Nuevo',
+    esEdicion ? 'Datos del Importador' : 'Registro de Datos del Importador',
+  )
 
   // /clientes/nuevo → /clientes/:id reutiliza este componente: el aviso se lee en cada navegación.
   useEffect(() => {
@@ -87,9 +101,14 @@ export function ClienteFormPage() {
   const cargar = useCallback(async () => {
     if (clienteId === null) return
     try {
-      const [c, h] = await Promise.all([obtenerCliente(clienteId), historialCliente(clienteId)])
+      const [c, h, cp] = await Promise.all([
+        obtenerCliente(clienteId),
+        historialCliente(clienteId),
+        listarCartasPoder(clienteId),
+      ])
       setCliente(c)
       setHistorial(h)
+      setCartas(cp)
       setForm({
         ruc: c.ruc,
         razonSocial: c.razonSocial,
@@ -108,6 +127,7 @@ export function ClienteFormPage() {
   useEffect(() => {
     setForm(VACIO)
     setCliente(null)
+    setCartas([])
     setDuplicado(null)
     setErrores({})
     setCarta(CARTA_VACIA)
@@ -218,12 +238,28 @@ export function ClienteFormPage() {
     )
   }
 
+  const campo = (nombre: keyof ClienteRequest, label: string, extra: Partial<TextFieldProps> = {}) => (
+    <TextField
+      label={label}
+      value={form[nombre]}
+      onChange={cambiar(nombre)}
+      error={Boolean(errores[nombre])}
+      helperText={errores[nombre]}
+      {...extra}
+    />
+  )
+
   return (
     <Stack spacing={2}>
       <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-        <Typography variant="h5" component="h1">
-          {esEdicion ? cliente?.razonSocial ?? 'Cliente' : 'Nuevo cliente'}
-        </Typography>
+        {esEdicion ? (
+          <Tabs value={pestana} onChange={(_, v: number) => setPestana(v)}>
+            <Tab label="Datos del cliente" />
+            <Tab label="Historial de cambios" />
+          </Tabs>
+        ) : (
+          <span />
+        )}
         <Button component={RouterLink} to="/clientes">
           Volver a clientes
         </Button>
@@ -232,138 +268,150 @@ export function ClienteFormPage() {
       {mensaje && <Alert severity="success">{mensaje}</Alert>}
       {error && <Alert severity="error">{error}</Alert>}
 
-      {esEdicion && (
-        <Tabs value={pestana} onChange={(_, v: number) => setPestana(v)}>
-          <Tab label="Datos del cliente" />
-          <Tab label="Historial de cambios" />
-        </Tabs>
-      )}
-
       {pestana === 0 && (
-        <Paper component="form" onSubmit={guardar} noValidate sx={{ p: 3 }}>
-          <Stack spacing={2.5}>
-            {duplicado && (
-              <Alert
-                severity="warning"
-                action={
-                  <Button color="inherit" size="small" onClick={() => navegar(`/clientes/${duplicado.clienteId}`)}>
-                    Abrir cliente existente
-                  </Button>
-                }
-              >
-                Este RUC ya está registrado: {duplicado.razonSocial}
+        <Paper component="form" onSubmit={guardar} noValidate sx={{ p: { xs: 2, md: 2.5 } }}>
+          {duplicado && (
+            <Alert
+              severity="warning"
+              sx={{ mb: 2 }}
+              action={
+                <Button color="inherit" size="small" onClick={() => navegar(`/clientes/${duplicado.clienteId}`)}>
+                  Abrir cliente existente
+                </Button>
+              }
+            >
+              Este RUC ya está registrado: {duplicado.razonSocial}
+            </Alert>
+          )}
+
+          <TituloSeccion>Información del importador</TituloSeccion>
+          <Box sx={DOS_COLUMNAS}>
+            {campo('razonSocial', 'Razón social', { required: true })}
+            {campo('ruc', 'RUC', {
+              required: true,
+              onBlur: verificarRuc,
+              helperText: errores.ruc || '11 dígitos',
+              slotProps: { htmlInput: { inputMode: 'numeric', maxLength: 11, pattern: '\\d*' } },
+            })}
+            <TextField
+              label="Tipo de contribuyente"
+              value={tipoContribuyente(form.ruc) || 'Se determina con el RUC'}
+              disabled
+              slotProps={{ htmlInput: { readOnly: true } }}
+            />
+            {campo('direccion', 'Dirección fiscal')}
+            {campo('correo', 'Correo de contacto', { type: 'email' })}
+            {campo('telefono', 'Teléfono', { slotProps: { htmlInput: { inputMode: 'tel' } } })}
+            {campo('contacto', 'Representante / contacto operativo')}
+          </Box>
+
+          <Box sx={{ mt: 3 }}>
+            <TituloSeccion>Carta poder / autorización vigente</TituloSeccion>
+            {cliente?.estadoCartaPoder === 'POR_VENCER' && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                La carta poder vence en 15 días o menos. Actualícela.
               </Alert>
             )}
+            {cliente?.estadoCartaPoder === 'VENCIDA' && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                La carta poder está vencida. No se podrán abrir despachos.
+              </Alert>
+            )}
+            <Table size="small" sx={{ mb: 2 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Documento</TableCell>
+                  <TableCell>Vigencia</TableCell>
+                  <TableCell>Estado</TableCell>
+                  <TableCell sx={{ width: 56 }} />
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {cartas.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell>{c.nombreArchivo}</TableCell>
+                    <TableCell>hasta {formatoFecha(c.fechaVencimiento)}</TableCell>
+                    <TableCell>
+                      <CartaPoderChip estado={c.estado} />
+                    </TableCell>
+                    <TableCell>
+                      <Tooltip title="Descargar PDF">
+                        <IconButton
+                          size="small"
+                          component="a"
+                          href={urlArchivoCartaPoder(clienteId!, c.id)}
+                          aria-label={`Descargar ${c.nombreArchivo}`}
+                        >
+                          <DownloadIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {cartas.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} sx={{ color: 'text.secondary', py: 2 }}>
+                      Sin carta poder registrada. Adjunte el PDF con su fecha de vigencia.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
 
-            <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 2fr' } }}>
-              <TextField
-                label="RUC"
-                value={form.ruc}
-                onChange={cambiar('ruc')}
-                onBlur={verificarRuc}
-                required
-                error={Boolean(errores.ruc)}
-                helperText={errores.ruc || '11 dígitos'}
-                slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 11, pattern: '\\d*' } }}
-              />
-              <TextField
-                label="Razón social"
-                value={form.razonSocial}
-                onChange={cambiar('razonSocial')}
-                required
-                error={Boolean(errores.razonSocial)}
-                helperText={errores.razonSocial}
-              />
-            </Box>
-            <TextField
-              label="Dirección"
-              value={form.direccion}
-              onChange={cambiar('direccion')}
-              error={Boolean(errores.direccion)}
-              helperText={errores.direccion}
-            />
-            <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' } }}>
-              <TextField
-                label="Correo"
-                type="email"
-                value={form.correo}
-                onChange={cambiar('correo')}
-                error={Boolean(errores.correo)}
-                helperText={errores.correo}
-              />
-              <TextField
-                label="Teléfono"
-                value={form.telefono}
-                onChange={cambiar('telefono')}
-                error={Boolean(errores.telefono)}
-                helperText={errores.telefono}
-                slotProps={{ htmlInput: { inputMode: 'tel' } }}
-              />
-              <TextField
-                label="Contacto"
-                value={form.contacto}
-                onChange={cambiar('contacto')}
-                error={Boolean(errores.contacto)}
-                helperText={errores.contacto}
-              />
-            </Box>
-
-            <Divider />
-
-            <Stack spacing={2}>
-              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 600 }}>
-                  Carta poder / autorización vigente
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2,
+                alignItems: 'start',
+                gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr' },
+              }}
+            >
+              <Box>
+                <Typography component="span" sx={{ display: 'block', fontSize: 12.5, fontWeight: 600, mb: 0.75 }}>
+                  {cartas.length ? 'Adjuntar nueva carta poder' : 'Adjuntar carta poder'}
                 </Typography>
-                {cliente && <CartaPoderChip estado={cliente.estadoCartaPoder} />}
-              </Stack>
-              {cliente?.estadoCartaPoder === 'POR_VENCER' && (
-                <Alert severity="warning">La carta poder vence en 15 días o menos. Actualícela.</Alert>
-              )}
-              {cliente?.estadoCartaPoder === 'VENCIDA' && (
-                <Alert severity="error">La carta poder está vencida. No se podrán abrir despachos.</Alert>
-              )}
-              <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr' } }}>
-                <Box>
-                  <Button component="label" variant="outlined" startIcon={<UploadFileIcon />}>
-                    Seleccionar PDF
-                    <input hidden type="file" accept="application/pdf" onChange={seleccionarArchivo} aria-label="Archivo de carta poder" />
-                  </Button>
-                  <Typography
-                    variant="body2"
-                    sx={{ mt: 0.5 }}
-                    color={erroresCarta.archivo ? 'error' : 'text.secondary'}
-                  >
-                    {erroresCarta.archivo || (carta.archivo ? carta.archivo.name : 'Solo PDF, máximo 10 MB')}
-                  </Typography>
-                </Box>
-                <TextField
-                  label="Fecha de emisión"
-                  type="date"
-                  value={carta.fechaEmision}
-                  onChange={(e) => setCarta((c) => ({ ...c, fechaEmision: e.target.value }))}
-                  error={Boolean(erroresCarta.fechaEmision)}
-                  helperText={erroresCarta.fechaEmision}
-                  slotProps={{ inputLabel: { shrink: true } }}
-                />
-                <TextField
-                  label="Fecha de vigencia"
-                  type="date"
-                  value={carta.fechaVencimiento}
-                  onChange={(e) => setCarta((c) => ({ ...c, fechaVencimiento: e.target.value }))}
-                  error={Boolean(erroresCarta.fechaVencimiento)}
-                  helperText={erroresCarta.fechaVencimiento}
-                  slotProps={{ inputLabel: { shrink: true } }}
-                />
+                <Button component="label" variant="outlined" startIcon={<UploadFileIcon />}>
+                  Seleccionar PDF
+                  <input
+                    hidden
+                    type="file"
+                    accept="application/pdf"
+                    onChange={seleccionarArchivo}
+                    aria-label="Archivo de carta poder"
+                  />
+                </Button>
+                <Typography
+                  variant="body2"
+                  sx={{ mt: 0.5, fontSize: 12.5 }}
+                  color={erroresCarta.archivo ? 'error' : 'text.secondary'}
+                >
+                  {erroresCarta.archivo || (carta.archivo ? carta.archivo.name : 'Solo PDF, máximo 10 MB')}
+                </Typography>
               </Box>
-            </Stack>
-
-            <Box>
-              <Button type="submit" variant="contained" disabled={guardando}>
-                {guardando ? 'Guardando…' : 'Guardar cliente'}
-              </Button>
+              <TextField
+                label="Fecha de emisión"
+                type="date"
+                value={carta.fechaEmision}
+                onChange={(e) => setCarta((c) => ({ ...c, fechaEmision: e.target.value }))}
+                error={Boolean(erroresCarta.fechaEmision)}
+                helperText={erroresCarta.fechaEmision}
+              />
+              <TextField
+                label="Fecha de vigencia"
+                type="date"
+                value={carta.fechaVencimiento}
+                onChange={(e) => setCarta((c) => ({ ...c, fechaVencimiento: e.target.value }))}
+                error={Boolean(erroresCarta.fechaVencimiento)}
+                helperText={erroresCarta.fechaVencimiento}
+              />
             </Box>
-          </Stack>
+          </Box>
+
+          <Box sx={{ mt: 3 }}>
+            <Button type="submit" variant="contained" disabled={guardando}>
+              {guardando ? 'Guardando…' : 'Guardar cliente'}
+            </Button>
+          </Box>
         </Paper>
       )}
 

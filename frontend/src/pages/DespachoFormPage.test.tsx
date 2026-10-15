@@ -50,7 +50,7 @@ describe('DespachoFormPage (HU-03)', () => {
 
   it('muestra el N° de Despacho en solo lectura hasta guardar', () => {
     renderizar()
-    expect(screen.getByLabelText('N° de Despacho')).toHaveValue('Se generará al guardar')
+    expect(screen.getByLabelText(/N° de Despacho/)).toHaveValue('Se generará al guardar')
   })
 
   it('CA3: con obligatorios vacíos resalta los campos e impide continuar', async () => {

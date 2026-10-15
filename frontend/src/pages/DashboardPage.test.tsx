@@ -24,8 +24,11 @@ function fila(id: number, numero: string, eta: string): DespachoTablero {
     aduanaCodigo: '118',
     aduana: 'Marítima del Callao',
     numeroBl: `HBL-${id}`,
+    contenedor: null,
+    totalContenedores: 0,
     fechaEta: eta,
     estado: 'APERTURA',
+    canalControl: null,
     diasAlmacenaje: 30,
     alertaAlmacenaje: false,
     estadoCartaPoder: 'VIGENTE',
@@ -72,11 +75,23 @@ describe('DashboardPage (HU-02)', () => {
 
     await screen.findByText('DESP-2026-0002')
     const filas = screen.getAllByRole('row').slice(1)
-    expect(filas.map((f) => within(f).getAllByRole('cell')[4].textContent)).toEqual([
+    expect(filas.map((f) => within(f).getAllByRole('cell')[6].textContent)).toEqual([
       '15/10/2026',
       '20/10/2026',
       '25/10/2026',
     ])
+  })
+
+  it('muestra el contenedor del BL y el canal de control como en el prototipo', async () => {
+    vi.mocked(dashboardApi.listarDespachosTablero).mockResolvedValue([
+      { ...fila(4, 'DESP-2026-0004', '2026-10-15'), contenedor: 'MSCU7841205', totalContenedores: 2, canalControl: 'ROJO' },
+    ])
+    renderEnRuta(<DashboardPage />, { ruta: '/dashboard', patron: '/dashboard' })
+
+    const celdas = within((await screen.findByText('DESP-2026-0004')).closest('tr')!).getAllByRole('cell')
+    expect(celdas[2]).toHaveTextContent('MSCU7841205 (+1)BL HBL-4')
+    expect(celdas[4]).toHaveTextContent('Rojo')
+    expect(celdas[5]).toHaveTextContent('Apertura')
   })
 
   it('CA3: el clic en una fila abre el detalle y guarda los filtros para volver', async () => {

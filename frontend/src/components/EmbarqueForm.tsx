@@ -12,28 +12,33 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableRow,
   TextField,
   Tooltip,
-  Typography,
 } from '@mui/material'
 import { useEffect, useState, type FormEvent } from 'react'
 
 import { guardarEmbarque, obtenerEmbarque } from '../api/despachos'
 import { leerError, mensajeDeError } from '../api/http'
 import type { Contenedor, Embarque, EmbarqueRequest } from '../types'
-import { formatoFecha } from '../utils/formato'
+import { diasEntre, formatoFecha, hoyIso, sumarDias } from '../utils/formato'
+import { TIPOS_CONTENEDOR } from '../utils/opciones'
 import { validarContenedor } from '../utils/validaciones'
+import { DOS_COLUMNAS, TituloSeccion } from './Seccion'
 
-export const TIPOS_CONTENEDOR = ['20GP', '40GP', '40HC']
+/** Valor por defecto de DIAS_ALMACENAJE (parametro_sistema) hasta que el API devuelva el plazo real. */
+const DIAS_ALMACENAJE_POR_DEFECTO = 30
+const DIAS_ALERTA_ALMACENAJE = 3
 
-const FILA_VACIA: Contenedor = { numero: '', tipo: '', precinto: '' }
+const FILA_VACIA: Contenedor = { numero: '', tipo: '', precinto: '', pesoBrutoKg: '' }
 const VACIO: EmbarqueRequest = {
   numeroBl: '',
   tipoBl: '',
   naviera: '',
   buque: '',
+  numeroViaje: '',
   puertoEmbarque: '',
   puertoDescarga: '',
   fechaEmbarque: '',
@@ -57,11 +62,17 @@ function desdeEmbarque(e: Embarque): EmbarqueRequest {
     tipoBl: e.tipoBl,
     naviera: e.naviera,
     buque: e.buque ?? '',
+    numeroViaje: e.numeroViaje ?? '',
     puertoEmbarque: e.puertoEmbarque,
     puertoDescarga: e.puertoDescarga ?? '',
     fechaEmbarque: e.fechaEmbarque ?? '',
     fechaEta: e.fechaEta,
-    contenedores: e.contenedores.map((c) => ({ numero: c.numero, tipo: c.tipo ?? '', precinto: c.precinto ?? '' })),
+    contenedores: e.contenedores.map((c) => ({
+      numero: c.numero,
+      tipo: c.tipo ?? '',
+      precinto: c.precinto ?? '',
+      pesoBrutoKg: c.pesoBrutoKg === null ? '' : String(c.pesoBrutoKg),
+    })),
   }
 }
 
@@ -72,7 +83,7 @@ export function validarEmbarque(form: EmbarqueRequest): Record<string, string> {
     if (!String(form[campo]).trim()) errores[campo] = mensaje
   }
   if (form.fechaEmbarque && form.fechaEta && form.fechaEmbarque > form.fechaEta) {
-    errores.fechaEmbarque = 'La fecha de embarque debe ser anterior o igual a la ETA'
+    errores.fechaEmbarque = 'La fecha de zarpe debe ser anterior o igual a la ETA'
   }
   if (form.contenedores.length === 0) errores.contenedores = 'Registre al menos un contenedor'
   const vistos = new Set<string>()
@@ -82,8 +93,25 @@ export function validarEmbarque(form: EmbarqueRequest): Record<string, string> {
     if (problema) errores[`contenedores[${i}].numero`] = problema
     else if (vistos.has(numero)) errores[`contenedores[${i}].numero`] = 'Contenedor repetido en este embarque'
     vistos.add(numero)
+    const peso = c.pesoBrutoKg.trim().replace(',', '.')
+    if (peso && !(/^\d+(\.\d{1,2})?$/.test(peso) && Number(peso) > 0)) {
+      errores[`contenedores[${i}].pesoBrutoKg`] = 'Peso no válido'
+    }
   })
   return errores
+}
+
+/**
+ * Plazo de almacenaje que se muestra mientras se edita la ETA (CA3): fecha límite = ETA +
+ * días de almacenaje. Los días salen del último guardado (fecha límite − ETA) y, para un
+ * embarque nuevo, del valor por defecto; al guardar, el API devuelve el plazo oficial.
+ */
+export function plazoAlmacenaje(fechaEta: string, embarque: Embarque | null, hoy = hoyIso()) {
+  if (!fechaEta) return null
+  const dias = embarque ? diasEntre(embarque.fechaEta, embarque.fechaLimiteAlmacenaje) : DIAS_ALMACENAJE_POR_DEFECTO
+  const fechaLimite = sumarDias(fechaEta, dias)
+  const diasRestantes = diasEntre(hoy, fechaLimite)
+  return { fechaLimite, diasRestantes, alerta: diasRestantes <= DIAS_ALERTA_ALMACENAJE }
 }
 
 /** HU-05 · T-05.4: embarque/BL del despacho con su tabla de contenedores. */
@@ -161,6 +189,9 @@ export function EmbarqueForm({ despachoId }: { despachoId: number }) {
     )
   }
 
+  const plazo = plazoAlmacenaje(form.fechaEta, embarque)
+  const etaCambiada = embarque !== null && form.fechaEta !== '' && form.fechaEta !== embarque.fechaEta
+
   const texto = (campo: CampoTexto, label: string, extra: { required?: boolean; type?: string } = {}) => (
     <TextField
       label={label}
@@ -170,99 +201,94 @@ export function EmbarqueForm({ despachoId }: { despachoId: number }) {
       type={extra.type}
       error={Boolean(errores[campo])}
       helperText={errores[campo]}
-      slotProps={extra.type === 'date' ? { inputLabel: { shrink: true } } : undefined}
     />
   )
 
   return (
-    <Paper component="form" onSubmit={guardar} noValidate sx={{ p: 3 }}>
-      <Stack spacing={2.5}>
+    <Paper component="form" onSubmit={guardar} noValidate sx={{ p: { xs: 2, md: 2.5 } }}>
+      <Stack spacing={2} sx={{ mb: mensaje || error ? 2 : 0 }}>
         {mensaje && <Alert severity={embarque?.etaModificada ? 'info' : 'success'}>{mensaje}</Alert>}
         {error && <Alert severity="error">{error}</Alert>}
-        {embarque?.alertaAlmacenaje && (
-          <Alert severity="warning" variant="filled" sx={{ bgcolor: 'warning.main' }}>
-            {embarque.diasRestantes !== null && embarque.diasRestantes < 0
-              ? `El plazo de almacenaje venció hace ${Math.abs(embarque.diasRestantes)} días.`
-              : `Quedan ${embarque.diasRestantes} días para el vencimiento del plazo de almacenaje.`}
-          </Alert>
-        )}
+      </Stack>
 
-        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' } }}>
-          {texto('numeroBl', 'N° de BL / House BL', { required: true })}
-          <TextField
-            select
-            label="Tipo de BL"
-            value={form.tipoBl}
-            onChange={(e) => cambiar('tipoBl', e.target.value)}
-            required
-            error={Boolean(errores.tipoBl)}
-            helperText={errores.tipoBl}
-          >
-            <MenuItem value="MASTER">Master BL</MenuItem>
-            <MenuItem value="HOUSE">House BL</MenuItem>
-          </TextField>
-        </Box>
-        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
-          {texto('naviera', 'Naviera', { required: true })}
-          {texto('buque', 'Buque')}
-          {texto('puertoEmbarque', 'Puerto de embarque', { required: true })}
-          {texto('puertoDescarga', 'Puerto de descarga')}
-          {texto('fechaEmbarque', 'Fecha de embarque', { type: 'date' })}
-          {texto('fechaEta', 'Fecha ETA (arribo estimado)', { required: true, type: 'date' })}
-        </Box>
+      <TituloSeccion>Datos del conocimiento de embarque (BL)</TituloSeccion>
+      <Box sx={DOS_COLUMNAS}>
+        {texto('numeroBl', 'N° de BL / House BL', { required: true })}
+        {texto('naviera', 'Naviera / Agente marítimo', { required: true })}
+        {texto('buque', 'Nombre del buque')}
+        {texto('numeroViaje', 'N° de viaje')}
+        {texto('puertoEmbarque', 'Puerto de embarque', { required: true })}
+        {texto('puertoDescarga', 'Puerto de descarga')}
+        {texto('fechaEmbarque', 'Fecha ETD (zarpe)', { type: 'date' })}
+        {texto('fechaEta', 'Fecha ETA (arribo estimado)', { required: true, type: 'date' })}
+        <TextField
+          select
+          label="Tipo de BL"
+          value={form.tipoBl}
+          onChange={(e) => cambiar('tipoBl', e.target.value)}
+          required
+          error={Boolean(errores.tipoBl)}
+          helperText={errores.tipoBl}
+        >
+          <MenuItem value="MASTER">Master BL</MenuItem>
+          <MenuItem value="HOUSE">House BL</MenuItem>
+        </TextField>
+        <TextField
+          label="Plazo de almacenaje (fecha límite)"
+          value={
+            plazo
+              ? `${formatoFecha(plazo.fechaLimite)} · ${plazo.diasRestantes < 0 ? `vencido hace ${Math.abs(plazo.diasRestantes)} días` : `${plazo.diasRestantes} días restantes`}`
+              : 'Se calcula con la fecha ETA'
+          }
+          disabled
+          slotProps={{ htmlInput: { readOnly: true, 'aria-live': 'polite' } }}
+          helperText={etaCambiada ? 'Recalculado con la nueva ETA. Guarde para confirmarlo.' : undefined}
+        />
+      </Box>
 
-        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
-          <TextField
-            label="Fecha límite de almacenaje"
-            value={embarque ? formatoFecha(embarque.fechaLimiteAlmacenaje) : 'Se calculará al guardar'}
-            disabled
-            slotProps={{ htmlInput: { readOnly: true } }}
-          />
-          <TextField
-            label="Días restantes"
-            value={embarque?.diasRestantes ?? '—'}
-            disabled
-            color={embarque?.alertaAlmacenaje ? 'warning' : undefined}
-            focused={embarque?.alertaAlmacenaje || undefined}
-            slotProps={{ htmlInput: { readOnly: true } }}
-          />
-        </Box>
+      {plazo?.alerta && (
+        <Alert severity="warning" sx={{ mt: 2 }}>
+          {plazo.diasRestantes < 0
+            ? `El plazo de almacenaje venció hace ${Math.abs(plazo.diasRestantes)} días.`
+            : `Quedan ${plazo.diasRestantes} días para el vencimiento del plazo de almacenaje.`}
+        </Alert>
+      )}
 
-        <Box>
-          <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-            <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 600 }}>
-              Contenedores asociados
-            </Typography>
+      <Box sx={{ mt: 3 }}>
+        <TituloSeccion
+          accion={
             <Button
+              size="small"
               startIcon={<AddIcon />}
               onClick={() => setForm((f) => ({ ...f, contenedores: [...f.contenedores, { ...FILA_VACIA }] }))}
             >
               Agregar contenedor
             </Button>
-          </Stack>
-          {errores.contenedores && (
-            <Alert severity="error" sx={{ mb: 1 }}>
-              {errores.contenedores}
-            </Alert>
-          )}
-          <Table size="small">
+          }
+        >
+          Contenedores asociados
+        </TituloSeccion>
+        {errores.contenedores && (
+          <Alert severity="error" sx={{ mb: 1 }}>
+            {errores.contenedores}
+          </Alert>
+        )}
+        <TableContainer>
+          <Table size="small" sx={{ minWidth: 640 }}>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ width: 40 }}>#</TableCell>
-                <TableCell>N° de contenedor</TableCell>
-                <TableCell sx={{ width: 140 }}>Tipo</TableCell>
-                <TableCell>Precinto</TableCell>
-                <TableCell sx={{ width: 56 }} />
+                <TableCell>N° Contenedor</TableCell>
+                <TableCell sx={{ width: 130 }}>Tipo</TableCell>
+                <TableCell sx={{ width: 150 }}>Peso bruto (kg)</TableCell>
+                <TableCell>Precintos</TableCell>
+                <TableCell sx={{ width: 48 }} />
               </TableRow>
             </TableHead>
             <TableBody>
               {form.contenedores.map((c, i) => (
-                <TableRow key={i}>
-                  <TableCell>{i + 1}</TableCell>
+                <TableRow key={i} sx={{ verticalAlign: 'top' }}>
                   <TableCell>
                     <TextField
-                      size="small"
-                      fullWidth
                       value={c.numero}
                       placeholder="CSQU3054383"
                       onChange={(e) => cambiarContenedor(i, 'numero', e.target.value)}
@@ -274,24 +300,33 @@ export function EmbarqueForm({ despachoId }: { despachoId: number }) {
                   <TableCell>
                     <TextField
                       select
-                      size="small"
-                      fullWidth
                       value={c.tipo}
                       onChange={(e) => cambiarContenedor(i, 'tipo', e.target.value)}
                       slotProps={{ htmlInput: { 'aria-label': `Tipo del contenedor ${i + 1}` } }}
                     >
                       {TIPOS_CONTENEDOR.map((t) => (
-                        <MenuItem key={t} value={t}>
-                          {t}
+                        <MenuItem key={t.valor} value={t.valor}>
+                          {t.texto}
                         </MenuItem>
                       ))}
                     </TextField>
                   </TableCell>
                   <TableCell>
                     <TextField
-                      size="small"
-                      fullWidth
+                      value={c.pesoBrutoKg}
+                      placeholder="18540"
+                      onChange={(e) => cambiarContenedor(i, 'pesoBrutoKg', e.target.value)}
+                      error={Boolean(errores[`contenedores[${i}].pesoBrutoKg`])}
+                      helperText={errores[`contenedores[${i}].pesoBrutoKg`]}
+                      slotProps={{
+                        htmlInput: { inputMode: 'decimal', 'aria-label': `Peso bruto del contenedor ${i + 1}` },
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <TextField
                       value={c.precinto}
+                      placeholder="SL-88213"
                       onChange={(e) => cambiarContenedor(i, 'precinto', e.target.value)}
                       slotProps={{ htmlInput: { maxLength: 30, 'aria-label': `Precinto del contenedor ${i + 1}` } }}
                     />
@@ -299,7 +334,7 @@ export function EmbarqueForm({ despachoId }: { despachoId: number }) {
                   <TableCell>
                     <Tooltip title="Quitar contenedor">
                       <IconButton aria-label={`Quitar contenedor ${i + 1}`} onClick={() => quitarContenedor(i)}>
-                        <DeleteIcon />
+                        <DeleteIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                   </TableCell>
@@ -307,14 +342,14 @@ export function EmbarqueForm({ despachoId }: { despachoId: number }) {
               ))}
             </TableBody>
           </Table>
-        </Box>
+        </TableContainer>
+      </Box>
 
-        <Box>
-          <Button type="submit" variant="contained" disabled={guardando}>
-            {guardando ? 'Guardando…' : 'Guardar información de embarque'}
-          </Button>
-        </Box>
-      </Stack>
+      <Box sx={{ mt: 3 }}>
+        <Button type="submit" variant="contained" disabled={guardando}>
+          {guardando ? 'Guardando…' : 'Guardar información de embarque'}
+        </Button>
+      </Box>
     </Paper>
   )
 }

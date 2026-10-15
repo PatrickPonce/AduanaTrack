@@ -1,12 +1,15 @@
-import { Alert, Box, Button, Checkbox, FormControlLabel, Paper, Stack, TextField, Typography } from '@mui/material'
-import { useState, type FormEvent } from 'react'
+import { Alert, Box, Button, Checkbox, FormControlLabel, Link, Paper, Stack, TextField, Typography } from '@mui/material'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 
 import { leerError } from '../api/http'
 import { useAuth } from '../auth/AuthContext'
+import { COLORES } from '../theme'
 
 export const MENSAJE_CREDENCIALES = 'Usuario o contraseña incorrectos'
 export const MENSAJE_BLOQUEO = 'Cuenta bloqueada temporalmente. Intente nuevamente en 15 minutos.'
+const MENSAJE_OLVIDO = 'Solicite el restablecimiento de su contraseña al administrador del sistema.'
+const VERSION = 'v0.1.0'
 
 /** HU-01 · T-01.3: inicio de sesión con «Recordarme» (sesión de 8 h). */
 export function LoginPage() {
@@ -18,13 +21,19 @@ export function LoginPage() {
   const [recordarme, setRecordarme] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [aviso, setAviso] = useState<string | null>(null)
   const [intentado, setIntentado] = useState(false)
+
+  useEffect(() => {
+    document.title = 'Iniciar sesión · AduanaTrack'
+  }, [])
 
   if (sesion) return <Navigate to="/dashboard" replace />
 
   async function enviar(evento: FormEvent) {
     evento.preventDefault()
     setIntentado(true)
+    setAviso(null)
     if (!usuario.trim() || !password) return
     setEnviando(true)
     setError(null)
@@ -44,14 +53,45 @@ export function LoginPage() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', bgcolor: 'background.default', p: 2 }}>
-      <Paper component="form" onSubmit={enviar} noValidate sx={{ p: 4, width: '100%', maxWidth: 420 }}>
-        <Stack spacing={2.5}>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'grid',
+        placeItems: 'center',
+        p: 2,
+        background: `linear-gradient(160deg, ${COLORES.marino} 0%, #123a63 100%)`,
+      }}
+    >
+      <Paper
+        component="form"
+        onSubmit={enviar}
+        noValidate
+        sx={{ p: { xs: 3, sm: 3.5 }, width: '100%', maxWidth: 380, border: 0, boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}
+      >
+        <Stack spacing={2.25}>
+          <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
+            <Box
+              aria-hidden
+              sx={{
+                width: 32,
+                height: 32,
+                borderRadius: 1.5,
+                bgcolor: COLORES.verde,
+                display: 'grid',
+                placeItems: 'center',
+                fontSize: 17,
+              }}
+            >
+              🚢
+            </Box>
+            <Typography sx={{ fontWeight: 800, fontSize: 17, letterSpacing: 0.3 }}>ADUANATRACK</Typography>
+          </Stack>
+
           <Box>
-            <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>
-              AduanaTrack
+            <Typography component="h1" sx={{ fontSize: 19, fontWeight: 700 }}>
+              Iniciar sesión
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12.5 }}>
               Sistema de Seguimiento Aduanero de Importaciones Marítimas
             </Typography>
           </Box>
@@ -61,6 +101,7 @@ export function LoginPage() {
               {error}
             </Alert>
           )}
+          {aviso && <Alert severity="info">{aviso}</Alert>}
 
           <TextField
             label="Usuario / Correo corporativo"
@@ -82,13 +123,33 @@ export function LoginPage() {
             error={intentado && !password}
             helperText={intentado && !password ? 'Ingrese su contraseña' : undefined}
           />
-          <FormControlLabel
-            control={<Checkbox checked={recordarme} onChange={(e) => setRecordarme(e.target.checked)} />}
-            label="Recordarme"
-          />
+          <Stack
+            direction="row"
+            sx={{ justifyContent: 'space-between', alignItems: 'center', mt: '6px !important', gap: 1 }}
+          >
+            <FormControlLabel
+              control={
+                <Checkbox size="small" checked={recordarme} onChange={(e) => setRecordarme(e.target.checked)} />
+              }
+              label="Recordarme"
+              slotProps={{ typography: { sx: { fontSize: 13, fontWeight: 600, color: '#475569' } } }}
+            />
+            <Link
+              component="button"
+              type="button"
+              underline="hover"
+              onClick={() => setAviso(MENSAJE_OLVIDO)}
+              sx={{ fontSize: 12.5 }}
+            >
+              ¿Olvidó su contraseña?
+            </Link>
+          </Stack>
           <Button type="submit" variant="contained" size="large" disabled={enviando}>
             {enviando ? 'Ingresando…' : 'Ingresar al sistema'}
           </Button>
+          <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+            Acceso restringido · Agencia de Aduanas · {VERSION}
+          </Typography>
         </Stack>
       </Paper>
     </Box>

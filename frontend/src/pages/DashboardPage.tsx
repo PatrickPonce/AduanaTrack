@@ -1,11 +1,8 @@
-import FileDownloadIcon from '@mui/icons-material/FileDownload'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
   MenuItem,
   Paper,
   Stack,
@@ -27,16 +24,21 @@ import { obtenerCliente } from '../api/clientes'
 import { exportarExcel, listarDespachosTablero, obtenerIndicadores } from '../api/dashboard'
 import { mensajeDeError } from '../api/http'
 import { ClienteAutocomplete } from '../components/ClienteAutocomplete'
-import { EstadoDespachoChip } from '../components/EstadoDespachoChip'
+import { useEncabezado } from '../components/Encabezado'
+import { textoEstado } from '../components/EstadoDespachoChip'
+import { CanalChip } from '../components/EtiquetaColor'
+import { TituloSeccion } from '../components/Seccion'
 import type { Aduana, ClienteResumen, DespachoTablero, FiltrosTablero, Indicadores } from '../types'
 import { formatoFecha } from '../utils/formato'
 
 const TARJETAS: { clave: keyof Indicadores; titulo: string; color: string }[] = [
-  { clave: 'despachosActivos', titulo: 'Despachos activos', color: 'primary.main' },
+  { clave: 'despachosActivos', titulo: 'Despachos activos', color: 'text.primary' },
   { clave: 'enCanalNaranjaRojo', titulo: 'En canal naranja/rojo', color: 'warning.main' },
   { clave: 'conLevante', titulo: 'Con levante registrado', color: 'success.main' },
   { clave: 'conAlertasCriticas', titulo: 'Con alertas críticas', color: 'error.main' },
 ]
+
+const COLUMNAS = 7
 
 function leerFiltros(params: URLSearchParams): FiltrosTablero {
   const filtros: FiltrosTablero = {}
@@ -49,6 +51,7 @@ function leerFiltros(params: URLSearchParams): FiltrosTablero {
 
 /** HU-02 · T-02.3 / T-02.4: panel de seguimiento con indicadores, filtros y tabla de despachos. */
 export function DashboardPage() {
+  useEncabezado('Dashboard', 'Panel de Seguimiento de Despachos')
   const navegar = useNavigate()
   const ubicacion = useLocation()
   const [params, setParams] = useSearchParams()
@@ -135,32 +138,47 @@ export function DashboardPage() {
   }
 
   return (
-    <Stack spacing={3}>
-      <Typography variant="h5" component="h1">
-        Panel de seguimiento de despachos
-      </Typography>
-
-      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' } }}>
+    <Stack spacing={2.5}>
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr 1fr', lg: 'repeat(4, 1fr)' } }}>
         {TARJETAS.map((t) => (
-          <Card key={t.clave} sx={{ borderTop: 4, borderColor: t.color }}>
-            <CardContent>
-              <Typography variant="body2" color="text.secondary">
-                {t.titulo}
-              </Typography>
-              <Typography variant="h4" component="p" sx={{ fontWeight: 700 }} aria-label={t.titulo}>
-                {indicadores ? indicadores[t.clave] : '—'}
-              </Typography>
-            </CardContent>
-          </Card>
+          <Paper key={t.clave} sx={{ px: 2.5, py: 2 }}>
+            <Typography
+              component="p"
+              sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.15, color: t.color }}
+              aria-label={t.titulo}
+            >
+              {indicadores ? indicadores[t.clave] : '—'}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: 13 }}>
+              {t.titulo}
+            </Typography>
+          </Paper>
         ))}
       </Box>
 
-      <Paper sx={{ p: 2 }}>
-        <Box sx={{ display: 'grid', gap: 2, alignItems: 'start', gridTemplateColumns: { xs: '1fr', md: '1fr 2fr auto' } }}>
+      <Paper sx={{ p: { xs: 2, md: 2.5 } }}>
+        <TituloSeccion
+          accion={
+            <Button variant="outlined" onClick={exportar} disabled={exportando || !despachos?.length}>
+              {exportando ? 'Exportando…' : 'Exportar a Excel'}
+            </Button>
+          }
+        >
+          Despachos recientes
+        </TituloSeccion>
+
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 2,
+            alignItems: 'end',
+            mb: 2,
+            gridTemplateColumns: { xs: '1fr', md: '1fr 2fr auto' },
+          }}
+        >
           <TextField
             select
             label="Aduana"
-            size="small"
             value={aduanaSel}
             onChange={(e) => setAduanaSel(e.target.value === '' ? '' : Number(e.target.value))}
           >
@@ -171,7 +189,7 @@ export function DashboardPage() {
               </MenuItem>
             ))}
           </TextField>
-          <ClienteAutocomplete label="Cliente" value={clienteSel} onChange={setClienteSel} size="small" />
+          <ClienteAutocomplete label="Cliente" value={clienteSel} onChange={setClienteSel} />
           <Stack direction="row" spacing={1}>
             <Button variant="contained" onClick={aplicar}>
               Aplicar filtro
@@ -179,38 +197,23 @@ export function DashboardPage() {
             <Button onClick={limpiar}>Limpiar</Button>
           </Stack>
         </Box>
-      </Paper>
 
-      <Box>
-        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <Typography variant="h6" component="h2">
-            Despachos recientes
-          </Typography>
-          <Button
-            variant="outlined"
-            startIcon={<FileDownloadIcon />}
-            onClick={exportar}
-            disabled={exportando || !despachos?.length}
-          >
-            Exportar a Excel
-          </Button>
-        </Stack>
         {error && (
-          <Alert severity="error" sx={{ mb: 1 }}>
+          <Alert severity="error" sx={{ mb: 1.5 }}>
             {error}
           </Alert>
         )}
-        <TableContainer component={Paper}>
-          <Table size="small">
+        <TableContainer>
+          <Table size="small" sx={{ '& td, & th': { py: 1.25 } }}>
             <TableHead>
               <TableRow>
-                <TableCell>N° despacho</TableCell>
+                <TableCell>N° Despacho</TableCell>
                 <TableCell>Cliente</TableCell>
+                <TableCell>BL / Contenedor</TableCell>
                 <TableCell>Aduana</TableCell>
-                <TableCell>BL</TableCell>
-                <TableCell>ETA</TableCell>
+                <TableCell>Canal</TableCell>
                 <TableCell>Estado</TableCell>
-                <TableCell align="right">Días de almacenaje</TableCell>
+                <TableCell>ETA</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -223,36 +226,49 @@ export function DashboardPage() {
                   onKeyDown={(e) => e.key === 'Enter' && abrir(d.id)}
                   sx={{ cursor: 'pointer', '&:focus-visible': { outline: 2, outlineColor: 'primary.main' } }}
                 >
-                  <TableCell sx={{ fontWeight: 600 }}>{d.numero}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{d.numero}</TableCell>
                   <TableCell>{d.cliente}</TableCell>
-                  <TableCell>{d.aduana ? `${d.aduanaCodigo} - ${d.aduana}` : '—'}</TableCell>
-                  <TableCell>{d.numeroBl ?? '—'}</TableCell>
-                  <TableCell>{formatoFecha(d.fechaEta)}</TableCell>
                   <TableCell>
-                    <EstadoDespachoChip estado={d.estado} />
+                    {d.contenedor ?? d.numeroBl ?? '—'}
+                    {d.totalContenedores > 1 && (
+                      <Typography component="span" variant="caption" color="text.secondary">
+                        {' '}
+                        (+{d.totalContenedores - 1})
+                      </Typography>
+                    )}
+                    {d.contenedor && d.numeroBl && (
+                      <Typography variant="caption" color="text.secondary" component="div">
+                        BL {d.numeroBl}
+                      </Typography>
+                    )}
                   </TableCell>
-                  <TableCell align="right">
-                    <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end', alignItems: 'center' }}>
+                  <TableCell>{d.aduana ?? '—'}</TableCell>
+                  <TableCell>
+                    <CanalChip canal={d.canalControl} />
+                  </TableCell>
+                  <TableCell>
+                    <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+                      <span>{textoEstado(d.estado)}</span>
                       {d.alertaCritica && (
                         <Tooltip title={motivoAlerta(d)}>
                           <WarningAmberIcon color="warning" fontSize="small" aria-label={motivoAlerta(d)} />
                         </Tooltip>
                       )}
-                      <span>{d.diasAlmacenaje ?? '—'}</span>
                     </Stack>
                   </TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatoFecha(d.fechaEta)}</TableCell>
                 </TableRow>
               ))}
               {despachos?.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                  <TableCell colSpan={COLUMNAS} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                     No hay despachos que coincidan con los filtros.
                   </TableCell>
                 </TableRow>
               )}
               {despachos === null && (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                  <TableCell colSpan={COLUMNAS} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                     Cargando…
                   </TableCell>
                 </TableRow>
@@ -260,14 +276,20 @@ export function DashboardPage() {
             </TableBody>
           </Table>
         </TableContainer>
-      </Box>
+      </Paper>
     </Stack>
   )
 }
 
 function motivoAlerta(d: DespachoTablero): string {
   const motivos: string[] = []
-  if (d.alertaAlmacenaje) motivos.push('plazo de almacenaje por vencer')
+  if (d.alertaAlmacenaje) {
+    motivos.push(
+      d.diasAlmacenaje !== null && d.diasAlmacenaje < 0
+        ? `plazo de almacenaje vencido hace ${Math.abs(d.diasAlmacenaje)} días`
+        : `quedan ${d.diasAlmacenaje} días de almacenaje`,
+    )
+  }
   if (d.estadoCartaPoder === 'VENCIDA') motivos.push('carta poder vencida')
   if (d.estadoCartaPoder === 'POR_VENCER') motivos.push('carta poder por vencer')
   return `Alerta crítica: ${motivos.join(', ')}`

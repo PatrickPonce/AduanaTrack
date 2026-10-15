@@ -1,23 +1,17 @@
-import {
-  Alert,
-  Box,
-  Button,
-  CircularProgress,
-  Link,
-  MenuItem,
-  Paper,
-  Stack,
-  TextField,
-  Typography,
-} from '@mui/material'
+import { Alert, Box, Button, CircularProgress, Link, MenuItem, Paper, Stack, TextField } from '@mui/material'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link as RouterLink, useNavigate, useParams } from 'react-router'
 
 import { listarAduanas, listarRegimenes } from '../api/catalogos'
 import { actualizarDespacho, crearDespacho, obtenerDespacho } from '../api/despachos'
 import { leerError, mensajeDeError } from '../api/http'
+import { useAuth } from '../auth/AuthContext'
 import { ClienteAutocomplete } from '../components/ClienteAutocomplete'
-import type { Aduana, ClienteResumen, Regimen } from '../types'
+import { useEncabezado } from '../components/Encabezado'
+import { DOS_COLUMNAS, TituloSeccion } from '../components/Seccion'
+import type { Aduana, ClienteResumen, ModalidadDespacho, Regimen, TipoOperacion } from '../types'
+import { formatoFecha, hoyIso } from '../utils/formato'
+import { MODALIDADES_DESPACHO, TIPOS_OPERACION } from '../utils/opciones'
 
 type Campo = 'clienteId' | 'regimenId' | 'aduanaId' | 'descripcionMercancia'
 
@@ -32,13 +26,18 @@ export function DespachoFormPage() {
   const { id } = useParams()
   const despachoId = id ? Number(id) : null
   const navegar = useNavigate()
+  const { usuario } = useAuth()
 
   const [cliente, setCliente] = useState<ClienteResumen | null>(null)
+  const [tipoOperacion, setTipoOperacion] = useState<TipoOperacion | ''>('IMPORTACION_DEFINITIVA')
   const [regimenId, setRegimenId] = useState<number | ''>('')
   const [aduanaId, setAduanaId] = useState<number | ''>('')
+  const [modalidad, setModalidad] = useState<ModalidadDespacho | ''>('')
   const [referencia, setReferencia] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [numero, setNumero] = useState<string | null>(null)
+  const [fechaApertura, setFechaApertura] = useState(hoyIso())
+  const [agente, setAgente] = useState<string | null>(null)
 
   const [regimenes, setRegimenes] = useState<Regimen[]>([])
   const [aduanas, setAduanas] = useState<Aduana[]>([])
@@ -48,6 +47,11 @@ export function DespachoFormPage() {
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(despachoId !== null)
   const [guardando, setGuardando] = useState(false)
+
+  useEncabezado(
+    despachoId !== null ? `Despachos / ${numero ?? 'Borrador'}` : 'Despachos / Nuevo',
+    despachoId !== null ? 'Completar Despacho de Importación' : 'Nuevo Despacho de Importación',
+  )
 
   const refs = {
     clienteId: useRef<HTMLDivElement>(null),
@@ -74,11 +78,15 @@ export function DespachoFormPage() {
           return
         }
         setCliente({ ...d.cliente })
+        setTipoOperacion(d.tipoOperacion ?? '')
         setRegimenId(d.regimen?.id ?? '')
         setAduanaId(d.aduana?.id ?? '')
+        setModalidad(d.modalidadDespacho ?? '')
         setReferencia(d.referenciaCliente ?? '')
         setDescripcion(d.descripcionMercancia ?? '')
         setNumero(d.numero)
+        setFechaApertura(d.creadoEn.slice(0, 10))
+        setAgente(d.agente)
       })
       .catch((e) => setError(mensajeDeError(e, 'No se pudo cargar el despacho.')))
       .finally(() => setCargando(false))
@@ -117,6 +125,8 @@ export function DespachoFormPage() {
       aduanaId: aduanaId === '' ? null : aduanaId,
       referenciaCliente: referencia,
       descripcionMercancia: descripcion,
+      tipoOperacion: tipoOperacion === '' ? null : tipoOperacion,
+      modalidadDespacho: modalidad === '' ? null : modalidad,
       borrador,
     }
     try {
@@ -154,10 +164,6 @@ export function DespachoFormPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography variant="h5" component="h1">
-        {despachoId !== null ? 'Completar despacho' : 'Nuevo despacho de importación'}
-      </Typography>
-
       {errorCatalogos && <Alert severity="warning">{errorCatalogos}</Alert>}
       {error && <Alert severity="error">{error}</Alert>}
       {restriccion && (
@@ -171,14 +177,17 @@ export function DespachoFormPage() {
         </Alert>
       )}
 
-      <Paper component="form" onSubmit={enviar} noValidate sx={{ p: 3 }}>
-        <Stack spacing={2.5}>
-          <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 600 }}>
-            Datos generales del despacho
-          </Typography>
+      <Paper component="form" onSubmit={enviar} noValidate sx={{ p: { xs: 2, md: 2.5 } }}>
+        <TituloSeccion>Datos generales del despacho</TituloSeccion>
 
-          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' } }}>
-            <Box ref={refs.clienteId}>
+        <Box sx={DOS_COLUMNAS}>
+          <TextField
+            label="N° de Despacho (autogenerado)"
+            value={numero ?? 'Se generará al guardar'}
+            slotProps={{ htmlInput: { readOnly: true } }}
+            disabled
+          />
+          <Box ref={refs.clienteId}>
             <ClienteAutocomplete
               label="Cliente / Importador"
               value={cliente}
@@ -190,55 +199,84 @@ export function DespachoFormPage() {
               required
               error={errores.clienteId}
             />
-            </Box>
-            <TextField
-              label="N° de Despacho"
-              value={numero ?? 'Se generará al guardar'}
-              slotProps={{ htmlInput: { readOnly: true } }}
-              disabled
-            />
           </Box>
 
-          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
-            <TextField
-              select
-              label="Régimen aduanero"
-              value={regimenId}
-              onChange={(e) => {
-                setRegimenId(Number(e.target.value))
-                setErrores((er) => ({ ...er, regimenId: undefined }))
-              }}
-              required
-              error={Boolean(errores.regimenId)}
-              helperText={errores.regimenId}
-              ref={refs.regimenId}
-            >
-              {regimenes.map((r) => (
-                <MenuItem key={r.id} value={r.id}>
-                  {r.codigo} - {r.descripcion}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              label="Aduana de destino"
-              value={aduanaId}
-              onChange={(e) => {
-                setAduanaId(Number(e.target.value))
-                setErrores((er) => ({ ...er, aduanaId: undefined }))
-              }}
-              required
-              error={Boolean(errores.aduanaId)}
-              helperText={errores.aduanaId}
-              ref={refs.aduanaId}
-            >
-              {aduanas.map((a) => (
-                <MenuItem key={a.id} value={a.id}>
-                  {a.codigo} - {a.nombre}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Box>
+          <TextField
+            select
+            label="Tipo de operación"
+            value={tipoOperacion}
+            onChange={(e) => setTipoOperacion(e.target.value as TipoOperacion)}
+          >
+            {TIPOS_OPERACION.map((o) => (
+              <MenuItem key={o.valor} value={o.valor}>
+                {o.texto}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            label="Régimen aduanero (referencial)"
+            value={regimenId}
+            onChange={(e) => {
+              setRegimenId(Number(e.target.value))
+              setErrores((er) => ({ ...er, regimenId: undefined }))
+            }}
+            required
+            error={Boolean(errores.regimenId)}
+            helperText={errores.regimenId}
+            ref={refs.regimenId}
+          >
+            {regimenes.map((r) => (
+              <MenuItem key={r.id} value={r.id}>
+                {r.codigo} - {r.descripcion}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          <TextField
+            select
+            label="Aduana de destino (referencial)"
+            value={aduanaId}
+            onChange={(e) => {
+              setAduanaId(Number(e.target.value))
+              setErrores((er) => ({ ...er, aduanaId: undefined }))
+            }}
+            required
+            error={Boolean(errores.aduanaId)}
+            helperText={errores.aduanaId}
+            ref={refs.aduanaId}
+          >
+            {aduanas.map((a) => (
+              <MenuItem key={a.id} value={a.id}>
+                {a.codigo} - {a.nombre}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            label="Fecha de apertura"
+            value={formatoFecha(fechaApertura)}
+            slotProps={{ htmlInput: { readOnly: true } }}
+            disabled
+          />
+
+          <TextField
+            select
+            label="Modalidad de despacho"
+            value={modalidad}
+            onChange={(e) => setModalidad(e.target.value as ModalidadDespacho)}
+          >
+            {MODALIDADES_DESPACHO.map((o) => (
+              <MenuItem key={o.valor} value={o.valor}>
+                {o.texto}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            label="Agente responsable"
+            value={agente ?? usuario?.nombre ?? ''}
+            slotProps={{ htmlInput: { readOnly: true } }}
+            disabled
+          />
 
           <TextField
             label="Referencia del cliente"
@@ -246,30 +284,32 @@ export function DespachoFormPage() {
             onChange={(e) => setReferencia(e.target.value)}
             slotProps={{ htmlInput: { maxLength: 100 } }}
           />
-          <TextField
-            label="Descripción general de la mercancía"
-            value={descripcion}
-            onChange={(e) => {
-              setDescripcion(e.target.value)
-              setErrores((er) => ({ ...er, descripcionMercancia: undefined }))
-            }}
-            required
-            multiline
-            minRows={3}
-            error={Boolean(errores.descripcionMercancia)}
-            helperText={errores.descripcionMercancia}
-            ref={refs.descripcionMercancia}
-            slotProps={{ htmlInput: { maxLength: 1000 } }}
-          />
+          <Box sx={{ gridColumn: '1 / -1' }}>
+            <TextField
+              label="Descripción general de la mercancía"
+              value={descripcion}
+              onChange={(e) => {
+                setDescripcion(e.target.value)
+                setErrores((er) => ({ ...er, descripcionMercancia: undefined }))
+              }}
+              required
+              multiline
+              minRows={2}
+              error={Boolean(errores.descripcionMercancia)}
+              helperText={errores.descripcionMercancia}
+              ref={refs.descripcionMercancia}
+              slotProps={{ htmlInput: { maxLength: 1000 } }}
+            />
+          </Box>
+        </Box>
 
-          <Stack direction="row" spacing={2} sx={{ justifyContent: 'flex-end' }}>
-            <Button variant="outlined" disabled={guardando} onClick={() => void guardar(true)}>
-              Guardar como borrador
-            </Button>
-            <Button type="submit" variant="contained" disabled={guardando}>
-              Guardar y continuar
-            </Button>
-          </Stack>
+        <Stack direction="row" spacing={1.5} sx={{ mt: 3, flexWrap: 'wrap' }}>
+          <Button type="submit" variant="contained" disabled={guardando}>
+            Guardar y continuar
+          </Button>
+          <Button variant="outlined" disabled={guardando} onClick={() => void guardar(true)}>
+            Guardar como borrador
+          </Button>
         </Stack>
       </Paper>
     </Stack>

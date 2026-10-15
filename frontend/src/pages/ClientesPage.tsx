@@ -14,21 +14,24 @@ import {
   TablePagination,
   TableRow,
   TextField,
-  Typography,
 } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { Link as RouterLink, useNavigate } from 'react-router'
 
 import { buscarClientes } from '../api/clientes'
 import { mensajeDeError } from '../api/http'
+import { useAuth } from '../auth/AuthContext'
 import { CartaPoderChip } from '../components/CartaPoderChip'
+import { useEncabezado } from '../components/Encabezado'
 import type { ClienteResumen, Pagina } from '../types'
 
 const TAMANO = 10
 
 /** HU-04 · T-04.4: listado de clientes con búsqueda y estado de la carta poder. */
 export function ClientesPage() {
+  useEncabezado('Clientes', 'Clientes / Importadores')
   const navegar = useNavigate()
+  const registra = useAuth().usuario?.rol !== 'CLIENTE'
   const [busqueda, setBusqueda] = useState('')
   const [pagina, setPagina] = useState(0)
   const [datos, setDatos] = useState<Pagina<ClienteResumen> | null>(null)
@@ -54,32 +57,34 @@ export function ClientesPage() {
 
   return (
     <Stack spacing={2}>
-      <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-        <Typography variant="h5" component="h1">
-          Clientes / Importadores
-        </Typography>
-        <Button component={RouterLink} to="/clientes/nuevo" variant="contained" startIcon={<AddIcon />}>
-          Nuevo cliente
-        </Button>
+      <Stack
+        direction="row"
+        sx={{ justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 2 }}
+      >
+        <TextField
+          label="Buscar por RUC o razón social"
+          sx={{ maxWidth: 480 }}
+          value={busqueda}
+          onChange={(e) => {
+            setBusqueda(e.target.value)
+            setPagina(0)
+          }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
+        {registra && (
+          <Button component={RouterLink} to="/clientes/nuevo" variant="contained" startIcon={<AddIcon />}>
+            Nuevo cliente
+          </Button>
+        )}
       </Stack>
-
-      <TextField
-        label="Buscar por RUC o razón social"
-        value={busqueda}
-        onChange={(e) => {
-          setBusqueda(e.target.value)
-          setPagina(0)
-        }}
-        slotProps={{
-          input: {
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          },
-        }}
-      />
 
       {error && <Alert severity="error">{error}</Alert>}
 

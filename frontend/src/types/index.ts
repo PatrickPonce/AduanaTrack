@@ -50,6 +50,16 @@ export interface ClienteExiste {
   razonSocial: string | null
 }
 
+/** Fila de la tabla "Carta poder / autorización vigente": estado según su propio vencimiento. */
+export interface CartaPoderResumen {
+  id: number
+  fechaEmision: string
+  fechaVencimiento: string
+  nombreArchivo: string
+  tamanoBytes: number
+  estado: EstadoCartaPoder
+}
+
 export interface CambioCliente {
   campo: string
   valorAnterior: string | null
@@ -79,6 +89,10 @@ export interface CatalogoRef {
   descripcion: string
 }
 
+export type TipoOperacion = 'IMPORTACION_DEFINITIVA' | 'ADMISION_TEMPORAL' | 'REIMPORTACION'
+
+export type ModalidadDespacho = 'ANTICIPADO' | 'DIFERIDO' | 'URGENTE'
+
 export interface Despacho {
   id: number
   numero: string | null
@@ -88,6 +102,8 @@ export interface Despacho {
   aduana: CatalogoRef | null
   referenciaCliente: string | null
   descripcionMercancia: string | null
+  tipoOperacion: TipoOperacion | null
+  modalidadDespacho: ModalidadDespacho | null
   canalControl: string | null
   fechaLevante: string | null
   agente: string
@@ -100,15 +116,19 @@ export interface DespachoRequest {
   aduanaId: number | null
   referenciaCliente: string
   descripcionMercancia: string
+  tipoOperacion: TipoOperacion | null
+  modalidadDespacho: ModalidadDespacho | null
   borrador: boolean
 }
 
 export type TipoBl = 'MASTER' | 'HOUSE'
 
+/** Fila del formulario: el peso bruto (kg) se edita como texto y se envía como número. */
 export interface Contenedor {
   numero: string
   tipo: string
   precinto: string
+  pesoBrutoKg: string
 }
 
 export interface EmbarqueRequest {
@@ -116,6 +136,7 @@ export interface EmbarqueRequest {
   tipoBl: TipoBl | ''
   naviera: string
   buque: string
+  numeroViaje: string
   puertoEmbarque: string
   puertoDescarga: string
   fechaEmbarque: string
@@ -131,6 +152,7 @@ export interface Embarque {
   tipoBl: TipoBl
   naviera: string
   buque: string | null
+  numeroViaje: string | null
   puertoEmbarque: string
   puertoDescarga: string | null
   fechaEmbarque: string | null
@@ -140,7 +162,13 @@ export interface Embarque {
   alertaAlmacenaje: boolean
   etaModificada: boolean
   etaAnterior: string | null
-  contenedores: (Contenedor & { id: number; tipo: string | null; precinto: string | null })[]
+  contenedores: {
+    id: number
+    numero: string
+    tipo: string | null
+    precinto: string | null
+    pesoBrutoKg: number | null
+  }[]
 }
 
 export interface Indicadores {
@@ -163,8 +191,13 @@ export interface DespachoTablero {
   aduanaCodigo: string | null
   aduana: string | null
   numeroBl: string | null
+  /** Primer contenedor del BL (por número) y cuántos tiene en total. */
+  contenedor: string | null
+  totalContenedores: number
   fechaEta: string | null
   estado: EstadoDespacho
+  /** VERDE, NARANJA o ROJO desde HU-10 (Sprint 2); nulo en el Sprint 1. */
+  canalControl: string | null
   diasAlmacenaje: number | null
   alertaAlmacenaje: boolean
   estadoCartaPoder: EstadoCartaPoder

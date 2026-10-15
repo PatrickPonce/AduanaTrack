@@ -11,6 +11,11 @@ const ESTADOS: Record<string, { texto: string; color: ChipProps['color'] }> = {
   APERTURA: { texto: 'Apertura', color: 'primary' },
 }
 
+/** Texto del estado tal como se muestra en las tablas ("Apertura"). */
+export function textoEstado(estado: EstadoDespacho): string {
+  return ESTADOS[estado]?.texto ?? estado
+}
+
 export function EstadoDespachoChip({ estado, size = 'small' }: { estado: EstadoDespacho; size?: ChipProps['size'] }) {
   const config = ESTADOS[estado] ?? { texto: estado, color: 'default' as const }
   return <Chip label={config.texto} color={config.color} size={size} />

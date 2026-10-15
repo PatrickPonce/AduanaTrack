@@ -1,4 +1,12 @@
-import type { CambioCliente, Cliente, ClienteExiste, ClienteRequest, ClienteResumen, Pagina } from '../types'
+import type {
+  CambioCliente,
+  CartaPoderResumen,
+  Cliente,
+  ClienteExiste,
+  ClienteRequest,
+  ClienteResumen,
+  Pagina,
+} from '../types'
 import { http } from './http'
 
 export async function buscarClientes(q: string, page = 0, size = 20): Promise<Pagina<ClienteResumen>> {
@@ -29,6 +37,17 @@ export async function actualizarCliente(id: number, cliente: ClienteRequest): Pr
 export async function historialCliente(id: number): Promise<CambioCliente[]> {
   const { data } = await http.get<CambioCliente[]>(`/clientes/${id}/historial`)
   return data
+}
+
+/** Cartas poder del cliente, la de vencimiento más lejano primero. */
+export async function listarCartasPoder(clienteId: number): Promise<CartaPoderResumen[]> {
+  const { data } = await http.get<CartaPoderResumen[]>(`/clientes/${clienteId}/carta-poder`)
+  return data
+}
+
+/** Enlace de descarga del PDF; la cookie de sesión viaja sola por ser del mismo origen. */
+export function urlArchivoCartaPoder(clienteId: number, cartaId: number): string {
+  return `${http.defaults.baseURL}/clientes/${clienteId}/carta-poder/${cartaId}/archivo`
 }
 
 /** Carta poder en PDF (≤ 10 MB) con sus fechas de emisión y vencimiento (T-04.2). */

@@ -1,15 +1,19 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import { Alert, Box, Button, CircularProgress, Paper, Stack, Tab, Tabs, Typography } from '@mui/material'
+import { Alert, Box, Button, CircularProgress, Paper, Stack, Typography } from '@mui/material'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link as RouterLink, useLocation, useParams } from 'react-router'
 
 import { obtenerDespacho } from '../api/despachos'
 import { mensajeDeError } from '../api/http'
+import { useAuth } from '../auth/AuthContext'
 import { CartaPoderChip } from '../components/CartaPoderChip'
-import { EmbarqueForm } from '../components/EmbarqueForm'
+import { useEncabezado } from '../components/Encabezado'
 import { EstadoDespachoChip } from '../components/EstadoDespachoChip'
+import { CanalChip } from '../components/EtiquetaColor'
+import { DOS_COLUMNAS, TituloSeccion } from '../components/Seccion'
 import type { Despacho } from '../types'
 import { formatoFecha } from '../utils/formato'
+import { MODALIDADES_DESPACHO, TIPOS_OPERACION, textoOpcion } from '../utils/opciones'
 
 interface EstadoNavegacion {
   mensaje?: string
@@ -17,14 +21,16 @@ interface EstadoNavegacion {
   volverA?: string
 }
 
-/** HU-03 · T-03.5: detalle del despacho con su estado y las pestañas de datos y embarque. */
+/** HU-03 · T-03.5 y HU-02 · T-02.4: detalle completo del despacho con su estado. */
 export function DespachoDetallePage() {
   const { id } = useParams()
   const ubicacion = useLocation()
+  const { usuario } = useAuth()
   const navegacion = (ubicacion.state as EstadoNavegacion | null) ?? {}
   const [despacho, setDespacho] = useState<Despacho | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [pestana, setPestana] = useState(0)
+
+  useEncabezado(`Despachos / ${despacho?.numero ?? 'Borrador'}`, 'Detalle del Despacho de Importación')
 
   useEffect(() => {
     setDespacho(null)
@@ -57,70 +63,68 @@ export function DespachoDetallePage() {
   }
 
   const esBorrador = despacho.estado === 'BORRADOR'
+  const registra = usuario?.rol !== 'CLIENTE'
 
   return (
     <Stack spacing={2}>
       <Box>{volver}</Box>
       {navegacion.mensaje && <Alert severity="success">{navegacion.mensaje}</Alert>}
 
-      <Paper sx={{ p: 3 }}>
-        <Stack direction="row" spacing={2} sx={{ alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
-          <Typography variant="h5" component="h1">
+      <Paper sx={{ p: { xs: 2, md: 2.5 } }}>
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+          <Typography component="h2" sx={{ fontSize: 20, fontWeight: 700 }}>
             {despacho.numero ?? 'Despacho en borrador'}
           </Typography>
           <EstadoDespachoChip estado={despacho.estado} size="medium" />
-          {esBorrador && (
-            <Button component={RouterLink} to={`/despachos/${despacho.id}/editar`} variant="contained" size="small">
+          <Box sx={{ flexGrow: 1 }} />
+          {esBorrador && registra && (
+            <Button component={RouterLink} to={`/despachos/${despacho.id}/editar`} variant="contained">
               Completar despacho
             </Button>
           )}
+          {!esBorrador && (
+            <Button component={RouterLink} to={`/embarques/${despacho.id}`} variant="contained">
+              Información de embarque (BL)
+            </Button>
+          )}
         </Stack>
-        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' } }}>
+
+        <TituloSeccion>Datos generales del despacho</TituloSeccion>
+        <Box sx={DOS_COLUMNAS}>
           <Dato titulo="Cliente / Importador">
             {despacho.cliente.razonSocial}
             <Typography variant="caption" sx={{ display: 'block' }} color="text.secondary">
               RUC {despacho.cliente.ruc}
             </Typography>
           </Dato>
-          <Dato titulo="Régimen aduanero">
+          <Dato titulo="Carta poder del cliente">
+            <CartaPoderChip estado={despacho.cliente.estadoCartaPoder} />
+          </Dato>
+          <Dato titulo="Tipo de operación">{textoOpcion(TIPOS_OPERACION, despacho.tipoOperacion)}</Dato>
+          <Dato titulo="Régimen aduanero (referencial)">
             {despacho.regimen ? `${despacho.regimen.codigo} - ${despacho.regimen.descripcion}` : '—'}
           </Dato>
-          <Dato titulo="Aduana de destino">
+          <Dato titulo="Aduana de destino (referencial)">
             {despacho.aduana ? `${despacho.aduana.codigo} - ${despacho.aduana.descripcion}` : '—'}
           </Dato>
           <Dato titulo={esBorrador ? 'Fecha de registro' : 'Fecha de apertura'}>{formatoFecha(despacho.creadoEn)}</Dato>
+          <Dato titulo="Modalidad de despacho">{textoOpcion(MODALIDADES_DESPACHO, despacho.modalidadDespacho)}</Dato>
+          <Dato titulo="Agente responsable">{despacho.agente}</Dato>
+          <Dato titulo="Referencia del cliente">{despacho.referenciaCliente ?? '—'}</Dato>
+          <Dato titulo="Canal de control">
+            <CanalChip canal={despacho.canalControl} />
+          </Dato>
+          <Box sx={{ gridColumn: '1 / -1' }}>
+            <Dato titulo="Descripción general de la mercancía">{despacho.descripcionMercancia ?? '—'}</Dato>
+          </Box>
         </Box>
       </Paper>
 
-      <Tabs value={pestana} onChange={(_, v: number) => setPestana(v)}>
-        <Tab label="Datos generales" />
-        <Tab label="Embarque / BL" />
-      </Tabs>
-
-      {pestana === 0 && (
-        <Paper sx={{ p: 3 }}>
-          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
-            <Dato titulo="Referencia del cliente">{despacho.referenciaCliente ?? '—'}</Dato>
-            <Dato titulo="Agente responsable">{despacho.agente}</Dato>
-            <Dato titulo="Carta poder del cliente">
-              <CartaPoderChip estado={despacho.cliente.estadoCartaPoder} />
-            </Dato>
-            <Dato titulo="Canal de control">{despacho.canalControl ?? 'Pendiente'}</Dato>
-            <Box sx={{ gridColumn: '1 / -1' }}>
-              <Dato titulo="Descripción general de la mercancía">{despacho.descripcionMercancia ?? '—'}</Dato>
-            </Box>
-          </Box>
-        </Paper>
+      {esBorrador && (
+        <Alert severity="info">
+          Confirme el despacho con «Guardar y continuar» antes de registrar la información de embarque.
+        </Alert>
       )}
-
-      {pestana === 1 &&
-        (esBorrador ? (
-          <Alert severity="info">
-            Confirme el despacho con «Guardar y continuar» antes de registrar la información de embarque.
-          </Alert>
-        ) : (
-          <EmbarqueForm despachoId={despacho.id} />
-        ))}
     </Stack>
   )
 }
@@ -128,7 +132,7 @@ export function DespachoDetallePage() {
 function Dato({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <Box>
-      <Typography variant="caption" color="text.secondary" component="div">
+      <Typography component="div" sx={{ fontSize: 12.5, fontWeight: 600, color: '#334155', mb: 0.5 }}>
         {titulo}
       </Typography>
       <Typography component="div">{children}</Typography>

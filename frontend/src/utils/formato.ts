@@ -12,6 +12,36 @@ export function formatoFechaHora(iso: string | null | undefined): string {
   return `${formatoFecha(iso)}${hora ? ` ${hora}` : ''}`
 }
 
+/** Fecha local de hoy en formato AAAA-MM-DD (sin pasar por UTC). */
+export function hoyIso(): string {
+  const hoy = new Date()
+  const mes = String(hoy.getMonth() + 1).padStart(2, '0')
+  const dia = String(hoy.getDate()).padStart(2, '0')
+  return `${hoy.getFullYear()}-${mes}-${dia}`
+}
+
+/** Suma días a una fecha AAAA-MM-DD y devuelve otra AAAA-MM-DD (cálculo en UTC para evitar cambios de horario). */
+export function sumarDias(iso: string, dias: number): string {
+  const [anio, mes, dia] = iso.split('-').map(Number)
+  const fecha = new Date(Date.UTC(anio!, mes! - 1, dia! + dias))
+  return fecha.toISOString().slice(0, 10)
+}
+
+/** Días entre dos fechas AAAA-MM-DD (hasta − desde). */
+export function diasEntre(desde: string, hasta: string): number {
+  const utc = (iso: string) => {
+    const [a, m, d] = iso.split('-').map(Number)
+    return Date.UTC(a!, m! - 1, d!)
+  }
+  return Math.round((utc(hasta) - utc(desde)) / 86_400_000)
+}
+
+/** Peso en kg con separador de miles: 18540 → "18,540 kg". */
+export function formatoPeso(kg: number | null | undefined): string {
+  if (kg === null || kg === undefined) return '—'
+  return `${kg.toLocaleString('en-US', { maximumFractionDigits: 2 })} kg`
+}
+
 /** Cadena vacía → null para los campos opcionales que se envían al API. */
 export function vacioANulo(valor: string): string | null {
   const recortado = valor.trim()
