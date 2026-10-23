@@ -42,6 +42,7 @@ import pe.edu.usmp.aduanatrack.despacho.dto.DespachoResponse;
 import pe.edu.usmp.aduanatrack.despacho.entity.Despacho;
 import pe.edu.usmp.aduanatrack.despacho.entity.EstadoDespacho;
 import pe.edu.usmp.aduanatrack.despacho.entity.ModalidadDespacho;
+import pe.edu.usmp.aduanatrack.despacho.entity.TipoHito;
 import pe.edu.usmp.aduanatrack.despacho.entity.TipoOperacion;
 import pe.edu.usmp.aduanatrack.despacho.repository.CorrelativoDespachoRepository;
 import pe.edu.usmp.aduanatrack.despacho.repository.DespachoRepository;
@@ -53,6 +54,7 @@ class DespachoServiceTest {
     private DespachoRepository despachoRepository;
     private CorrelativoDespachoRepository correlativo;
     private CartaPoderService cartaPoder;
+    private HitoDespachoService hitos;
     private DespachoService servicio;
     private Cliente cliente;
 
@@ -66,6 +68,7 @@ class DespachoServiceTest {
         UsuarioRepository usuarioRepository = mock(UsuarioRepository.class);
         cartaPoder = mock(CartaPoderService.class);
         CartaPoderEstadoService cartaPoderEstado = mock(CartaPoderEstadoService.class);
+        hitos = mock(HitoDespachoService.class);
 
         cliente = new Cliente("20787789324", LocalDateTime.of(2026, 10, 1, 9, 0));
         ReflectionTestUtils.setField(cliente, "id", 1L);
@@ -88,7 +91,7 @@ class DespachoServiceTest {
 
         Clock reloj = Clock.fixed(Instant.parse("2026-10-08T15:00:00Z"), ZoneId.of("America/Lima"));
         servicio = new DespachoService(despachoRepository, correlativo, clienteRepository, regimenRepository,
-                aduanaRepository, usuarioRepository, cartaPoder, cartaPoderEstado, reloj);
+                aduanaRepository, usuarioRepository, cartaPoder, cartaPoderEstado, hitos, reloj);
     }
 
     @Test
@@ -103,6 +106,7 @@ class DespachoServiceTest {
         assertThat(primero.agente()).isEqualTo("Agente Demo");
         assertThat(primero.tipoOperacion()).isEqualTo(TipoOperacion.IMPORTACION_DEFINITIVA);
         assertThat(primero.modalidadDespacho()).isEqualTo(ModalidadDespacho.ANTICIPADO);
+        verify(hitos).registrar(null, TipoHito.APERTURA, "Despacho abierto (DESP-2026-0001)");
     }
 
     @Test
@@ -113,6 +117,7 @@ class DespachoServiceTest {
         assertThat(borrador.estado()).isEqualTo(EstadoDespacho.BORRADOR);
         verify(correlativo, never()).siguiente(anyInt());
         verify(cartaPoder, never()).exigirVigente(anyLong(), any());
+        verify(hitos, never()).registrar(any(), any(), any());
     }
 
     @Test
@@ -142,6 +147,7 @@ class DespachoServiceTest {
                         e -> assertThat(e.getCodigo()).isEqualTo(CodigoError.CARTA_PODER_NO_VIGENTE));
         verify(correlativo, never()).siguiente(anyInt());
         verify(despachoRepository, never()).save(any());
+        verify(hitos, never()).registrar(any(), any(), any());
     }
 
     @Test
@@ -163,6 +169,7 @@ class DespachoServiceTest {
         assertThat(confirmado.numero()).isEqualTo("DESP-2026-0001");
         assertThat(confirmado.estado()).isEqualTo(EstadoDespacho.APERTURA);
         verify(cartaPoder).exigirVigente(1L, HOY);
+        verify(hitos).registrar(null, TipoHito.APERTURA, "Despacho abierto (DESP-2026-0001)");
     }
 
     @Test
@@ -178,6 +185,7 @@ class DespachoServiceTest {
         assertThat(resultado.numero()).isEqualTo("DESP-2026-0007");
         assertThat(resultado.estado()).isEqualTo(EstadoDespacho.APERTURA);
         verify(correlativo, never()).siguiente(anyInt());
+        verify(hitos, never()).registrar(any(), any(), any());
     }
 
     @Test
