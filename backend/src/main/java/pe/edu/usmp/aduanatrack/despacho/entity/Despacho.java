@@ -93,6 +93,14 @@ public class Despacho {
         this.estado = EstadoDespacho.APERTURA;
     }
 
+    /**
+     * Avanza el despacho en los Sprints 2 y 3. Quien lo llama valida antes el estado anterior
+     * y registra el hito con {@code HitoDespachoService} en la misma transacción.
+     */
+    public void cambiarEstado(EstadoDespacho nuevo) {
+        this.estado = nuevo;
+    }
+
     public boolean esBorrador() {
         return estado == EstadoDespacho.BORRADOR;
     }
