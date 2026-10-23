@@ -31,6 +31,9 @@ aduanatrack:
     directorio: ${CARTAS_PODER_DIR:/data/cartas-poder}
     # Alerta de cartas por vencer: todos los días a las 7:00 (hora de Lima).
     cron-alerta: ${CARTAS_PODER_CRON_ALERTA:0 0 7 * * *}
+  documentos:
+    # Documentos del despacho (HU-06): {directorio}/{despachoId}/{uuid}.pdf. En Docker Compose es el volumen documentos.
+    directorio: ${DOCUMENTOS_DIR:/data/documentos}
   seguridad:
     # Secreto HS256 de al menos 32 caracteres; se inyecta desde .env (nunca en el repositorio).
     jwt-secret: ${JWT_SECRET}

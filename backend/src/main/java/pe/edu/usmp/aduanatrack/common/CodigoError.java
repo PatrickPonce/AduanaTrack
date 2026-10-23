@@ -14,6 +14,8 @@ public final class CodigoError {
     public static final String CARTA_PODER_NO_VIGENTE = "CARTA_PODER_NO_VIGENTE";
     public static final String CUENTA_BLOQUEADA = "CUENTA_BLOQUEADA";
     public static final String DESPACHO_EN_BORRADOR = "DESPACHO_EN_BORRADOR";
+    /** HU-06: otra carga del mismo documento terminó primero; se vuelve a intentar. */
+    public static final String CARGA_SIMULTANEA = "CARGA_SIMULTANEA";
     public static final String ERROR_INTERNO = "ERROR_INTERNO";
 
     private CodigoError() {
