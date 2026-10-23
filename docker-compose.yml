@@ -29,6 +29,7 @@ services:
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
     volumes:
       - cartas-poder:/data/cartas-poder
+      - documentos:/data/documentos
     restart: unless-stopped
 
   frontend:
@@ -42,3 +43,4 @@ services:
 volumes:
   pgdata:
   cartas-poder:
+  documentos:
