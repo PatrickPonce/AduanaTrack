@@ -45,6 +45,15 @@ export function DespachoDetallePage() {
       .catch((e) => setError(mensajeDeError(e, 'No se pudo cargar el despacho.')))
   }, [id])
 
+  /** Tras un cambio de estado (p. ej. DOCUMENTACION_COMPLETA) se actualiza la cabecera sin perder la pestaña. */
+  function recargarDespacho() {
+    obtenerDespacho(Number(id))
+      .then(setDespacho)
+      .catch(() => {
+        // La cabecera conserva el estado anterior; se actualiza al volver a abrir el despacho.
+      })
+  }
+
   const volver = (
     <Button component={RouterLink} to={navegacion.volverA ?? '/dashboard'} startIcon={<ArrowBackIcon />}>
       Volver al panel
@@ -107,7 +116,13 @@ export function DespachoDetallePage() {
           </Tabs>
         )}
 
-        {visible === 'documentos' && <DocumentosDespacho despachoId={despacho.id} />}
+        {visible === 'documentos' && (
+          <DocumentosDespacho
+            despachoId={despacho.id}
+            puedeCargar={registra}
+            onDocumentacionCompleta={recargarDespacho}
+          />
+        )}
 
         {visible === 'generales' && (
           <>

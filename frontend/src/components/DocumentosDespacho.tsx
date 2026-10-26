@@ -1,5 +1,7 @@
 import DownloadIcon from '@mui/icons-material/FileDownloadOutlined'
 import HistoryIcon from '@mui/icons-material/History'
+import SwapIcon from '@mui/icons-material/SwapHoriz'
+import UploadFileIcon from '@mui/icons-material/UploadFile'
 import {
   Alert,
   Box,
@@ -24,34 +26,54 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { listarDocumentos, listarVersiones, urlArchivoDocumento } from '../api/documentos'
 import { mensajeDeError } from '../api/http'
-import type { DocumentoRequerido, DocumentosDespacho as Documentos, VersionDocumento } from '../types'
+import type { DocumentoCargado, DocumentoRequerido, DocumentosDespacho as Documentos, VersionDocumento } from '../types'
 import { formatoFechaHora, formatoTamano } from '../utils/formato'
+import { CargaDocumentoDialog } from './CargaDocumentoDialog'
 import { EtiquetaColor } from './EtiquetaColor'
 import { TituloSeccion } from './Seccion'
 
 interface Props {
   despachoId: number
+  /** ADMIN y AGENTE cargan y reemplazan; CLIENTE solo consulta y descarga. */
+  puedeCargar: boolean
+  /** Se llama cuando el último obligatorio deja el estado general en COMPLETO (CA4). */
+  onDocumentacionCompleta?: () => void
 }
 
 /** HU-06 · T-06.4: pestaña «Documentos» del despacho (contrato C1). */
-export function DocumentosDespacho({ despachoId }: Props) {
+export function DocumentosDespacho({ despachoId, puedeCargar, onDocumentacionCompleta }: Props) {
   const [datos, setDatos] = useState<Documentos | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [mensaje, setMensaje] = useState<string | null>(null)
   const [versionesDe, setVersionesDe] = useState<DocumentoRequerido | null>(null)
+  const [cargaDe, setCargaDe] = useState<DocumentoRequerido | null>(null)
 
   const cargar = useCallback(async () => {
     try {
-      setDatos(await listarDocumentos(despachoId))
+      const nuevos = await listarDocumentos(despachoId)
+      setDatos(nuevos)
       setError(null)
+      return nuevos
     } catch (e) {
       setError(mensajeDeError(e, 'No se pudieron cargar los documentos del despacho.'))
+      return null
     }
   }, [despachoId])
 
   useEffect(() => {
     setDatos(null)
+    setMensaje(null)
     void cargar()
   }, [cargar])
+
+  async function alCargar(cargado: DocumentoCargado) {
+    const nombre = cargaDe?.nombre ?? cargado.tipo
+    const estabaCompleto = datos?.estadoGeneral === 'COMPLETO'
+    setCargaDe(null)
+    setMensaje(`${nombre} cargado como versión ${cargado.version}.`)
+    const nuevos = await cargar()
+    if (!estabaCompleto && nuevos?.estadoGeneral === 'COMPLETO') onDocumentacionCompleta?.()
+  }
 
   if (error && !datos) return <Alert severity="error">{error}</Alert>
   if (!datos) {
@@ -88,6 +110,11 @@ export function DocumentosDespacho({ despachoId }: Props) {
         Documentos requeridos del despacho
       </TituloSeccion>
 
+      {mensaje && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          {mensaje}
+        </Alert>
+      )}
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
@@ -142,6 +169,16 @@ export function DocumentosDespacho({ despachoId }: Props) {
                   )}
                 </TableCell>
                 <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                  {puedeCargar && (
+                    <Button
+                      size="small"
+                      startIcon={d.version !== null ? <SwapIcon /> : <UploadFileIcon />}
+                      onClick={() => setCargaDe(d)}
+                      aria-label={`${d.version !== null ? 'Reemplazar' : 'Cargar'} ${d.nombre}`}
+                    >
+                      {d.version !== null ? 'Reemplazar' : 'Cargar'}
+                    </Button>
+                  )}
                   {d.version !== null && (
                     <Tooltip title="Ver versiones">
                       <IconButton
@@ -173,6 +210,12 @@ export function DocumentosDespacho({ despachoId }: Props) {
       </TableContainer>
 
       <VersionesDialog despachoId={despachoId} documento={versionesDe} onCerrar={() => setVersionesDe(null)} />
+      <CargaDocumentoDialog
+        despachoId={despachoId}
+        documento={cargaDe}
+        onCerrar={() => setCargaDe(null)}
+        onCargado={alCargar}
+      />
     </Box>
   )
 }
