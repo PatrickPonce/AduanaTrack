@@ -26,6 +26,15 @@ export const TIPOS_CONTENEDOR: Opcion<string>[] = [
   { valor: '40HC', texto: "40' HC" },
 ]
 
+/** Unidades de los ítems de la factura comercial (HU-07); el API acepta hasta 10 caracteres. */
+export const UNIDADES_ITEM: Opcion<string>[] = [
+  { valor: 'UND', texto: 'Unidades (UND)' },
+  { valor: 'KG', texto: 'Kilogramos (KG)' },
+  { valor: 'M', texto: 'Metros (M)' },
+  { valor: 'L', texto: 'Litros (L)' },
+  { valor: 'PAR', texto: 'Pares (PAR)' },
+]
+
 export function textoOpcion<T extends string>(opciones: Opcion<T>[], valor: T | null | undefined): string {
   return opciones.find((o) => o.valor === valor)?.texto ?? valor ?? '—'
 }

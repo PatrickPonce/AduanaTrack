@@ -245,6 +245,46 @@ export interface VersionDocumento {
   cargadoEn: string
 }
 
+/** HU-07 (contrato C2): partida tal como la repite cada ítem ("8482.10.00.00"). */
+export interface PartidaResumen {
+  id: number
+  codigoFormateado: string
+  descripcion: string
+}
+
+/** Resultado de GET /catalogos/partidas?q= (catálogo referencial, no el Arancel de SUNAT). */
+export interface PartidaArancelaria extends PartidaResumen {
+  codigo: string
+  tasaAdValorem: number
+}
+
+export interface ItemFactura {
+  id: number
+  numero: number
+  descripcion: string
+  cantidad: number
+  unidad: string
+  valorFob: number
+  partidaId: number | null
+  partida: PartidaResumen | null
+}
+
+/** Fila del PUT /items: sin id se crea; el ítem guardado que no viene en la lista se quita. */
+export interface ItemFacturaRequest {
+  id?: number
+  descripcion: string
+  cantidad: number
+  unidad: string
+  valorFob: number
+  partidaId: number | null
+}
+
+export interface ClasificacionGuardada {
+  estado: EstadoDespacho
+  clasificadoPor: string
+  clasificadoEn: string
+}
+
 /** Formato único de error del backend. */
 export interface ApiErrorBody {
   codigo: string
