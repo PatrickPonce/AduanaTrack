@@ -204,6 +204,47 @@ export interface DespachoTablero {
   alertaCritica: boolean
 }
 
+/** HU-06 (contrato C1): COMPLETO cuando todos los obligatorios tienen versión vigente. */
+export type EstadoDocumentacion = 'COMPLETO' | 'PENDIENTE'
+
+export type EstadoDocumento = 'CARGADO' | 'PENDIENTE'
+
+/** Fila de "Documentos requeridos del despacho": los datos de la versión vigente son nulos si está pendiente. */
+export interface DocumentoRequerido {
+  tipo: string
+  nombre: string
+  obligatorio: boolean
+  estado: EstadoDocumento
+  version: number | null
+  documentoId: number | null
+  archivo: string | null
+  tamanoBytes: number | null
+  cargadoPor: string | null
+  cargadoEn: string | null
+}
+
+export interface DocumentosDespacho {
+  estadoGeneral: EstadoDocumentacion
+  documentos: DocumentoRequerido[]
+}
+
+export interface DocumentoCargado {
+  documentoId: number
+  tipo: string
+  version: number
+  estado: EstadoDocumento
+}
+
+export interface VersionDocumento {
+  documentoId: number
+  version: number
+  vigente: boolean
+  archivo: string
+  tamanoBytes: number
+  cargadoPor: string
+  cargadoEn: string
+}
+
 /** Formato único de error del backend. */
 export interface ApiErrorBody {
   codigo: string

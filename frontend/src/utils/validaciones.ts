@@ -38,12 +38,12 @@ export function validarContenedor(numero: string): string | null {
   return control === Number(n[10]) ? null : 'Dígito de control ISO 6346 incorrecto'
 }
 
-export const TAMANO_MAXIMO_CARTA_PODER = 10 * 1024 * 1024
+export const TAMANO_MAXIMO_PDF = 10 * 1024 * 1024
 
-/** Carta poder: solo PDF y máximo 10 MB, revisado antes de enviar (HU-04). */
-export function validarArchivoCartaPoder(archivo: File): string | null {
+/** PDF de máximo 10 MB, revisado antes de enviar: carta poder (HU-04) y documentos del despacho (HU-06, CA1). */
+export function validarArchivoPdf(archivo: File): string | null {
   const esPdf = archivo.type === 'application/pdf' || archivo.name.toLowerCase().endsWith('.pdf')
   if (!esPdf) return 'Solo se permiten archivos PDF'
-  if (archivo.size > TAMANO_MAXIMO_CARTA_PODER) return 'El archivo supera el tamaño máximo de 10 MB'
+  if (archivo.size > TAMANO_MAXIMO_PDF) return 'El archivo supera el tamaño máximo de 10 MB'
   return null
 }
