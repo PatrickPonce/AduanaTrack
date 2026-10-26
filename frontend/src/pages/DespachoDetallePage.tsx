@@ -1,5 +1,5 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import { Alert, Box, Button, CircularProgress, Paper, Stack, Typography } from '@mui/material'
+import { Alert, Box, Button, CircularProgress, Paper, Stack, Tab, Tabs, Typography } from '@mui/material'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link as RouterLink, useLocation, useParams } from 'react-router'
 
@@ -7,6 +7,7 @@ import { obtenerDespacho } from '../api/despachos'
 import { mensajeDeError } from '../api/http'
 import { useAuth } from '../auth/AuthContext'
 import { CartaPoderChip } from '../components/CartaPoderChip'
+import { DocumentosDespacho } from '../components/DocumentosDespacho'
 import { useEncabezado } from '../components/Encabezado'
 import { EstadoDespachoChip } from '../components/EstadoDespachoChip'
 import { CanalChip } from '../components/EtiquetaColor'
@@ -21,7 +22,9 @@ interface EstadoNavegacion {
   volverA?: string
 }
 
-/** HU-03 · T-03.5 y HU-02 · T-02.4: detalle completo del despacho con su estado. */
+type Pestana = 'generales' | 'documentos'
+
+/** HU-03 · T-03.5 y HU-02 · T-02.4: detalle completo del despacho con su estado; HU-06 · T-06.4: pestaña «Documentos». */
 export function DespachoDetallePage() {
   const { id } = useParams()
   const ubicacion = useLocation()
@@ -29,12 +32,14 @@ export function DespachoDetallePage() {
   const navegacion = (ubicacion.state as EstadoNavegacion | null) ?? {}
   const [despacho, setDespacho] = useState<Despacho | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [pestana, setPestana] = useState<Pestana>('generales')
 
   useEncabezado(`Despachos / ${despacho?.numero ?? 'Borrador'}`, 'Detalle del Despacho de Importación')
 
   useEffect(() => {
     setDespacho(null)
     setError(null)
+    setPestana('generales')
     obtenerDespacho(Number(id))
       .then(setDespacho)
       .catch((e) => setError(mensajeDeError(e, 'No se pudo cargar el despacho.')))
@@ -64,6 +69,8 @@ export function DespachoDetallePage() {
 
   const esBorrador = despacho.estado === 'BORRADOR'
   const registra = usuario?.rol !== 'CLIENTE'
+  // Un borrador todavía no tiene expediente: el API responde 409 DESPACHO_EN_BORRADOR.
+  const visible = esBorrador ? 'generales' : pestana
 
   return (
     <Stack spacing={2}>
@@ -89,35 +96,52 @@ export function DespachoDetallePage() {
           )}
         </Stack>
 
-        <TituloSeccion>Datos generales del despacho</TituloSeccion>
-        <Box sx={DOS_COLUMNAS}>
-          <Dato titulo="Cliente / Importador">
-            {despacho.cliente.razonSocial}
-            <Typography variant="caption" sx={{ display: 'block' }} color="text.secondary">
-              RUC {despacho.cliente.ruc}
-            </Typography>
-          </Dato>
-          <Dato titulo="Carta poder del cliente">
-            <CartaPoderChip estado={despacho.cliente.estadoCartaPoder} />
-          </Dato>
-          <Dato titulo="Tipo de operación">{textoOpcion(TIPOS_OPERACION, despacho.tipoOperacion)}</Dato>
-          <Dato titulo="Régimen aduanero (referencial)">
-            {despacho.regimen ? `${despacho.regimen.codigo} - ${despacho.regimen.descripcion}` : '—'}
-          </Dato>
-          <Dato titulo="Aduana de destino (referencial)">
-            {despacho.aduana ? `${despacho.aduana.codigo} - ${despacho.aduana.descripcion}` : '—'}
-          </Dato>
-          <Dato titulo={esBorrador ? 'Fecha de registro' : 'Fecha de apertura'}>{formatoFecha(despacho.creadoEn)}</Dato>
-          <Dato titulo="Modalidad de despacho">{textoOpcion(MODALIDADES_DESPACHO, despacho.modalidadDespacho)}</Dato>
-          <Dato titulo="Agente responsable">{despacho.agente}</Dato>
-          <Dato titulo="Referencia del cliente">{despacho.referenciaCliente ?? '—'}</Dato>
-          <Dato titulo="Canal de control">
-            <CanalChip canal={despacho.canalControl} />
-          </Dato>
-          <Box sx={{ gridColumn: '1 / -1' }}>
-            <Dato titulo="Descripción general de la mercancía">{despacho.descripcionMercancia ?? '—'}</Dato>
-          </Box>
-        </Box>
+        {!esBorrador && (
+          <Tabs
+            value={visible}
+            onChange={(_, v: Pestana) => setPestana(v)}
+            sx={{ mb: 2.5, borderBottom: 1, borderColor: 'divider' }}
+          >
+            <Tab value="generales" label="Datos generales" />
+            <Tab value="documentos" label="Documentos" />
+          </Tabs>
+        )}
+
+        {visible === 'documentos' && <DocumentosDespacho despachoId={despacho.id} />}
+
+        {visible === 'generales' && (
+          <>
+            <TituloSeccion>Datos generales del despacho</TituloSeccion>
+            <Box sx={DOS_COLUMNAS}>
+              <Dato titulo="Cliente / Importador">
+                {despacho.cliente.razonSocial}
+                <Typography variant="caption" sx={{ display: 'block' }} color="text.secondary">
+                  RUC {despacho.cliente.ruc}
+                </Typography>
+              </Dato>
+              <Dato titulo="Carta poder del cliente">
+                <CartaPoderChip estado={despacho.cliente.estadoCartaPoder} />
+              </Dato>
+              <Dato titulo="Tipo de operación">{textoOpcion(TIPOS_OPERACION, despacho.tipoOperacion)}</Dato>
+              <Dato titulo="Régimen aduanero (referencial)">
+                {despacho.regimen ? `${despacho.regimen.codigo} - ${despacho.regimen.descripcion}` : '—'}
+              </Dato>
+              <Dato titulo="Aduana de destino (referencial)">
+                {despacho.aduana ? `${despacho.aduana.codigo} - ${despacho.aduana.descripcion}` : '—'}
+              </Dato>
+              <Dato titulo={esBorrador ? 'Fecha de registro' : 'Fecha de apertura'}>{formatoFecha(despacho.creadoEn)}</Dato>
+              <Dato titulo="Modalidad de despacho">{textoOpcion(MODALIDADES_DESPACHO, despacho.modalidadDespacho)}</Dato>
+              <Dato titulo="Agente responsable">{despacho.agente}</Dato>
+              <Dato titulo="Referencia del cliente">{despacho.referenciaCliente ?? '—'}</Dato>
+              <Dato titulo="Canal de control">
+                <CanalChip canal={despacho.canalControl} />
+              </Dato>
+              <Box sx={{ gridColumn: '1 / -1' }}>
+                <Dato titulo="Descripción general de la mercancía">{despacho.descripcionMercancia ?? '—'}</Dato>
+              </Box>
+            </Box>
+          </>
+        )}
       </Paper>
 
       {esBorrador && (

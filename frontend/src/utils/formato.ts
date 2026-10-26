@@ -42,6 +42,14 @@ export function formatoPeso(kg: number | null | undefined): string {
   return `${kg.toLocaleString('en-US', { maximumFractionDigits: 2 })} kg`
 }
 
+/** Tamaño de archivo legible: 482113 → "470.8 KB", 5242880 → "5.0 MB". */
+export function formatoTamano(bytes: number | null | undefined): string {
+  if (bytes === null || bytes === undefined) return '—'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 /** Cadena vacía → null para los campos opcionales que se envían al API. */
 export function vacioANulo(valor: string): string | null {
   const recortado = valor.trim()
