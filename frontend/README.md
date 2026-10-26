@@ -39,4 +39,12 @@ La sesión vive en la cookie HttpOnly `AT_SESSION`: el token nunca se guarda en 
 | `/despachos/:id` (pestañas «Datos generales» y «Embarque / BL») | HU-03 · T-03.5 · HU-05 · T-05.4 |
 | `/dashboard?aduanaId=&clienteId=` | HU-02 · T-02.3 · T-02.4 |
 
+## Pantallas del Sprint 2
+
+| Ruta | HU · Tarea |
+|---|---|
+| `/despachos/:id`, pestaña «Documentos» (carga por arrastre, reemplazo con versión, historial y descarga) | HU-06 · T-06.4 |
+
+Contratos que consume (en `docs/sprint-2/contratos/`): C1 · documentos del despacho (`api/documentos.ts`).
+
 Endpoints de otras tareas que consume: `GET /catalogos/regimenes` y `/catalogos/aduanas` (T-03.2), `POST /clientes/{id}/carta-poder` (T-04.2) y `GET /dashboard/indicadores` (T-02.1). Mientras no existan, la pantalla muestra un aviso o «—» en lugar del dato.
