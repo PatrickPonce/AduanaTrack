@@ -50,6 +50,12 @@ export function formatoTamano(bytes: number | null | undefined): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+/** Monto en USD con dos decimales y separador de miles: 4200 → "4,200.00". */
+export function formatoMonto(monto: number | null | undefined): string {
+  if (monto === null || monto === undefined) return '—'
+  return monto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
 /** Cadena vacía → null para los campos opcionales que se envían al API. */
 export function vacioANulo(valor: string): string | null {
   const recortado = valor.trim()

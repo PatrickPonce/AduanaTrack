@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatoFecha, formatoFechaHora, formatoTamano } from './formato'
+import { formatoFecha, formatoFechaHora, formatoMonto, formatoTamano } from './formato'
 
 describe('formatoFecha', () => {
   it('convierte la fecha ISO sin desfase de zona horaria', () => {
@@ -26,5 +26,12 @@ describe('formatoTamano', () => {
 
   it('muestra un guion si no hay tamaño', () => {
     expect(formatoTamano(null)).toBe('—')
+  })
+})
+
+describe('formatoMonto', () => {
+  it('usa dos decimales y separador de miles', () => {
+    expect(formatoMonto(4200)).toBe('4,200.00')
+    expect(formatoMonto(3225.625)).toBe('3,225.63')
   })
 })

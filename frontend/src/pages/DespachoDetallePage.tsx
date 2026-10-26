@@ -7,12 +7,14 @@ import { obtenerDespacho } from '../api/despachos'
 import { mensajeDeError } from '../api/http'
 import { useAuth } from '../auth/AuthContext'
 import { CartaPoderChip } from '../components/CartaPoderChip'
+import { ClasificacionDespacho } from '../components/ClasificacionDespacho'
 import { DocumentosDespacho } from '../components/DocumentosDespacho'
 import { useEncabezado } from '../components/Encabezado'
 import { EstadoDespachoChip } from '../components/EstadoDespachoChip'
 import { CanalChip } from '../components/EtiquetaColor'
 import { DOS_COLUMNAS, TituloSeccion } from '../components/Seccion'
 import type { Despacho } from '../types'
+import { alcanzoEstado } from '../utils/estados'
 import { formatoFecha } from '../utils/formato'
 import { MODALIDADES_DESPACHO, TIPOS_OPERACION, textoOpcion } from '../utils/opciones'
 
@@ -22,9 +24,12 @@ interface EstadoNavegacion {
   volverA?: string
 }
 
-type Pestana = 'generales' | 'documentos'
+type Pestana = 'generales' | 'documentos' | 'clasificacion'
 
-/** HU-03 · T-03.5 y HU-02 · T-02.4: detalle completo del despacho con su estado; HU-06 · T-06.4: pestaña «Documentos». */
+/**
+ * HU-03 · T-03.5 y HU-02 · T-02.4: detalle completo del despacho con su estado. Sprint 2: pestañas
+ * «Documentos» (HU-06 · T-06.4) y «Clasificación» desde DOCUMENTACION_COMPLETA (HU-07 · T-07.4).
+ */
 export function DespachoDetallePage() {
   const { id } = useParams()
   const ubicacion = useLocation()
@@ -78,8 +83,9 @@ export function DespachoDetallePage() {
 
   const esBorrador = despacho.estado === 'BORRADOR'
   const registra = usuario?.rol !== 'CLIENTE'
+  const conClasificacion = alcanzoEstado(despacho.estado, 'DOCUMENTACION_COMPLETA')
   // Un borrador todavía no tiene expediente: el API responde 409 DESPACHO_EN_BORRADOR.
-  const visible = esBorrador ? 'generales' : pestana
+  const visible = esBorrador || (pestana === 'clasificacion' && !conClasificacion) ? 'generales' : pestana
 
   return (
     <Stack spacing={2}>
@@ -113,7 +119,17 @@ export function DespachoDetallePage() {
           >
             <Tab value="generales" label="Datos generales" />
             <Tab value="documentos" label="Documentos" />
+            {conClasificacion && <Tab value="clasificacion" label="Clasificación" />}
           </Tabs>
+        )}
+
+        {visible === 'clasificacion' && (
+          <ClasificacionDespacho
+            despachoId={despacho.id}
+            estado={despacho.estado}
+            puedeEditar={registra}
+            onClasificado={recargarDespacho}
+          />
         )}
 
         {visible === 'documentos' && (
