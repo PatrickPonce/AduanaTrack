@@ -16,6 +16,8 @@ public final class CodigoError {
     public static final String DESPACHO_EN_BORRADOR = "DESPACHO_EN_BORRADOR";
     /** HU-06: otra carga del mismo documento terminó primero; se vuelve a intentar. */
     public static final String CARGA_SIMULTANEA = "CARGA_SIMULTANEA";
+    /** HU-06: faltan documentos obligatorios; HU-07 no deja clasificar (409 con {@code pendientes}). */
+    public static final String DOCUMENTACION_INCOMPLETA = "DOCUMENTACION_INCOMPLETA";
     public static final String ERROR_INTERNO = "ERROR_INTERNO";
 
     private CodigoError() {
