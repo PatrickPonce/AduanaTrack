@@ -62,7 +62,7 @@ jobs:
           npm test --if-present
 
       # Python
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         if: steps.stack.outputs.tipo == 'python'
         with:
           python-version: "3.12"
