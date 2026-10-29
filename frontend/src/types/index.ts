@@ -334,6 +334,24 @@ export interface PagoRegistrado {
   estado: EstadoDespacho
 }
 
+/** Pago guardado, tal como lo devuelve GET /despachos/{id}/liquidacion. */
+export interface PagoConsulta {
+  fecha: string
+  monto: number
+  medioPago: string
+  numeroOperacion: string
+  registradoPor: string
+  registradoEn: string
+}
+
+/** GET /despachos/{id}/liquidacion (contrato C3): todo nulo mientras no se genera la liquidación. */
+export interface LiquidacionConsulta {
+  liquidacion: Liquidacion | null
+  generadoPor: string | null
+  generadoEn: string | null
+  pago: PagoConsulta | null
+}
+
 /** HU-09 (contrato C4): numeración de la DAM; los tres datos vienen nulos mientras no se registra. */
 export interface Dam {
   numeroDam: string | null

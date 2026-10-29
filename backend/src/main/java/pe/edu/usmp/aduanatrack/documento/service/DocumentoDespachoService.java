@@ -4,9 +4,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -19,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 import pe.edu.usmp.aduanatrack.auth.repository.UsuarioRepository;
 import pe.edu.usmp.aduanatrack.common.AlmacenPdf;
 import pe.edu.usmp.aduanatrack.common.AlmacenPdf.ArchivoGuardado;
+import pe.edu.usmp.aduanatrack.common.AlmacenPdf.Formato;
 import pe.edu.usmp.aduanatrack.common.ApiException;
 import pe.edu.usmp.aduanatrack.common.CodigoError;
 import pe.edu.usmp.aduanatrack.config.DocumentoProperties;
@@ -37,11 +40,13 @@ import pe.edu.usmp.aduanatrack.documento.repository.TipoDocumentoRepository;
 
 /**
  * Carga, reemplazo con versión histórica y descarga de los documentos del despacho
- * (HU-06 · T-06.2, contrato C1). Los PDF se guardan en {@code {directorio}/{despachoId}/{uuid}.pdf}
- * con la misma validación que la carta poder ({@link AlmacenPdf}).
+ * (HU-06 · T-06.2, contrato C1). Se aceptan PDF y JPG (regla de negocio 1 de HU-06), guardados en
+ * {@code {directorio}/{despachoId}/{uuid}.pdf|jpg} con la validación de {@link AlmacenPdf}.
  */
 @Service
 public class DocumentoDespachoService {
+
+    static final Set<Formato> FORMATOS_PERMITIDOS = EnumSet.of(Formato.PDF, Formato.JPG);
 
     private final DocumentoDespachoRepository documentoRepository;
     private final TipoDocumentoRepository tipoRepository;
@@ -96,10 +101,11 @@ public class DocumentoDespachoService {
         }
         TipoDocumento tipo = buscarTipo(codigoTipo);
         if (archivo == null || archivo.isEmpty()) {
-            throw ApiException.validacion(Map.of("archivo", "Seleccione el PDF del documento"));
+            throw ApiException.validacion(Map.of("archivo", "Seleccione el archivo del documento (PDF o JPG)"));
         }
 
-        ArchivoGuardado guardado = AlmacenPdf.guardar(directorio.resolve(despachoId.toString()), archivo);
+        ArchivoGuardado guardado = AlmacenPdf.guardar(directorio.resolve(despachoId.toString()), archivo,
+                FORMATOS_PERMITIDOS);
         try {
             documentoRepository.findByDespachoIdAndTipoIdAndVigenteTrue(despachoId, tipo.getId())
                     .ifPresent(anterior -> {
@@ -109,7 +115,8 @@ public class DocumentoDespachoService {
                     });
             int version = documentoRepository.ultimaVersion(despachoId, tipo.getId()) + 1;
             DocumentoDespacho nuevo = documentoRepository.saveAndFlush(new DocumentoDespacho(despachoId, tipo, version,
-                    AlmacenPdf.nombreOriginal(archivo, tipo.getCodigo().toLowerCase(Locale.ROOT) + ".pdf"),
+                    AlmacenPdf.nombreOriginal(archivo,
+                            tipo.getCodigo().toLowerCase(Locale.ROOT) + "." + guardado.formato().extension()),
                     despachoId + "/" + guardado.ruta().getFileName(), guardado.tamanoBytes(), guardado.sha256(),
                     usuarioRepository.getReferenceById(usuarioId), LocalDateTime.now(clock)));
             documentacion.actualizarEstado(despachoId);
@@ -149,7 +156,8 @@ public class DocumentoDespachoService {
         if (!ruta.startsWith(directorio) || !Files.isRegularFile(ruta)) {
             throw ApiException.noEncontrado("El archivo del documento no está disponible.");
         }
-        return new ArchivoDocumento(ruta, documento.getNombreArchivo());
+        return new ArchivoDocumento(ruta, documento.getNombreArchivo(),
+                Formato.deRuta(documento.getRutaArchivo()).tipoContenido());
     }
 
     private static DocumentoRequeridoResponse fila(TipoDocumento tipo, DocumentoDespacho vigente) {
@@ -171,6 +179,6 @@ public class DocumentoDespachoService {
                 .orElseThrow(() -> ApiException.noEncontrado("No existe el tipo de documento " + codigo + "."));
     }
 
-    public record ArchivoDocumento(Path ruta, String nombre) {
+    public record ArchivoDocumento(Path ruta, String nombre, String tipoContenido) {
     }
 }

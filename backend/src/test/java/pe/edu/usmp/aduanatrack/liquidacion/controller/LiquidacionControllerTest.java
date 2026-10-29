@@ -6,12 +6,15 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +28,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import jakarta.servlet.http.Cookie;
 import pe.edu.usmp.aduanatrack.common.ApiException;
 import pe.edu.usmp.aduanatrack.common.CodigoError;
+import pe.edu.usmp.aduanatrack.liquidacion.dto.LiquidacionConsultaResponse;
+import pe.edu.usmp.aduanatrack.liquidacion.dto.LiquidacionConsultaResponse.PagoConsulta;
 import pe.edu.usmp.aduanatrack.liquidacion.dto.LiquidacionResponse;
 import pe.edu.usmp.aduanatrack.liquidacion.dto.PagoResponse;
 import pe.edu.usmp.aduanatrack.liquidacion.dto.ResultadoCalculo.Tasas;
@@ -62,6 +67,27 @@ class LiquidacionControllerTest {
                 .andExpect(jsonPath("$.total").value(3225.63))
                 .andExpect(jsonPath("$.tasas.percepcion").value(3.5))
                 .andExpect(jsonPath("$.estado").value("LIQUIDADO"));
+    }
+
+    @Test
+    void consultar_elClienteTambienVeLaLiquidacionGuardada() throws Exception {
+        when(liquidacionService.consultar(1L)).thenReturn(new LiquidacionConsultaResponse(
+                new LiquidacionResponse(new BigDecimal("10000.00"), new BigDecimal("800.00"),
+                        new BigDecimal("150.00"), new BigDecimal("10950.00"), new BigDecimal("657.00"),
+                        new BigDecimal("1857.12"), new BigDecimal("232.14"), new BigDecimal("479.37"),
+                        new BigDecimal("3225.63"), "USD",
+                        new Tasas(new BigDecimal("16"), new BigDecimal("2"), new BigDecimal("3.5")), "TRIBUTOS_PAGADOS"),
+                "Agente Demo", LocalDateTime.of(2026, 10, 28, 10, 0),
+                new PagoConsulta(LocalDate.of(2026, 10, 28), new BigDecimal("3225.63"), "VENTANILLA", "00123456",
+                        "Agente Demo", LocalDateTime.of(2026, 10, 28, 11, 0))));
+
+        mvc.perform(get("/api/v1/despachos/1/liquidacion").cookie(sesion("CLIENTE")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.liquidacion.total").value(3225.63))
+                .andExpect(jsonPath("$.liquidacion.estado").value("TRIBUTOS_PAGADOS"))
+                .andExpect(jsonPath("$.generadoPor").value("Agente Demo"))
+                .andExpect(jsonPath("$.pago.medioPago").value("VENTANILLA"))
+                .andExpect(jsonPath("$.pago.fecha").value("2026-10-28"));
     }
 
     @Test

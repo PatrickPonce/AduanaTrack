@@ -4,7 +4,9 @@ Parte de partidas del contrato C2. Publica e implementa: Fabio (T-07.1 · SCRUM-
 
 La parte de ítems (`GET/PUT /despachos/{id}/items`) es de Patrick (`C2-items-factura.md`). `POST /clasificacion` es de Fabio (T-07.3).
 
-Código en `backend/src/main/java/pe/edu/usmp/aduanatrack/clasificacion/`. Migración `V007__partidas_e_items.sql` (crea `partida_referencial` con 20 partidas de la demo e `item_factura`). Es un catálogo interno referencial: las tasas son de ejemplo, las valida el PO, y no se conecta al Arancel de SUNAT.
+Código en `backend/src/main/java/pe/edu/usmp/aduanatrack/clasificacion/`. Migración `V007__partidas_e_items.sql` (crea `partida_referencial` con 20 partidas de la demo e `item_factura`).
+
+**Desde `V011__arancel_aduanas_2022.sql`** el catálogo tiene las **8 017 subpartidas nacionales del Arancel de Aduanas 2022** (D.S. N.° 404-2021-EF), extraídas del PDF oficial de SUNAT (<https://www.sunat.gob.pe/orientacionaduanera/aranceles/2022/arancel-ad-2022.pdf>), con su tasa Ad Valorem oficial (0 %, 4 %, 6 % u 11 %). La `descripcion` incluye los niveles superiores para que los textos «Los demás» tengan sentido (p. ej. `Balones y pelotas, excepto las de golf o tenis de mesa › Inflables`) y la búsqueda incluye además el texto de la partida de 4 dígitos (buscar «juguetes» o «pelota» encuentra el capítulo 95). Las 11 partidas de ejemplo del V007 que no existen en el arancel quedan con `activo = false`. Sigue siendo un catálogo interno: no se consulta en línea a SUNAT (regla de negocio 1 de HU-07).
 
 ## GET `/api/v1/catalogos/partidas?q=`
 

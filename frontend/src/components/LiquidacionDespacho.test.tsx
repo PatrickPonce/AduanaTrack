@@ -4,7 +4,7 @@ import { AxiosError, AxiosHeaders } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as liquidacionApi from '../api/liquidacion'
-import type { Liquidacion } from '../types'
+import type { Liquidacion, LiquidacionConsulta } from '../types'
 import { hoyIso } from '../utils/formato'
 import { LiquidacionDespacho, validarLiquidacion, validarPago } from './LiquidacionDespacho'
 
@@ -24,6 +24,22 @@ const LIQUIDACION: Liquidacion = {
   moneda: 'USD',
   tasas: { igv: 16, ipm: 2, percepcion: 3.5 },
   estado: 'LIQUIDADO',
+}
+
+const SIN_GUARDAR: LiquidacionConsulta = { liquidacion: null, generadoPor: null, generadoEn: null, pago: null }
+
+const GUARDADA: LiquidacionConsulta = {
+  liquidacion: { ...LIQUIDACION, estado: 'TRIBUTOS_PAGADOS' },
+  generadoPor: 'Agente Demo',
+  generadoEn: '2026-10-13T09:05:00',
+  pago: {
+    fecha: '2026-10-14',
+    monto: 3225.63,
+    medioPago: 'VENTANILLA',
+    numeroOperacion: 'OP-000145',
+    registradoPor: 'Agente Demo',
+    registradoEn: '2026-10-14T15:05:00',
+  },
 }
 
 function errorApi(status: number, data: Record<string, unknown>) {
@@ -49,6 +65,7 @@ async function elegirMedioPago(user: ReturnType<typeof userEvent.setup>, texto: 
 
 describe('LiquidacionDespacho (HU-08)', () => {
   beforeEach(() => {
+    vi.mocked(liquidacionApi.obtenerLiquidacion).mockResolvedValue(SIN_GUARDAR)
     vi.mocked(liquidacionApi.generarLiquidacion).mockResolvedValue(LIQUIDACION)
     vi.mocked(liquidacionApi.registrarPago).mockResolvedValue({ estado: 'TRIBUTOS_PAGADOS' })
   })
@@ -205,17 +222,31 @@ describe('LiquidacionDespacho (HU-08)', () => {
     expect(await screen.findByText('Genere la liquidación antes de registrar el pago.')).toBeInTheDocument()
   })
 
-  it('con la liquidación ya generada pero sin el detalle en pantalla, invita a generarla de nuevo', () => {
+  it('con la liquidación ya generada muestra el detalle guardado y deja el flete y el seguro listos para regenerar', async () => {
+    vi.mocked(liquidacionApi.obtenerLiquidacion).mockResolvedValue({
+      ...GUARDADA,
+      liquidacion: LIQUIDACION,
+      pago: null,
+    })
     render(<LiquidacionDespacho despachoId={7} estado="LIQUIDADO" puedeEditar />)
 
-    expect(screen.getByText(/La liquidación ya fue generada/)).toBeInTheDocument()
+    expect(await screen.findByLabelText('Total de tributos')).toHaveTextContent('3,225.63')
+    expect(screen.getByText(/Generada por Agente Demo/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/^Flete \(USD\)/)).toHaveValue('800.00')
+    expect(screen.getByLabelText(/^Monto pagado/)).toHaveValue('3225.63')
     expect(screen.getByRole('button', { name: 'Volver a generar liquidación' })).toBeInTheDocument()
   })
 
-  it('con los tributos pagados solo informa el estado', () => {
+  it('con los tributos pagados muestra la liquidación y el pago registrado, sin formularios', async () => {
+    vi.mocked(liquidacionApi.obtenerLiquidacion).mockResolvedValue(GUARDADA)
     render(<LiquidacionDespacho despachoId={7} estado="TRIBUTOS_PAGADOS" puedeEditar />)
 
     expect(screen.getByText(/Los tributos ya fueron pagados/)).toBeInTheDocument()
+    expect(await screen.findByLabelText('Valor CIF')).toHaveTextContent('10,950.00')
+    const pago = screen.getByRole('table', { name: 'Pago registrado' })
+    expect(within(pago).getByLabelText('Medio de pago')).toHaveTextContent('Ventanilla')
+    expect(within(pago).getByLabelText('N° de operación')).toHaveTextContent('OP-000145')
+    expect(within(pago).getByLabelText('Fecha del pago')).toHaveTextContent('14/10/2026')
     expect(screen.queryByRole('button', { name: /liquidación/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Registrar pago realizado' })).not.toBeInTheDocument()
   })

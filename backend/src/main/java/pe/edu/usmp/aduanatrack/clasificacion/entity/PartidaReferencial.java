@@ -9,7 +9,10 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-/** Partida arancelaria del catálogo interno referencial (HU-07 · T-07.1); no es el Arancel de SUNAT. */
+/**
+ * Subpartida nacional del catálogo interno referencial (HU-07 · T-07.1), cargado con el Arancel de
+ * Aduanas 2022 (V011). Es una copia local: no se consulta en línea a SUNAT.
+ */
 @Entity
 @Table(name = "partida_referencial")
 public class PartidaReferencial {

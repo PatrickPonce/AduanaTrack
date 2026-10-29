@@ -39,6 +39,7 @@ import pe.edu.usmp.aduanatrack.despacho.entity.EstadoDespacho;
 import pe.edu.usmp.aduanatrack.despacho.entity.TipoHito;
 import pe.edu.usmp.aduanatrack.despacho.repository.DespachoRepository;
 import pe.edu.usmp.aduanatrack.despacho.service.HitoDespachoService;
+import pe.edu.usmp.aduanatrack.liquidacion.dto.LiquidacionConsultaResponse;
 import pe.edu.usmp.aduanatrack.liquidacion.dto.LiquidacionRequest;
 import pe.edu.usmp.aduanatrack.liquidacion.dto.LiquidacionResponse;
 import pe.edu.usmp.aduanatrack.liquidacion.dto.PagoRequest;
@@ -220,6 +221,46 @@ class LiquidacionServiceTest {
                 new BigDecimal("100.00"), "TRANSFERENCIA", "1"), AGENTE))
                 .isInstanceOfSatisfying(ApiException.class, e -> assertThat(e.getCampos()).containsKey("fecha"));
         assertThat(despacho.getEstado()).isEqualTo(EstadoDespacho.LIQUIDADO);
+    }
+
+    // Consulta de la liquidación guardada (GET, contrato C3)
+
+    @Test
+    void consultar_devuelveElDesgloseGuardadoYElPagoRegistrado() {
+        servicio.generar(DESPACHO, new LiquidacionRequest(new BigDecimal("800.00"), new BigDecimal("150.00")), AGENTE);
+        ArgumentCaptor<Liquidacion> guardada = ArgumentCaptor.forClass(Liquidacion.class);
+        verify(liquidacionRepository).save(guardada.capture());
+        when(liquidacionRepository.findByDespachoId(DESPACHO)).thenReturn(Optional.of(guardada.getValue()));
+        despacho.cambiarEstado(EstadoDespacho.TRIBUTOS_PAGADOS);
+        when(pagoRepository.findByDespachoId(DESPACHO)).thenReturn(Optional.of(new PagoTributos(DESPACHO,
+                LocalDate.of(2026, 10, 28), new BigDecimal("3225.63"), "BANCA_POR_CONVENIO", "00123456", agente, AHORA)));
+
+        LiquidacionConsultaResponse consulta = servicio.consultar(DESPACHO);
+
+        assertThat(consulta.liquidacion().cif()).isEqualByComparingTo("10950.00");
+        assertThat(consulta.liquidacion().total()).isEqualByComparingTo("3225.63");
+        assertThat(consulta.liquidacion().tasas().igv()).isEqualByComparingTo("16");
+        assertThat(consulta.liquidacion().estado()).isEqualTo("TRIBUTOS_PAGADOS");
+        assertThat(consulta.generadoPor()).isEqualTo("Agente Demo");
+        assertThat(consulta.generadoEn()).isEqualTo(AHORA);
+        assertThat(consulta.pago().monto()).isEqualByComparingTo("3225.63");
+        assertThat(consulta.pago().medioPago()).isEqualTo("BANCA_POR_CONVENIO");
+        assertThat(consulta.pago().registradoPor()).isEqualTo("Agente Demo");
+    }
+
+    @Test
+    void consultarSinLiquidacion_devuelveTodoNulo() {
+        LiquidacionConsultaResponse consulta = servicio.consultar(DESPACHO);
+
+        assertThat(consulta.liquidacion()).isNull();
+        assertThat(consulta.generadoPor()).isNull();
+        assertThat(consulta.pago()).isNull();
+    }
+
+    @Test
+    void consultarDespachoInexistente_responde404() {
+        assertThatThrownBy(() -> servicio.consultar(99L)).isInstanceOfSatisfying(ApiException.class,
+                e -> assertThat(e.getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 
     private ItemFactura item(String fob, boolean conPartida) {
