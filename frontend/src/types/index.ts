@@ -80,8 +80,17 @@ export interface Aduana {
   nombre: string
 }
 
-/** Sprint 1: BORRADOR y APERTURA; los demás estados llegan en los Sprints 2 y 3. */
-export type EstadoDespacho = 'BORRADOR' | 'APERTURA' | (string & {})
+/** Estados del despacho en el orden en que avanza (Sprints 1 y 2); los del Sprint 3 llegan después. */
+export type EstadoDespacho =
+  | 'BORRADOR'
+  | 'APERTURA'
+  | 'DOCUMENTACION_COMPLETA'
+  | 'CLASIFICADO'
+  | 'LIQUIDADO'
+  | 'TRIBUTOS_PAGADOS'
+  | 'DAM_NUMERADA'
+  | 'CANAL_ASIGNADO'
+  | (string & {})
 
 export interface CatalogoRef {
   id: number
@@ -202,6 +211,177 @@ export interface DespachoTablero {
   alertaAlmacenaje: boolean
   estadoCartaPoder: EstadoCartaPoder
   alertaCritica: boolean
+}
+
+/** HU-06 (contrato C1): COMPLETO cuando todos los obligatorios tienen versión vigente. */
+export type EstadoDocumentacion = 'COMPLETO' | 'PENDIENTE'
+
+export type EstadoDocumento = 'CARGADO' | 'PENDIENTE'
+
+/** Fila de "Documentos requeridos del despacho": los datos de la versión vigente son nulos si está pendiente. */
+export interface DocumentoRequerido {
+  tipo: string
+  nombre: string
+  obligatorio: boolean
+  estado: EstadoDocumento
+  version: number | null
+  documentoId: number | null
+  archivo: string | null
+  tamanoBytes: number | null
+  cargadoPor: string | null
+  cargadoEn: string | null
+}
+
+export interface DocumentosDespacho {
+  estadoGeneral: EstadoDocumentacion
+  documentos: DocumentoRequerido[]
+}
+
+export interface DocumentoCargado {
+  documentoId: number
+  tipo: string
+  version: number
+  estado: EstadoDocumento
+}
+
+export interface VersionDocumento {
+  documentoId: number
+  version: number
+  vigente: boolean
+  archivo: string
+  tamanoBytes: number
+  cargadoPor: string
+  cargadoEn: string
+}
+
+/** HU-07 (contrato C2): partida tal como la repite cada ítem ("8482.10.00.00"). */
+export interface PartidaResumen {
+  id: number
+  codigoFormateado: string
+  descripcion: string
+}
+
+/** Resultado de GET /catalogos/partidas?q= (catálogo referencial, no el Arancel de SUNAT). */
+export interface PartidaArancelaria extends PartidaResumen {
+  codigo: string
+  tasaAdValorem: number
+}
+
+export interface ItemFactura {
+  id: number
+  numero: number
+  descripcion: string
+  cantidad: number
+  unidad: string
+  valorFob: number
+  partidaId: number | null
+  partida: PartidaResumen | null
+}
+
+/** Fila del PUT /items: sin id se crea; el ítem guardado que no viene en la lista se quita. */
+export interface ItemFacturaRequest {
+  id?: number
+  descripcion: string
+  cantidad: number
+  unidad: string
+  valorFob: number
+  partidaId: number | null
+}
+
+export interface ClasificacionGuardada {
+  estado: EstadoDespacho
+  clasificadoPor: string
+  clasificadoEn: string
+}
+
+/** HU-08 (contrato C3): tasas aplicadas, en porcentaje. */
+export interface TasasLiquidacion {
+  igv: number
+  ipm: number
+  percepcion: number
+}
+
+/** Liquidación referencial: todos los montos en USD con 2 decimales. */
+export interface Liquidacion {
+  fob: number
+  flete: number
+  seguro: number
+  cif: number
+  adValorem: number
+  igv: number
+  ipm: number
+  percepcion: number
+  total: number
+  moneda: string
+  tasas: TasasLiquidacion
+  estado: EstadoDespacho
+}
+
+export interface LiquidacionRequest {
+  flete: number
+  seguro: number
+}
+
+/** Pago de tributos hecho fuera del sistema (banco o SUNAT). */
+export interface PagoRequest {
+  fecha: string
+  monto: number
+  medioPago: string
+  numeroOperacion: string
+}
+
+export interface PagoRegistrado {
+  estado: EstadoDespacho
+}
+
+/** HU-09 (contrato C4): numeración de la DAM; los tres datos vienen nulos mientras no se registra. */
+export interface Dam {
+  numeroDam: string | null
+  fechaNumeracion: string | null
+  nombreCargo: string | null
+  estado: EstadoDespacho
+}
+
+/** Cuerpo del POST /dam (registro) y del POST /dam/rectificacion; viaja como multipart. */
+export interface DamRequest {
+  numeroDam: string
+  fechaNumeracion: string | null
+  cargo: File | null
+}
+
+export interface DamRectificacionRequest extends DamRequest {
+  motivo: string
+}
+
+/** Una rectificación del N° de DAM (GET /dam/historial), la más reciente primero. */
+export interface RectificacionDam {
+  numeroAnterior: string
+  fechaAnterior: string | null
+  numeroNuevo: string
+  fechaNueva: string | null
+  motivo: string
+  usuario: string
+  fecha: string
+}
+
+/** HU-10 (contrato C5): colores del canal de control según el estándar de SUNAT. */
+export type CanalControl = 'VERDE' | 'NARANJA' | 'ROJO'
+
+/** Respuesta del PUT /canal: `hitoSugerido` solo viene en canal rojo y `levanteHabilitado` solo en verde. */
+export interface CanalGuardado {
+  canal: CanalControl
+  estado: EstadoDespacho
+  levanteHabilitado: boolean
+  hitoSugerido: string | null
+}
+
+/** Fila de la «Línea de tiempo del despacho» (GET /hitos); `sugerido` marca una acción propuesta por el sistema. */
+export interface Hito {
+  tipo: string
+  descripcion: string
+  sugerido: boolean
+  usuario: string
+  fecha: string
 }
 
 /** Formato único de error del backend. */

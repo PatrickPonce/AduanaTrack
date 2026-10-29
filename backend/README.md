@@ -15,7 +15,7 @@ docker compose up --build          # http://localhost
 cd backend && mvn -B verify
 ```
 
-Variables: `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `JWT_SECRET` (≥ 32 caracteres), `COOKIE_SECURE`.
+Variables: `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `JWT_SECRET` (≥ 32 caracteres), `COOKIE_SECURE`, `CARTAS_PODER_DIR` y `DOCUMENTOS_DIR` (carpetas de los PDF; en Docker son volúmenes).
 
 ## API (prefijo `/api/v1`)
 
@@ -39,6 +39,11 @@ Errores en formato único: `{"codigo", "mensaje", "campos"}`.
 | GET | `/despachos/{id}` | HU-03 · T-03.1 | Detalle con cliente, régimen, aduana, estado, número y agente |
 | GET | `/catalogos/regimenes`, `/catalogos/aduanas` | HU-03 · T-03.2 | Solo activos, por código: `[{id, codigo, descripcion}]` y `[{id, codigo, nombre}]` |
 | GET / PUT | `/despachos/{id}/embarque` | HU-05 · T-05.1 / T-05.3 | BL (con `numeroViaje`) + contenedores (con `pesoBrutoKg`) + `fechaLimiteAlmacenaje`, `diasRestantes`, `alertaAlmacenaje`, `etaModificada`, `etaAnterior`; 400 con la fila del contenedor (`contenedores[i].numero`); 409 `DESPACHO_EN_BORRADOR` |
+| GET | `/despachos/{id}/hitos` | HU-10 · T-10.1 | Línea de tiempo en orden cronológico: `[{tipo, descripcion, sugerido, usuario, fecha}]`; `usuario` = `Sistema` en los hitos sugeridos; 404 si el despacho no existe |
+| GET | `/despachos/{id}/documentos` | HU-06 · T-06.2 | `{estadoGeneral, documentos: [{tipo, nombre, obligatorio, estado, version, documentoId, archivo, tamanoBytes, cargadoPor, cargadoEn}]}`; `estadoGeneral` = `COMPLETO` cuando todos los obligatorios tienen versión vigente (contrato C1) |
+| POST | `/despachos/{id}/documentos/{tipo}` multipart `archivo` | HU-06 · T-06.2 | 201 `{documentoId, tipo, version, estado}`; reemplazar crea la versión siguiente y la anterior queda con `vigente=false`; 400 `campos.archivo`; 404 despacho o tipo; 409 `DESPACHO_EN_BORRADOR` o `CARGA_SIMULTANEA`; 413 `ARCHIVO_MUY_GRANDE`; 415 `FORMATO_NO_PERMITIDO`. Se guarda en `/data/documentos/{despachoId}/{uuid}.pdf` |
+| GET | `/despachos/{id}/documentos/{tipo}/versiones` | HU-06 · T-06.2 | `[{documentoId, version, vigente, archivo, tamanoBytes, cargadoPor, cargadoEn}]`, la más reciente primero |
+| GET | `/despachos/{id}/documentos/{documentoId}/archivo` | HU-06 · T-06.2 | PDF de cualquier versión (`Content-Disposition: attachment`); 404 si es de otro despacho o el archivo no está |
 | GET | `/dashboard/despachos?aduanaId=&clienteId=` | HU-02 · T-02.2 | Despachos no borradores por ETA ascendente (sin ETA al final) con `contenedor`, `totalContenedores`, `canalControl`, `diasAlmacenaje`, `alertaCritica` |
 | GET | `/dashboard/despachos/excel?aduanaId=&clienteId=` | HU-02 · T-02.2 | `despachos-AAAAMMDD.xlsx` con las mismas filas |
 | GET | `/dashboard/indicadores?aduanaId=&clienteId=` | HU-02 · T-02.1 | `{despachosActivos, enCanalNaranjaRojo, conLevante, conAlertasCriticas}` sobre los despachos no borradores; activos = sin levante; alertas críticas = filas con `alertaCritica` |
@@ -48,6 +53,13 @@ Permisos por rol: `POST` y `PUT` sobre `/clientes/**` y `/despachos/**` solo par
 Reglas configurables leídas de `parametro_sistema`: `DIAS_ALMACENAJE` (30), `DIAS_ALERTA_ALMACENAJE` (3), `DIAS_ALERTA_CARTA_PODER` (15).
 
 ## Contratos con otras tareas
+
+### Sprint 2
+
+- **Estados y línea de tiempo (T-10.1):** `EstadoDespacho` ya tiene los estados del Sprint 2 en orden (`APERTURA` → `DOCUMENTACION_COMPLETA` → `CLASIFICADO` → `LIQUIDADO` → `TRIBUTOS_PAGADOS` → `DAM_NUMERADA` → `CANAL_ASIGNADO`). Cada servicio valida el estado anterior, llama a `despacho.cambiarEstado(nuevo)` y, en la misma transacción, a `HitoDespachoService.registrar(despachoId, TipoHito.X, descripcion)`, que guarda el usuario de la sesión y la hora de Lima. Para el canal rojo (T-10.2) está `registrarSugerido(despachoId, "Programar inspección física")`. `EstadoDespacho.alcanzo(otro)` dice si el despacho ya llegó a un estado (p. ej. para habilitar una pestaña). Migración `V005__hito_despacho.sql`: crea la tabla y el hito de apertura de los despachos que ya estaban abiertos.
+- **Documentos del despacho (T-06.1 y T-06.2):** contrato en [`docs/sprint-2/contratos/C1-documentos-despacho.md`](../docs/sprint-2/contratos/C1-documentos-despacho.md). Catálogo en `tipo_documento` (V006) y versiones en `documento_despacho`, con una sola vigente por tipo (índice único parcial). La validación y el guardado del PDF están en `common.AlmacenPdf`, compartido con la carta poder; T-09.1 (cargo de la DAM) puede reutilizar `DocumentoDespachoService.cargar`. Para T-06.3 (Fabio): el estado general ya se calcula en `listar`; falta el paso a `DOCUMENTACION_COMPLETA` con su hito al cargar el último obligatorio (marcado en `cargar`) y `exigirDocumentacionCompleta(despachoId)` → 409 `DOCUMENTACION_INCOMPLETA` con `pendientes`.
+
+### Sprint 1
 
 - **T-00.4 (migraciones, `src/main/resources/db/migration/`):** las entidades usan `ddl-auto=validate`, así que V001 debe crear las 13 tablas de la sección 2.5 de la guía con estos tipos: `id` `BIGSERIAL`/`BIGINT IDENTITY`; textos `VARCHAR`; fechas de calendario (`fecha_emision`, `fecha_vencimiento`, `fecha_levante`, `fecha_embarque`, `fecha_eta`, `fecha_limite_almacenaje`) `DATE`; marcas de tiempo (`bloqueado_hasta`, `creado_en`, `actualizado_en`, `fecha`, `alerta_generada_en`) `TIMESTAMP` sin zona (la app trabaja en hora de Lima); `tamano_bytes BIGINT`; `intentos_fallidos INTEGER`; `correlativo_despacho(anio INTEGER PK, ultimo_numero INTEGER)`; `contenedor` con `UNIQUE (embarque_id, numero)`; `despacho.estado`, `embarque.tipo_bl` y `auditoria_acceso.resultado` como `VARCHAR` (enums en texto).
 - **T-01.2 (auditoría):** implementar la interfaz `auditoria.AuditoriaAccesoService` (`@Service`, `REQUIRES_NEW`). El login la llama en cada intento; `usuarioId` es nulo si el usuario no existe. **Hasta que exista, la aplicación no arranca.**

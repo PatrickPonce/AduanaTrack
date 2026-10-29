@@ -70,6 +70,20 @@ public class Despacho {
     @Column(name = "fecha_levante")
     private LocalDate fechaLevante;
 
+    /** HU-09: N° de DAM numerada en el sistema externo; nulo hasta DAM_NUMERADA. */
+    @Column(name = "numero_dam", unique = true)
+    private String numeroDam;
+
+    @Column(name = "fecha_numeracion")
+    private LocalDate fechaNumeracion;
+
+    /** Cargo de numeración en PDF (opcional): nombre original y ruta relativa al directorio de documentos. */
+    @Column(name = "cargo_nombre")
+    private String cargoNombre;
+
+    @Column(name = "cargo_ruta")
+    private String cargoRuta;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "agente_id", nullable = false)
     private Usuario agente;
@@ -91,6 +105,42 @@ public class Despacho {
     public void abrir(String numero) {
         this.numero = numero;
         this.estado = EstadoDespacho.APERTURA;
+    }
+
+    /**
+     * Avanza el despacho en los Sprints 2 y 3. Quien lo llama valida antes el estado anterior
+     * y registra el hito con {@code HitoDespachoService} en la misma transacción.
+     */
+    public void cambiarEstado(EstadoDespacho nuevo) {
+        this.estado = nuevo;
+    }
+
+    /** Guarda el canal que informó SUNAT y pasa a CANAL_ASIGNADO (HU-10 · T-10.2). */
+    public void asignarCanal(CanalControl canal) {
+        this.canalControl = canal.name();
+        this.estado = EstadoDespacho.CANAL_ASIGNADO;
+    }
+
+    /** HU-09: guarda la numeración y pasa a DAM_NUMERADA; el cargo es opcional. */
+    public void registrarDam(String numeroDam, LocalDate fechaNumeracion, String cargoNombre, String cargoRuta) {
+        this.numeroDam = numeroDam;
+        this.fechaNumeracion = fechaNumeracion;
+        this.cargoNombre = cargoNombre;
+        this.cargoRuta = cargoRuta;
+        this.estado = EstadoDespacho.DAM_NUMERADA;
+    }
+
+    /**
+     * HU-09: corrige el número y la fecha de numeración sin cambiar el estado. El cargo solo se
+     * reemplaza si llega uno nuevo ({@code cargoNombre} no nulo).
+     */
+    public void rectificarDam(String numeroDam, LocalDate fechaNumeracion, String cargoNombre, String cargoRuta) {
+        this.numeroDam = numeroDam;
+        this.fechaNumeracion = fechaNumeracion;
+        if (cargoNombre != null) {
+            this.cargoNombre = cargoNombre;
+            this.cargoRuta = cargoRuta;
+        }
     }
 
     public boolean esBorrador() {
@@ -173,6 +223,22 @@ public class Despacho {
         return fechaLevante;
     }
 
+    public String getNumeroDam() {
+        return numeroDam;
+    }
+
+    public LocalDate getFechaNumeracion() {
+        return fechaNumeracion;
+    }
+
+    public String getCargoNombre() {
+        return cargoNombre;
+    }
+
+    public String getCargoRuta() {
+        return cargoRuta;
+    }
+
     public Usuario getAgente() {
         return agente;
     }
@@ -181,3 +247,4 @@ public class Despacho {
         return creadoEn;
     }
 }
+
