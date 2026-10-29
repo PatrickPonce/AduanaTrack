@@ -1,5 +1,17 @@
+import { keyframes } from '@emotion/react'
 import { createTheme } from '@mui/material'
 import { esES } from '@mui/material/locale'
+
+/** Animaciones reutilizables: entrada suave de tarjetas y transición al cambiar de pestaña/página. */
+export const fadeInUp = keyframes`
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+`
+
+export const fadeIn = keyframes`
+  from { opacity: 0; }
+  to { opacity: 1; }
+`
 
 /** Colores de los prototipos de las HU (Grupo 2 - Historias de Usuario v2.0). */
 export const COLORES = {
@@ -40,11 +52,24 @@ export const tema = createTheme(
     components: {
       MuiPaper: {
         defaultProps: { elevation: 0 },
-        styleOverrides: { root: { border: `1px solid ${COLORES.borde}`, borderRadius: 10 } },
+        styleOverrides: {
+          root: {
+            border: `1px solid ${COLORES.borde}`,
+            borderRadius: 10,
+            transition: 'box-shadow .25s ease, transform .25s ease',
+          },
+        },
       },
       MuiButton: {
         defaultProps: { disableElevation: true },
-        styleOverrides: { root: { borderRadius: 6, padding: '8px 16px' } },
+        styleOverrides: {
+          root: {
+            borderRadius: 6,
+            padding: '8px 16px',
+            transition: 'transform .18s ease, box-shadow .18s ease',
+            '&:hover': { transform: 'translateY(-1px)' },
+          },
+        },
       },
       MuiTextField: {
         defaultProps: { fullWidth: true, size: 'small' },
@@ -95,7 +120,13 @@ export const tema = createTheme(
         },
       },
       MuiChip: {
-        styleOverrides: { root: { fontWeight: 600, borderRadius: 999 } },
+        styleOverrides: { root: { fontWeight: 600, borderRadius: 999, transition: 'background-color .2s ease' } },
+      },
+      MuiTableRow: {
+        styleOverrides: { root: { transition: 'background-color .15s ease' } },
+      },
+      MuiTab: {
+        styleOverrides: { root: { transition: 'color .2s ease' } },
       },
     },
   },

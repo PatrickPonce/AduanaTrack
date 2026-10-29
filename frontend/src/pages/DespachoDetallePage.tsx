@@ -17,6 +17,7 @@ import { LineaTiempoDespacho } from '../components/LineaTiempoDespacho'
 import { LiquidacionDespacho } from '../components/LiquidacionDespacho'
 import { NumeracionDam } from '../components/NumeracionDam'
 import { DOS_COLUMNAS, TituloSeccion } from '../components/Seccion'
+import { fadeIn } from '../theme'
 import type { Despacho } from '../types'
 import { alcanzoEstado } from '../utils/estados'
 import { formatoFecha } from '../utils/formato'
@@ -144,6 +145,8 @@ export function DespachoDetallePage() {
           </Tabs>
         )}
 
+        {/* key={visible} retriggera la animación de entrada al cambiar de pestaña. */}
+        <Box key={visible} sx={{ animation: `${fadeIn} .25s ease` }}>
         {visible === 'canal' && (
           <CanalControlDespacho
             despachoId={despacho.id}
@@ -224,6 +227,7 @@ export function DespachoDetallePage() {
             </Box>
           </>
         )}
+        </Box>
       </Paper>
 
       {esBorrador && (
