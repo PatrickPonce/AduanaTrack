@@ -16,6 +16,14 @@ public final class CodigoError {
     public static final String DESPACHO_EN_BORRADOR = "DESPACHO_EN_BORRADOR";
     /** HU-06: otra carga del mismo documento terminó primero; se vuelve a intentar. */
     public static final String CARGA_SIMULTANEA = "CARGA_SIMULTANEA";
+    /** HU-08: la liquidación necesita el despacho clasificado (todos los ítems con partida). */
+    public static final String DESPACHO_NO_CLASIFICADO = "DESPACHO_NO_CLASIFICADO";
+    /** HU-08: se intenta pagar sin una liquidación generada. */
+    public static final String LIQUIDACION_PENDIENTE = "LIQUIDACION_PENDIENTE";
+    /** HU-09: se intenta numerar la DAM sin tributos pagados. */
+    public static final String TRIBUTOS_PENDIENTES = "TRIBUTOS_PENDIENTES";
+    /** HU-09: el N° de DAM ya está registrado en otro despacho. */
+    public static final String DAM_DUPLICADA = "DAM_DUPLICADA";
     public static final String ERROR_INTERNO = "ERROR_INTERNO";
 
     private CodigoError() {
