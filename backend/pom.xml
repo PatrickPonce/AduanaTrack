@@ -20,7 +20,7 @@
     <properties>
         <java.version>21</java.version>
         <jjwt.version>0.12.6</jjwt.version>
-        <poi.version>5.5.1</poi.version>
+        <poi.version>6.0.0</poi.version>
         <!-- Parches de seguridad sobre las versiones que gestiona Spring Boot 3.5.16
              (Security Scan / Trivy). Ver docs/seguridad/sprint-1/02-hallazgos-y-correcciones.md -->
         <tomcat.version>10.1.60</tomcat.version>
