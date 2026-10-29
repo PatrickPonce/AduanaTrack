@@ -1,5 +1,19 @@
+import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined'
+import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined'
+import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined'
+import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined'
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
+import DirectionsBoatOutlinedIcon from '@mui/icons-material/DirectionsBoatOutlined'
+import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined'
+import InventoryOutlinedIcon from '@mui/icons-material/InventoryOutlined'
 import LogoutIcon from '@mui/icons-material/Logout'
+import ManageSearchOutlinedIcon from '@mui/icons-material/ManageSearchOutlined'
 import MenuIcon from '@mui/icons-material/Menu'
+import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined'
+import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined'
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
+import TrafficOutlinedIcon from '@mui/icons-material/TrafficOutlined'
+import WarehouseOutlinedIcon from '@mui/icons-material/WarehouseOutlined'
 import {
   Avatar,
   Box,
@@ -12,7 +26,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router'
 
 import { useAuth } from '../auth/AuthContext'
@@ -22,29 +36,55 @@ import { EncabezadoContext, type Encabezado } from './Encabezado'
 
 interface ItemMenu {
   texto: string
-  icono: string
-  /** Sin ruta: módulo de los Sprints 2 y 3, se muestra deshabilitado. */
+  icono: ReactNode
+  /** Sin ruta: módulo del Sprint 3, se muestra deshabilitado con la marca «Pronto». */
   a?: string
   prefijo?: string
   /** Solo para quien registra datos (administrador y agente). */
   soloRegistro?: boolean
 }
 
-const MENU: ItemMenu[] = [
-  { texto: 'Dashboard', icono: '🏠', a: '/dashboard', prefijo: '/dashboard' },
-  { texto: 'Despachos', icono: '📋', a: '/despachos/nuevo', prefijo: '/despachos', soloRegistro: true },
-  { texto: 'Clientes', icono: '🏢', a: '/clientes', prefijo: '/clientes' },
-  { texto: 'Embarques', icono: '🚢', a: '/embarques', prefijo: '/embarques' },
-  { texto: 'Documentos', icono: '📎' },
-  { texto: 'Clasificación', icono: '🏷️' },
-  { texto: 'Tributos', icono: '💰' },
-  { texto: 'DAM (Registro)', icono: '📄' },
-  { texto: 'Canal de Control', icono: '🚦' },
-  { texto: 'Depósitos / Citas', icono: '🏭' },
-  { texto: 'Inspecciones', icono: '🔍' },
-  { texto: 'Levante', icono: '✅' },
-  { texto: 'Notificaciones', icono: '🔔' },
-  { texto: 'Reportes', icono: '📊' },
+interface SeccionMenu {
+  titulo: string
+  items: ItemMenu[]
+}
+
+const MENU: SeccionMenu[] = [
+  {
+    titulo: 'General',
+    items: [
+      { texto: 'Dashboard', icono: <DashboardOutlinedIcon />, a: '/dashboard', prefijo: '/dashboard' },
+      {
+        texto: 'Despachos',
+        icono: <InventoryOutlinedIcon />,
+        a: '/despachos/nuevo',
+        prefijo: '/despachos',
+        soloRegistro: true,
+      },
+      { texto: 'Clientes', icono: <BusinessOutlinedIcon />, a: '/clientes', prefijo: '/clientes' },
+      { texto: 'Embarques', icono: <DirectionsBoatOutlinedIcon />, a: '/embarques', prefijo: '/embarques' },
+    ],
+  },
+  {
+    titulo: 'Operación aduanera',
+    items: [
+      { texto: 'Documentos', icono: <DescriptionOutlinedIcon />, a: '/documentos', prefijo: '/documentos' },
+      { texto: 'Clasificación', icono: <CategoryOutlinedIcon />, a: '/clasificacion', prefijo: '/clasificacion' },
+      { texto: 'Tributos', icono: <PaymentsOutlinedIcon />, a: '/tributos', prefijo: '/tributos' },
+      { texto: 'DAM (Registro)', icono: <ReceiptLongOutlinedIcon />, a: '/dam', prefijo: '/dam' },
+      { texto: 'Canal de Control', icono: <TrafficOutlinedIcon />, a: '/canal-control', prefijo: '/canal-control' },
+    ],
+  },
+  {
+    titulo: 'Próximamente',
+    items: [
+      { texto: 'Depósitos / Citas', icono: <WarehouseOutlinedIcon /> },
+      { texto: 'Inspecciones', icono: <ManageSearchOutlinedIcon /> },
+      { texto: 'Levante', icono: <FactCheckOutlinedIcon /> },
+      { texto: 'Notificaciones', icono: <NotificationsNoneOutlinedIcon /> },
+      { texto: 'Reportes', icono: <AssessmentOutlinedIcon /> },
+    ],
+  },
 ]
 
 export const ROLES: Record<Rol, string> = {
@@ -53,7 +93,7 @@ export const ROLES: Record<Rol, string> = {
   CLIENTE: 'Cliente / Importador',
 }
 
-const ANCHO_MENU = 224
+const ANCHO_MENU = 248
 
 function iniciales(nombre: string): string {
   return nombre
@@ -64,7 +104,7 @@ function iniciales(nombre: string): string {
     .join('')
 }
 
-/** Barra lateral, barra superior con migas y título, y el contenido de cada pantalla. */
+/** Barra lateral por secciones, barra superior con migas y título, y el contenido de cada pantalla. */
 export function Layout() {
   const { usuario, cerrarSesion } = useAuth()
   const navegar = useNavigate()
@@ -80,89 +120,164 @@ export function Layout() {
     navegar('/login', { replace: true })
   }
 
+  const estiloItem = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1.5,
+    width: 'calc(100% - 16px)',
+    mx: 1,
+    my: 0.25,
+    justifyContent: 'flex-start',
+    px: 1.5,
+    py: 1,
+    borderRadius: 2,
+    fontSize: 13.5,
+    color: 'rgba(255,255,255,0.78)',
+    position: 'relative',
+    '& .icono': { display: 'grid', placeItems: 'center', '& svg': { fontSize: 20 } },
+  } as const
+
   const menu = (
-    <Box sx={{ height: '100%', bgcolor: COLORES.marino, color: '#fff', overflowY: 'auto' }}>
-      <Stack
-        direction="row"
-        spacing={1.25}
-        sx={{ alignItems: 'center', px: 2, py: 2.25, borderBottom: '1px solid rgba(255,255,255,0.08)' }}
-      >
+    <Box
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        color: '#fff',
+        overflowY: 'auto',
+        background: `linear-gradient(180deg, ${COLORES.marino} 0%, #0a2140 60%, #081a33 100%)`,
+      }}
+    >
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', px: 2.5, py: 2.5 }}>
         <Box
           aria-hidden
           sx={{
-            width: 30,
-            height: 30,
-            borderRadius: 1.5,
-            bgcolor: COLORES.verde,
+            width: 36,
+            height: 36,
+            borderRadius: 2,
             display: 'grid',
             placeItems: 'center',
-            fontSize: 16,
+            background: `linear-gradient(135deg, ${COLORES.verdeActivo}, ${COLORES.verde})`,
+            boxShadow: '0 6px 16px rgba(52,196,124,0.35)',
+            '& svg': { fontSize: 22, color: '#fff' },
           }}
         >
-          🚢
+          <DirectionsBoatOutlinedIcon />
         </Box>
-        <Typography sx={{ fontWeight: 800, fontSize: 16, letterSpacing: 0.3 }}>ADUANATRACK</Typography>
+        <Box>
+          <Typography sx={{ fontWeight: 800, fontSize: 16, letterSpacing: 0.6, lineHeight: 1.1 }}>
+            ADUANATRACK
+          </Typography>
+          <Typography sx={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', letterSpacing: 0.3 }}>
+            Importaciones marítimas
+          </Typography>
+        </Box>
       </Stack>
-      <Box component="nav" aria-label="Menú principal" sx={{ py: 1 }}>
-        {MENU.map((item) => {
-          const habilitado = item.a && (!item.soloRegistro || registra)
-          const activo = Boolean(item.prefijo && ruta.startsWith(item.prefijo))
-          const estilo = {
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1.5,
-            width: '100%',
-            justifyContent: 'flex-start',
-            px: 2,
-            py: 1.1,
-            fontSize: 13.5,
-            borderLeft: '3px solid transparent',
-            color: 'rgba(255,255,255,0.86)',
-          } as const
-          const contenido = (
-            <>
-              <Box component="span" aria-hidden sx={{ width: 20, textAlign: 'center', fontSize: 14 }}>
-                {item.icono}
-              </Box>
-              {item.texto}
-            </>
-          )
-          if (!habilitado) {
-            return (
-              <Box
-                key={item.texto}
-                aria-disabled
-                title="Disponible en los próximos sprints"
-                sx={{ ...estilo, opacity: 0.5, cursor: 'default' }}
-              >
-                {contenido}
-              </Box>
-            )
-          }
-          return (
-            <ButtonBase
-              key={item.texto}
-              component={RouterLink}
-              to={item.a!}
-              onClick={() => setMenuMovil(false)}
-              aria-current={activo ? 'page' : undefined}
+
+      <Box component="nav" aria-label="Menú principal" sx={{ flexGrow: 1, pb: 2 }}>
+        {MENU.map((seccion) => (
+          <Box key={seccion.titulo} sx={{ mt: 1.5 }}>
+            <Typography
               sx={{
-                ...estilo,
-                ...(activo && {
-                  bgcolor: COLORES.marinoActivo,
-                  borderLeftColor: COLORES.verdeActivo,
-                  color: '#fff',
-                  fontWeight: 700,
-                }),
-                transition: 'background-color .18s ease, padding-left .18s ease',
-                '&:hover': { bgcolor: activo ? COLORES.marinoActivo : 'rgba(255,255,255,0.06)', pl: 2.5 },
-                '&.Mui-focusVisible': { outline: '2px solid #fff', outlineOffset: -2 },
+                px: 2.75,
+                pb: 0.75,
+                fontSize: 10.5,
+                fontWeight: 700,
+                letterSpacing: 1.2,
+                textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.4)',
               }}
             >
-              {contenido}
-            </ButtonBase>
-          )
-        })}
+              {seccion.titulo}
+            </Typography>
+            {seccion.items.map((item) => {
+              const habilitado = item.a && (!item.soloRegistro || registra)
+              const activo = Boolean(item.prefijo && ruta.startsWith(item.prefijo))
+              const contenido = (
+                <>
+                  <Box component="span" aria-hidden className="icono">
+                    {item.icono}
+                  </Box>
+                  <Box component="span" sx={{ flexGrow: 1, textAlign: 'left' }}>
+                    {item.texto}
+                  </Box>
+                </>
+              )
+              if (!habilitado) {
+                return (
+                  <Box
+                    key={item.texto}
+                    aria-disabled
+                    title={item.a ? 'Solo para administrador y agente' : 'Disponible en el Sprint 3'}
+                    sx={{ ...estiloItem, opacity: 0.45, cursor: 'default' }}
+                  >
+                    {contenido}
+                    {!item.a && (
+                      <Box
+                        component="span"
+                        sx={{
+                          fontSize: 9.5,
+                          fontWeight: 700,
+                          letterSpacing: 0.5,
+                          px: 0.75,
+                          py: 0.25,
+                          borderRadius: 1,
+                          bgcolor: 'rgba(255,255,255,0.12)',
+                        }}
+                      >
+                        PRONTO
+                      </Box>
+                    )}
+                  </Box>
+                )
+              }
+              return (
+                <ButtonBase
+                  key={item.texto}
+                  component={RouterLink}
+                  to={item.a!}
+                  onClick={() => setMenuMovil(false)}
+                  aria-current={activo ? 'page' : undefined}
+                  sx={{
+                    ...estiloItem,
+                    transition: 'background-color .2s ease, color .2s ease, transform .2s ease',
+                    ...(activo && {
+                      color: '#fff',
+                      fontWeight: 700,
+                      background: 'linear-gradient(90deg, rgba(52,196,124,0.22), rgba(26,111,220,0.18))',
+                      boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08)',
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        left: -8,
+                        top: 8,
+                        bottom: 8,
+                        width: 3,
+                        borderRadius: 2,
+                        bgcolor: COLORES.verdeActivo,
+                      },
+                      '& .icono': { color: COLORES.verdeActivo, '& svg': { fontSize: 20 } },
+                    }),
+                    '&:hover': {
+                      bgcolor: activo ? undefined : 'rgba(255,255,255,0.07)',
+                      color: '#fff',
+                      transform: 'translateX(2px)',
+                    },
+                    '&.Mui-focusVisible': { outline: '2px solid #fff', outlineOffset: -2 },
+                  }}
+                >
+                  {contenido}
+                </ButtonBase>
+              )
+            })}
+          </Box>
+        ))}
+      </Box>
+
+      <Box sx={{ px: 2.75, py: 2, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <Typography sx={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
+          v0.2.0 · Sprint 2 · Grupo 2 USMP
+        </Typography>
       </Box>
     </Box>
   )
@@ -171,7 +286,18 @@ export function Layout() {
     <EncabezadoContext.Provider value={setEncabezado}>
       <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
         <Box sx={{ width: ANCHO_MENU, flexShrink: 0, display: { xs: 'none', md: 'block' } }}>
-          <Box sx={{ position: 'fixed', top: 0, bottom: 0, width: ANCHO_MENU }}>{menu}</Box>
+          <Box
+            sx={{
+              position: 'fixed',
+              top: 0,
+              bottom: 0,
+              width: ANCHO_MENU,
+              boxShadow: '4px 0 24px rgba(13,42,75,0.18)',
+              zIndex: 2,
+            }}
+          >
+            {menu}
+          </Box>
         </Box>
         <Drawer
           open={menuMovil}
@@ -187,11 +313,16 @@ export function Layout() {
             direction="row"
             spacing={2}
             sx={{
+              position: 'sticky',
+              top: 0,
+              zIndex: 1,
               alignItems: 'center',
-              bgcolor: '#fff',
+              bgcolor: 'rgba(255,255,255,0.82)',
+              backdropFilter: 'blur(10px)',
               borderBottom: 1,
               borderColor: 'divider',
-              px: { xs: 2, md: 3 },
+              boxShadow: '0 1px 12px rgba(15,31,58,0.05)',
+              px: { xs: 2, md: 3.5 },
               py: 1.5,
             }}
           >
@@ -203,25 +334,40 @@ export function Layout() {
               <MenuIcon />
             </IconButton>
             <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-              <Typography variant="caption" color="text.secondary" component="p">
+              <Typography
+                variant="caption"
+                component="p"
+                sx={{ color: 'text.secondary', letterSpacing: 0.3, textTransform: 'uppercase', fontSize: 11 }}
+              >
                 {encabezado.migas}
               </Typography>
-              <Typography component="h1" sx={{ fontSize: { xs: 18, md: 20 }, fontWeight: 700, lineHeight: 1.3 }}>
+              <Typography component="h1" sx={{ fontSize: { xs: 18, md: 21 }, fontWeight: 700, lineHeight: 1.3 }}>
                 {encabezado.titulo}
               </Typography>
             </Box>
             {usuario && (
               <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
-                <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' }, fontSize: 13 }}>
-                  {usuario.nombre} · {ROLES[usuario.rol] ?? usuario.rol}
-                </Typography>
+                <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'right' }}>
+                  <Typography sx={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.2 }}>{usuario.nombre}</Typography>
+                  <Typography sx={{ fontSize: 11.5, color: 'text.secondary' }}>
+                    {ROLES[usuario.rol] ?? usuario.rol}
+                  </Typography>
+                </Box>
                 <IconButton
                   aria-label="Cuenta de usuario"
                   aria-haspopup="menu"
                   onClick={(e) => setAnclaCuenta(e.currentTarget)}
-                  sx={{ p: 0 }}
+                  sx={{ p: 0.25, border: `2px solid ${COLORES.verdeActivo}40` }}
                 >
-                  <Avatar sx={{ width: 34, height: 34, bgcolor: COLORES.verde, fontSize: 13, fontWeight: 700 }}>
+                  <Avatar
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      background: `linear-gradient(135deg, ${COLORES.verde}, ${COLORES.azul})`,
+                    }}
+                  >
                     {iniciales(usuario.nombre)}
                   </Avatar>
                 </IconButton>
@@ -242,7 +388,7 @@ export function Layout() {
               </Stack>
             )}
           </Stack>
-          <Box component="main" sx={{ p: { xs: 2, md: 3 } }}>
+          <Box component="main" sx={{ p: { xs: 2, md: 3.5 } }}>
             {/* key={ruta} retriggera la animación de entrada al navegar entre pantallas. */}
             <Box key={ruta} sx={{ animation: `${fadeIn} .3s ease` }}>
               <Outlet />

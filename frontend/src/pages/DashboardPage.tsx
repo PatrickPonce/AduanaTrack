@@ -1,8 +1,12 @@
+import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined'
+import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined'
+import TrafficOutlinedIcon from '@mui/icons-material/TrafficOutlined'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import {
   Alert,
   Box,
   Button,
+  ButtonBase,
   MenuItem,
   Paper,
   Stack,
@@ -16,7 +20,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
 
 import { listarAduanas } from '../api/catalogos'
@@ -29,14 +33,56 @@ import { textoEstado } from '../components/EstadoDespachoChip'
 import { CanalChip } from '../components/EtiquetaColor'
 import { TituloSeccion } from '../components/Seccion'
 import { COLORES, fadeInUp } from '../theme'
-import type { Aduana, ClienteResumen, DespachoTablero, FiltrosTablero, Indicadores } from '../types'
+import type {
+  Aduana,
+  ClienteResumen,
+  DespachoTablero,
+  EstadoDespacho,
+  FiltrosTablero,
+  Indicadores,
+} from '../types'
 import { formatoFecha } from '../utils/formato'
 
-const TARJETAS: { clave: keyof Indicadores; titulo: string; color: string }[] = [
-  { clave: 'despachosActivos', titulo: 'Despachos activos', color: 'text.primary' },
-  { clave: 'enCanalNaranjaRojo', titulo: 'En canal naranja/rojo', color: 'warning.main' },
-  { clave: 'conLevante', titulo: 'Con levante registrado', color: 'success.main' },
-  { clave: 'conAlertasCriticas', titulo: 'Con alertas críticas', color: 'error.main' },
+const TARJETAS: { clave: keyof Indicadores; titulo: string; color: string; acento: string; icono: ReactNode }[] = [
+  {
+    clave: 'despachosActivos',
+    titulo: 'Despachos activos',
+    color: 'text.primary',
+    acento: COLORES.azul,
+    icono: <LocalShippingOutlinedIcon />,
+  },
+  {
+    clave: 'enCanalNaranjaRojo',
+    titulo: 'En canal naranja/rojo',
+    color: 'warning.main',
+    acento: '#d97706',
+    icono: <TrafficOutlinedIcon />,
+  },
+  {
+    clave: 'conLevante',
+    titulo: 'Con levante registrado',
+    color: 'success.main',
+    acento: '#16a34a',
+    icono: <TaskAltOutlinedIcon />,
+  },
+  {
+    clave: 'conAlertasCriticas',
+    titulo: 'Con alertas críticas',
+    color: 'error.main',
+    acento: '#dc2626',
+    icono: <WarningAmberIcon />,
+  },
+]
+
+/** Etapas del Sprint 2 y el módulo del menú donde se trabaja cada una. */
+const ETAPAS: { estado: EstadoDespacho; a: string }[] = [
+  { estado: 'APERTURA', a: '/documentos' },
+  { estado: 'DOCUMENTACION_COMPLETA', a: '/clasificacion' },
+  { estado: 'CLASIFICADO', a: '/tributos' },
+  { estado: 'LIQUIDADO', a: '/tributos' },
+  { estado: 'TRIBUTOS_PAGADOS', a: '/dam' },
+  { estado: 'DAM_NUMERADA', a: '/canal-control' },
+  { estado: 'CANAL_ASIGNADO', a: '/canal-control' },
 ]
 
 const COLUMNAS = 7
@@ -140,25 +186,51 @@ export function DashboardPage() {
 
   return (
     <Stack spacing={2.5}>
-      {/* Banner decorativo: refuerza la identidad marítima del sistema (aria-hidden, no afecta pruebas). */}
+      {/* Banner decorativo con la identidad marítima del sistema (aria-hidden, no afecta pruebas). */}
       <Box
         aria-hidden
         sx={{
-          height: 64,
-          borderRadius: 2.5,
-          background: `linear-gradient(120deg, ${COLORES.marino} 0%, ${COLORES.azul} 55%, ${COLORES.verde} 130%)`,
-          display: { xs: 'none', sm: 'flex' },
-          alignItems: 'center',
-          px: 3,
+          position: 'relative',
+          overflow: 'hidden',
+          borderRadius: 3,
+          px: { xs: 2.5, md: 3.5 },
+          py: { xs: 2.5, md: 3 },
           color: '#fff',
-          fontWeight: 700,
-          fontSize: 14,
-          letterSpacing: 0.4,
-          opacity: 0.95,
+          display: { xs: 'none', sm: 'block' },
+          background: `linear-gradient(120deg, ${COLORES.marino} 0%, #134574 55%, ${COLORES.azul} 100%)`,
+          boxShadow: '0 12px 30px rgba(13,42,75,0.25)',
           animation: `${fadeInUp} .4s ease`,
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            backgroundImage:
+              "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='80' viewBox='0 0 600 80'%3E%3Cpath d='M0 40c75 20 175 20 250 0s175-20 250 0 75 20 100 0v40H0z' fill='%23ffffff' fill-opacity='0.07'/%3E%3C/svg%3E\")",
+            backgroundRepeat: 'repeat-x',
+            backgroundPosition: 'bottom',
+            backgroundSize: '600px 80px',
+          },
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            width: 260,
+            height: 260,
+            right: -60,
+            top: -120,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(52,196,124,0.35), transparent 70%)',
+          },
         }}
       >
-        Seguimiento aduanero de importaciones marítimas · Panel en tiempo real
+        <Typography sx={{ position: 'relative', fontSize: 12, letterSpacing: 1.2, opacity: 0.75, fontWeight: 600 }}>
+          PANEL DE SEGUIMIENTO
+        </Typography>
+        <Typography sx={{ position: 'relative', fontSize: { sm: 20, md: 24 }, fontWeight: 800, mt: 0.5 }}>
+          Seguimiento aduanero de importaciones marítimas
+        </Typography>
+        <Typography sx={{ position: 'relative', fontSize: 13.5, opacity: 0.8, mt: 0.5 }}>
+          Del registro del despacho a la asignación del canal de control, en un solo lugar.
+        </Typography>
       </Box>
 
       <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr 1fr', lg: 'repeat(4, 1fr)' } }}>
@@ -167,26 +239,103 @@ export function DashboardPage() {
             key={t.clave}
             sx={{
               px: 2.5,
-              py: 2,
+              py: 2.25,
+              position: 'relative',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 1.5,
               animation: `${fadeInUp} .4s ease`,
               animationDelay: `${i * 0.06}s`,
               animationFillMode: 'backwards',
-              '&:hover': { boxShadow: '0 10px 24px rgba(15,31,58,0.12)', transform: 'translateY(-2px)' },
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: 4,
+                bgcolor: t.acento,
+              },
+              '&:hover': { boxShadow: '0 12px 28px rgba(15,31,58,0.12)', transform: 'translateY(-3px)' },
             }}
           >
-            <Typography
-              component="p"
-              sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.15, color: t.color }}
-              aria-label={t.titulo}
+            <Box>
+              <Typography
+                component="p"
+                sx={{ fontSize: 30, fontWeight: 800, lineHeight: 1.15, color: t.color }}
+                aria-label={t.titulo}
+              >
+                {indicadores ? indicadores[t.clave] : '—'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: 13 }}>
+                {t.titulo}
+              </Typography>
+            </Box>
+            <Box
+              aria-hidden
+              sx={{
+                width: 46,
+                height: 46,
+                flexShrink: 0,
+                borderRadius: 2.5,
+                display: 'grid',
+                placeItems: 'center',
+                color: t.acento,
+                bgcolor: `${t.acento}17`,
+                '& svg': { fontSize: 24 },
+              }}
             >
-              {indicadores ? indicadores[t.clave] : '—'}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: 13 }}>
-              {t.titulo}
-            </Typography>
+              {t.icono}
+            </Box>
           </Paper>
         ))}
       </Box>
+
+      <Paper sx={{ p: { xs: 2, md: 2.5 }, animation: `${fadeInUp} .45s ease` }}>
+        <TituloSeccion>Flujo del despacho · Sprint 2</TituloSeccion>
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 1.25,
+            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)', lg: 'repeat(7, 1fr)' },
+          }}
+        >
+          {ETAPAS.map((e, i) => {
+            const cantidad = despachos?.filter((d) => d.estado === e.estado).length
+            return (
+              <ButtonBase
+                key={e.estado}
+                onClick={() => navegar(e.a)}
+                sx={{
+                  display: 'block',
+                  textAlign: 'left',
+                  p: 1.5,
+                  borderRadius: 2,
+                  border: 1,
+                  borderColor: 'divider',
+                  bgcolor: cantidad ? '#f5f9ff' : '#fff',
+                  transition: 'transform .18s ease, box-shadow .18s ease, border-color .18s ease',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    borderColor: COLORES.azul,
+                    boxShadow: '0 8px 18px rgba(26,111,220,0.12)',
+                  },
+                }}
+              >
+                <Typography sx={{ fontSize: 11, color: 'text.secondary', fontWeight: 600 }}>Paso {i + 1}</Typography>
+                <Typography sx={{ fontSize: 22, fontWeight: 800, lineHeight: 1.2, color: COLORES.azul }}>
+                  {despachos ? cantidad : '—'}
+                </Typography>
+                <Typography sx={{ fontSize: 12.5, fontWeight: 600, lineHeight: 1.25 }}>
+                  {textoEstado(e.estado)}
+                </Typography>
+              </ButtonBase>
+            )
+          })}
+        </Box>
+      </Paper>
 
       <Paper sx={{ p: { xs: 2, md: 2.5 } }}>
         <TituloSeccion
