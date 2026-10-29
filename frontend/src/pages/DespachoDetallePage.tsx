@@ -23,13 +23,15 @@ import { alcanzoEstado } from '../utils/estados'
 import { formatoFecha } from '../utils/formato'
 import { MODALIDADES_DESPACHO, TIPOS_OPERACION, textoOpcion } from '../utils/opciones'
 
+export type Pestana = 'generales' | 'documentos' | 'clasificacion' | 'liquidacion' | 'dam' | 'canal' | 'linea'
+
 interface EstadoNavegacion {
   mensaje?: string
   /** Filtros del Dashboard (?aduanaId=&clienteId=) para volver con ellos intactos (T-02.4). */
   volverA?: string
+  /** Pestaña con la que se abre el despacho al llegar desde un módulo del menú (Documentos, DAM…). */
+  pestana?: Pestana
 }
-
-type Pestana = 'generales' | 'documentos' | 'clasificacion' | 'liquidacion' | 'dam' | 'canal' | 'linea'
 
 /**
  * HU-03 · T-03.5 y HU-02 · T-02.4: detalle completo del despacho con su estado. Sprint 2: pestañas
@@ -44,18 +46,19 @@ export function DespachoDetallePage() {
   const navegacion = (ubicacion.state as EstadoNavegacion | null) ?? {}
   const [despacho, setDespacho] = useState<Despacho | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [pestana, setPestana] = useState<Pestana>('generales')
+  const pestanaInicial = navegacion.pestana ?? 'generales'
+  const [pestana, setPestana] = useState<Pestana>(pestanaInicial)
 
   useEncabezado(`Despachos / ${despacho?.numero ?? 'Borrador'}`, 'Detalle del Despacho de Importación')
 
   useEffect(() => {
     setDespacho(null)
     setError(null)
-    setPestana('generales')
+    setPestana(pestanaInicial)
     obtenerDespacho(Number(id))
       .then(setDespacho)
       .catch((e) => setError(mensajeDeError(e, 'No se pudo cargar el despacho.')))
-  }, [id])
+  }, [id, pestanaInicial])
 
   /** Tras un cambio de estado (p. ej. DOCUMENTACION_COMPLETA) se actualiza la cabecera sin perder la pestaña. */
   function recargarDespacho() {
@@ -68,7 +71,9 @@ export function DespachoDetallePage() {
 
   const volver = (
     <Button component={RouterLink} to={navegacion.volverA ?? '/dashboard'} startIcon={<ArrowBackIcon />}>
-      Volver al panel
+      {navegacion.volverA && navegacion.volverA !== '/dashboard' && !navegacion.volverA.startsWith('/dashboard?')
+        ? 'Volver'
+        : 'Volver al panel'}
     </Button>
   )
 
