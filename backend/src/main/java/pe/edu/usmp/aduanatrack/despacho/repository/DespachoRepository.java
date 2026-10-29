@@ -20,4 +20,7 @@ public interface DespachoRepository extends JpaRepository<Despacho, Long> {
             where d.id = :id
             """)
     Optional<Despacho> buscarDetalle(@Param("id") Long id);
+
+    /** HU-09: el N° de DAM es único entre todos los despachos. */
+    boolean existsByNumeroDam(String numeroDam);
 }
