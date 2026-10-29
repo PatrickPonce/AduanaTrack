@@ -1,0 +1,35 @@
+# Plantilla: la imagen de nginx sustituye ${BACKEND_URL} al arrancar (por defecto http://backend:8080 en Docker Compose;
+# en Render es la URL pública del backend). Las variables propias de nginx ($host, $scheme...) no se tocan.
+
+# Si hay un proxy HTTPS delante (Render), se conserva su protocolo; si no, el del propio nginx.
+map $http_x_forwarded_proto $proto_cliente {
+    default $http_x_forwarded_proto;
+    ''      $scheme;
+}
+
+server {
+    listen 8080;
+    server_name _;
+    server_tokens off;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # La carta poder admite hasta 10 MB (nginx corta en 1 MB por defecto).
+    client_max_body_size 11m;
+
+    location /api/ {
+        proxy_pass ${BACKEND_URL};
+        proxy_ssl_server_name on;
+        # Host del backend (Render enruta por nombre de host).
+        proxy_set_header Host $proxy_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $proto_cliente;
+    }
+
+    # SPA: las rutas de React Router (/dashboard, /clientes/...) devuelven index.html.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
