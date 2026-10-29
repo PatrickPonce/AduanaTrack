@@ -14,7 +14,7 @@ npm run build    # tsc -b && vite build → dist/
 npm run lint     # oxlint
 ```
 
-En Docker Compose, nginx sirve `dist/` y hace de proxy de `/api` hacia el backend (`nginx.conf`).
+En Docker Compose, nginx sirve `dist/` y hace de proxy de `/api` hacia el backend (`nginx.conf.template`, destino en la variable `BACKEND_URL`).
 
 ## Estructura
 

@@ -1,0 +1,40 @@
+# Blueprint de Render (plan Free). Las claves NO van aquí: Render las pide al crear el blueprint (sync: false).
+# Guía paso a paso: docs/despliegue.md
+services:
+  - type: web
+    name: aduanatrack-backend
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: PORT
+        value: "8080"
+      # Conexión directa de Neon (sin -pooler): jdbc:postgresql://HOST/neondb?sslmode=require
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      # Render sirve por HTTPS.
+      - key: COOKIE_SECURE
+        value: "true"
+      # El plan Free tiene ~512 MB: el recolector serial reduce el consumo de memoria de la JVM.
+      - key: JAVA_TOOL_OPTIONS
+        value: "-XX:+UseSerialGC"
+
+  - type: web
+    name: aduanatrack-frontend
+    runtime: docker
+    plan: free
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    envVars:
+      - key: PORT
+        value: "8080"
+      # URL pública del backend, sin barra final: https://aduanatrack-backend.onrender.com
+      - key: BACKEND_URL
+        sync: false
