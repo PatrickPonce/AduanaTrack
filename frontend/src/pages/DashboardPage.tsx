@@ -28,6 +28,7 @@ import { useEncabezado } from '../components/Encabezado'
 import { textoEstado } from '../components/EstadoDespachoChip'
 import { CanalChip } from '../components/EtiquetaColor'
 import { TituloSeccion } from '../components/Seccion'
+import { COLORES, fadeInUp } from '../theme'
 import type { Aduana, ClienteResumen, DespachoTablero, FiltrosTablero, Indicadores } from '../types'
 import { formatoFecha } from '../utils/formato'
 
@@ -139,9 +140,40 @@ export function DashboardPage() {
 
   return (
     <Stack spacing={2.5}>
+      {/* Banner decorativo: refuerza la identidad marítima del sistema (aria-hidden, no afecta pruebas). */}
+      <Box
+        aria-hidden
+        sx={{
+          height: 64,
+          borderRadius: 2.5,
+          background: `linear-gradient(120deg, ${COLORES.marino} 0%, ${COLORES.azul} 55%, ${COLORES.verde} 130%)`,
+          display: { xs: 'none', sm: 'flex' },
+          alignItems: 'center',
+          px: 3,
+          color: '#fff',
+          fontWeight: 700,
+          fontSize: 14,
+          letterSpacing: 0.4,
+          opacity: 0.95,
+          animation: `${fadeInUp} .4s ease`,
+        }}
+      >
+        Seguimiento aduanero de importaciones marítimas · Panel en tiempo real
+      </Box>
+
       <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr 1fr', lg: 'repeat(4, 1fr)' } }}>
-        {TARJETAS.map((t) => (
-          <Paper key={t.clave} sx={{ px: 2.5, py: 2 }}>
+        {TARJETAS.map((t, i) => (
+          <Paper
+            key={t.clave}
+            sx={{
+              px: 2.5,
+              py: 2,
+              animation: `${fadeInUp} .4s ease`,
+              animationDelay: `${i * 0.06}s`,
+              animationFillMode: 'backwards',
+              '&:hover': { boxShadow: '0 10px 24px rgba(15,31,58,0.12)', transform: 'translateY(-2px)' },
+            }}
+          >
             <Typography
               component="p"
               sx={{ fontSize: 30, fontWeight: 700, lineHeight: 1.15, color: t.color }}
