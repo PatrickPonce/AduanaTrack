@@ -67,6 +67,7 @@ class DocumentoDespachoServiceTest {
     private DocumentoDespachoRepository documentoRepository;
     private TipoDocumentoRepository tipoRepository;
     private DespachoRepository despachoRepository;
+    private DocumentacionDespachoService documentacion;
     private Despacho despacho;
     private Usuario agente;
     private TipoDocumento factura;
@@ -80,6 +81,7 @@ class DocumentoDespachoServiceTest {
         tipoRepository = mock(TipoDocumentoRepository.class);
         despachoRepository = mock(DespachoRepository.class);
         UsuarioRepository usuarioRepository = mock(UsuarioRepository.class);
+        documentacion = mock(DocumentacionDespachoService.class);
 
         despacho = new Despacho(new Cliente("20787789324", AHORA), null, AHORA);
         despacho.abrir("DESP-2026-0001");
@@ -104,7 +106,7 @@ class DocumentoDespachoServiceTest {
 
         Clock reloj = Clock.fixed(Instant.parse("2026-10-22T15:15:00Z"), ZoneId.of("America/Lima"));
         servicio = new DocumentoDespachoService(documentoRepository, tipoRepository, despachoRepository,
-                usuarioRepository, reloj, new DocumentoProperties(directorio.toString()));
+                usuarioRepository, documentacion, reloj, new DocumentoProperties(directorio.toString()));
     }
 
     // CA1: carga de PDF de hasta 10 MB
@@ -127,6 +129,13 @@ class DocumentoDespachoServiceTest {
         assertThat(guardado.getSha256()).hasSize(64);
         assertThat(guardado.getUsuario()).isSameAs(agente);
         assertThat(guardado.getCargadoEn()).isEqualTo(AHORA);
+    }
+
+    @Test
+    void cadaCargaReevaluaElEstadoDeLaDocumentacion_criterio4() throws Exception {
+        servicio.cargar(DESPACHO, "FACTURA_COMERCIAL", pdf("f.pdf", PDF), AGENTE);
+
+        verify(documentacion).actualizarEstado(DESPACHO);
     }
 
     @Test
