@@ -16,6 +16,8 @@ public final class CodigoError {
     public static final String DESPACHO_EN_BORRADOR = "DESPACHO_EN_BORRADOR";
     /** HU-06: otra carga del mismo documento terminó primero; se vuelve a intentar. */
     public static final String CARGA_SIMULTANEA = "CARGA_SIMULTANEA";
+    /** HU-06: faltan documentos obligatorios; HU-07 no deja clasificar (409 con {@code pendientes}). */
+    public static final String DOCUMENTACION_INCOMPLETA = "DOCUMENTACION_INCOMPLETA";
     /** HU-08: la liquidación necesita el despacho clasificado (todos los ítems con partida). */
     public static final String DESPACHO_NO_CLASIFICADO = "DESPACHO_NO_CLASIFICADO";
     /** HU-08: se intenta pagar sin una liquidación generada. */
