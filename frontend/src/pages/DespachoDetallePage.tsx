@@ -13,6 +13,7 @@ import { useEncabezado } from '../components/Encabezado'
 import { EstadoDespachoChip } from '../components/EstadoDespachoChip'
 import { CanalChip } from '../components/EtiquetaColor'
 import { LiquidacionDespacho } from '../components/LiquidacionDespacho'
+import { NumeracionDam } from '../components/NumeracionDam'
 import { DOS_COLUMNAS, TituloSeccion } from '../components/Seccion'
 import type { Despacho } from '../types'
 import { alcanzoEstado } from '../utils/estados'
@@ -25,12 +26,12 @@ interface EstadoNavegacion {
   volverA?: string
 }
 
-type Pestana = 'generales' | 'documentos' | 'clasificacion' | 'liquidacion'
+type Pestana = 'generales' | 'documentos' | 'clasificacion' | 'liquidacion' | 'dam'
 
 /**
  * HU-03 · T-03.5 y HU-02 · T-02.4: detalle completo del despacho con su estado. Sprint 2: pestañas
- * «Documentos» (HU-06 · T-06.4), «Clasificación» desde DOCUMENTACION_COMPLETA (HU-07 · T-07.4) y
- * «Liquidación» desde CLASIFICADO (HU-08 · T-08.3).
+ * «Documentos» (HU-06 · T-06.4), «Clasificación» desde DOCUMENTACION_COMPLETA (HU-07 · T-07.4),
+ * «Liquidación» desde CLASIFICADO (HU-08 · T-08.3) y «DAM» desde TRIBUTOS_PAGADOS (HU-09 · T-09.2).
  */
 export function DespachoDetallePage() {
   const { id } = useParams()
@@ -87,12 +88,14 @@ export function DespachoDetallePage() {
   const registra = usuario?.rol !== 'CLIENTE'
   const conClasificacion = alcanzoEstado(despacho.estado, 'DOCUMENTACION_COMPLETA')
   const conLiquidacion = alcanzoEstado(despacho.estado, 'CLASIFICADO')
+  const conDam = alcanzoEstado(despacho.estado, 'TRIBUTOS_PAGADOS')
   // Un borrador todavía no tiene expediente (el API responde 409 DESPACHO_EN_BORRADOR) y cada pestaña
   // de un paso posterior solo se abre cuando el despacho llegó a ese estado.
   const visible =
     esBorrador ||
     (pestana === 'clasificacion' && !conClasificacion) ||
-    (pestana === 'liquidacion' && !conLiquidacion)
+    (pestana === 'liquidacion' && !conLiquidacion) ||
+    (pestana === 'dam' && !conDam)
       ? 'generales'
       : pestana
 
@@ -130,7 +133,17 @@ export function DespachoDetallePage() {
             <Tab value="documentos" label="Documentos" />
             {conClasificacion && <Tab value="clasificacion" label="Clasificación" />}
             {conLiquidacion && <Tab value="liquidacion" label="Liquidación" />}
+            {conDam && <Tab value="dam" label="DAM" />}
           </Tabs>
+        )}
+
+        {visible === 'dam' && (
+          <NumeracionDam
+            despachoId={despacho.id}
+            estado={despacho.estado}
+            puedeEditar={registra}
+            onDamNumerada={recargarDespacho}
+          />
         )}
 
         {visible === 'liquidacion' && (
