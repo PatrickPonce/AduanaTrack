@@ -325,6 +325,36 @@ export interface PagoRegistrado {
   estado: EstadoDespacho
 }
 
+/** HU-09 (contrato C4): numeración de la DAM; los tres datos vienen nulos mientras no se registra. */
+export interface Dam {
+  numeroDam: string | null
+  fechaNumeracion: string | null
+  nombreCargo: string | null
+  estado: EstadoDespacho
+}
+
+/** Cuerpo del POST /dam (registro) y del POST /dam/rectificacion; viaja como multipart. */
+export interface DamRequest {
+  numeroDam: string
+  fechaNumeracion: string | null
+  cargo: File | null
+}
+
+export interface DamRectificacionRequest extends DamRequest {
+  motivo: string
+}
+
+/** Una rectificación del N° de DAM (GET /dam/historial), la más reciente primero. */
+export interface RectificacionDam {
+  numeroAnterior: string
+  fechaAnterior: string | null
+  numeroNuevo: string
+  fechaNueva: string | null
+  motivo: string
+  usuario: string
+  fecha: string
+}
+
 /** Formato único de error del backend. */
 export interface ApiErrorBody {
   codigo: string
