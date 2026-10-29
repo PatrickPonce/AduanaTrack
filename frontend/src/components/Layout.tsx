@@ -16,7 +16,7 @@ import { useState } from 'react'
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router'
 
 import { useAuth } from '../auth/AuthContext'
-import { COLORES } from '../theme'
+import { COLORES, fadeIn } from '../theme'
 import type { Rol } from '../types'
 import { EncabezadoContext, type Encabezado } from './Encabezado'
 
@@ -154,7 +154,8 @@ export function Layout() {
                   color: '#fff',
                   fontWeight: 700,
                 }),
-                '&:hover': { bgcolor: activo ? COLORES.marinoActivo : 'rgba(255,255,255,0.06)' },
+                transition: 'background-color .18s ease, padding-left .18s ease',
+                '&:hover': { bgcolor: activo ? COLORES.marinoActivo : 'rgba(255,255,255,0.06)', pl: 2.5 },
                 '&.Mui-focusVisible': { outline: '2px solid #fff', outlineOffset: -2 },
               }}
             >
@@ -242,7 +243,10 @@ export function Layout() {
             )}
           </Stack>
           <Box component="main" sx={{ p: { xs: 2, md: 3 } }}>
-            <Outlet />
+            {/* key={ruta} retriggera la animación de entrada al navegar entre pantallas. */}
+            <Box key={ruta} sx={{ animation: `${fadeIn} .3s ease` }}>
+              <Outlet />
+            </Box>
           </Box>
         </Box>
       </Box>
