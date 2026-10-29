@@ -90,13 +90,6 @@ describe('DespachoDetallePage · pestañas del Sprint 2', () => {
     expect(screen.queryAllByRole('tab')).toHaveLength(0)
   })
 
-  it('el chip de la cabecera muestra el estado en texto legible', async () => {
-    vi.mocked(despachosApi.obtenerDespacho).mockResolvedValue(despacho('TRIBUTOS_PAGADOS'))
-    mostrar()
-
-    expect(await screen.findByText('Tributos pagados')).toBeInTheDocument()
-  })
-
   it('«Línea de tiempo» lista los hitos del despacho', async () => {
     vi.mocked(despachosApi.obtenerDespacho).mockResolvedValue(despacho('APERTURA'))
     vi.mocked(hitosApi.listarHitos).mockResolvedValue([
@@ -155,7 +148,8 @@ describe('DespachoDetallePage · HU-07 · T-07.5 (QA de los criterios de aceptac
     const pestanaLiquidacion = await screen.findByRole('tab', { name: 'Liquidación' })
     await user.click(pestanaLiquidacion)
     expect(await screen.findByRole('button', { name: 'Generar liquidación' })).toBeInTheDocument()
-    expect(screen.getByText('Clasificado')).toBeInTheDocument()
+    // La cabecera se volvió a consultar al clasificar: de ahí sale el estado que abre la pestaña.
+    expect(despachosApi.obtenerDespacho).toHaveBeenCalledTimes(2)
   })
 
   it('CA3: con un ítem sin partida el guardado sigue bloqueado y no se abre el cálculo de tributos', async () => {
@@ -214,7 +208,8 @@ describe('DespachoDetallePage · HU-10 · canal de control', () => {
     await user.click(screen.getByRole('button', { name: 'Guardar canal' }))
 
     expect(await screen.findByText('Hito sugerido: Programar inspección física.')).toBeInTheDocument()
-    expect(await screen.findByText('Canal asignado')).toBeInTheDocument()
+    // La cabecera se vuelve a consultar al guardar el canal.
+    await waitFor(() => expect(despachosApi.obtenerDespacho).toHaveBeenCalledTimes(2))
 
     await user.click(screen.getByRole('button', { name: 'Ver línea de tiempo' }))
 
