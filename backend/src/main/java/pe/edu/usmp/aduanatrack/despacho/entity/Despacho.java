@@ -101,6 +101,12 @@ public class Despacho {
         this.estado = nuevo;
     }
 
+    /** Guarda el canal que informó SUNAT y pasa a CANAL_ASIGNADO (HU-10 · T-10.2). */
+    public void asignarCanal(CanalControl canal) {
+        this.canalControl = canal.name();
+        this.estado = EstadoDespacho.CANAL_ASIGNADO;
+    }
+
     public boolean esBorrador() {
         return estado == EstadoDespacho.BORRADOR;
     }
