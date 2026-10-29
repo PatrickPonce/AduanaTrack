@@ -124,6 +124,19 @@ public class Despacho {
         this.estado = EstadoDespacho.DAM_NUMERADA;
     }
 
+    /**
+     * HU-09: corrige el número y la fecha de numeración sin cambiar el estado. El cargo solo se
+     * reemplaza si llega uno nuevo ({@code cargoNombre} no nulo).
+     */
+    public void rectificarDam(String numeroDam, LocalDate fechaNumeracion, String cargoNombre, String cargoRuta) {
+        this.numeroDam = numeroDam;
+        this.fechaNumeracion = fechaNumeracion;
+        if (cargoNombre != null) {
+            this.cargoNombre = cargoNombre;
+            this.cargoRuta = cargoRuta;
+        }
+    }
+
     public boolean esBorrador() {
         return estado == EstadoDespacho.BORRADOR;
     }

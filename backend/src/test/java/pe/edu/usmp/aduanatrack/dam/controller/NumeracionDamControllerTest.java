@@ -32,6 +32,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import jakarta.servlet.http.Cookie;
 import pe.edu.usmp.aduanatrack.common.ApiException;
 import pe.edu.usmp.aduanatrack.common.CodigoError;
+import pe.edu.usmp.aduanatrack.dam.dto.DamHistorialResponse;
 import pe.edu.usmp.aduanatrack.dam.dto.DamResponse;
 import pe.edu.usmp.aduanatrack.dam.service.NumeracionDamService;
 import pe.edu.usmp.aduanatrack.dam.service.NumeracionDamService.ArchivoCargo;
@@ -133,6 +134,64 @@ class NumeracionDamControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF))
                 .andExpect(content().bytes(PDF));
+    }
+
+    @Test
+    void rectificarComoAgente_responde200ConLaDamCorregida() throws Exception {
+        when(damService.rectificar(eq(1L), eq("118-2026-10-654321"), any(), eq("Error de digitación"), any(), eq(9L)))
+                .thenReturn(new DamResponse("118-2026-10-654321", LocalDate.of(2026, 10, 27), "cargo.pdf",
+                        "DAM_NUMERADA"));
+
+        mvc.perform(multipart("/api/v1/despachos/1/dam/rectificacion")
+                .param("numeroDam", "118-2026-10-654321").param("motivo", "Error de digitación")
+                .with(csrf()).cookie(sesion("AGENTE")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.numeroDam").value("118-2026-10-654321"))
+                .andExpect(jsonPath("$.estado").value("DAM_NUMERADA"));
+    }
+
+    @Test
+    void rectificarSinMotivo_respondeElErrorConElCampoMarcado() throws Exception {
+        when(damService.rectificar(eq(1L), any(), any(), any(), any(), any())).thenThrow(
+                ApiException.validacion(java.util.Map.of("motivo", "Indique el motivo de la rectificación")));
+
+        mvc.perform(multipart("/api/v1/despachos/1/dam/rectificacion").param("numeroDam", "118-2026-10-654321")
+                .with(csrf()).cookie(sesion("AGENTE")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.campos.motivo").value("Indique el motivo de la rectificación"));
+    }
+
+    @Test
+    void rectificarSinDamRegistrada_responde409() throws Exception {
+        when(damService.rectificar(eq(1L), any(), any(), any(), any(), any())).thenThrow(new ApiException(
+                HttpStatus.CONFLICT, CodigoError.DAM_NO_REGISTRADA, "La DAM aún no está registrada."));
+
+        mvc.perform(multipart("/api/v1/despachos/1/dam/rectificacion").param("numeroDam", "118-2026-10-654321")
+                .param("motivo", "Error").with(csrf()).cookie(sesion("ADMIN")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo").value(CodigoError.DAM_NO_REGISTRADA));
+    }
+
+    @Test
+    void rectificarComoCliente_responde403() throws Exception {
+        mvc.perform(multipart("/api/v1/despachos/1/dam/rectificacion").param("numeroDam", "118-2026-10-654321")
+                .param("motivo", "Error").with(csrf()).cookie(sesion("CLIENTE")))
+                .andExpect(status().isForbidden());
+        verify(damService, never()).rectificar(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void historial_loPuedeConsultarCualquierPerfil() throws Exception {
+        when(damService.historial(1L)).thenReturn(java.util.List.of(new DamHistorialResponse("118-2026-10-123456",
+                LocalDate.of(2026, 10, 26), "118-2026-10-654321", LocalDate.of(2026, 10, 26), "Error de digitación",
+                "Agente Demo", java.time.LocalDateTime.of(2026, 10, 28, 10, 0))));
+
+        mvc.perform(get("/api/v1/despachos/1/dam/historial").cookie(sesion("CLIENTE")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].numeroAnterior").value("118-2026-10-123456"))
+                .andExpect(jsonPath("$[0].numeroNuevo").value("118-2026-10-654321"))
+                .andExpect(jsonPath("$[0].motivo").value("Error de digitación"))
+                .andExpect(jsonPath("$[0].usuario").value("Agente Demo"));
     }
 
     private Cookie sesion(String rol) {
