@@ -364,6 +364,26 @@ export interface RectificacionDam {
   fecha: string
 }
 
+/** HU-10 (contrato C5): colores del canal de control según el estándar de SUNAT. */
+export type CanalControl = 'VERDE' | 'NARANJA' | 'ROJO'
+
+/** Respuesta del PUT /canal: `hitoSugerido` solo viene en canal rojo y `levanteHabilitado` solo en verde. */
+export interface CanalGuardado {
+  canal: CanalControl
+  estado: EstadoDespacho
+  levanteHabilitado: boolean
+  hitoSugerido: string | null
+}
+
+/** Fila de la «Línea de tiempo del despacho» (GET /hitos); `sugerido` marca una acción propuesta por el sistema. */
+export interface Hito {
+  tipo: string
+  descripcion: string
+  sugerido: boolean
+  usuario: string
+  fecha: string
+}
+
 /** Formato único de error del backend. */
 export interface ApiErrorBody {
   codigo: string
