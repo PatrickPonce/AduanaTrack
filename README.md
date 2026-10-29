@@ -29,6 +29,21 @@ Diseño e Implementación de Sistemas · **Grupo 2** · Docente: Mg. Juan Manuel
 | GitHub | Repositorio con GitFlow (`main`, `develop`, `feature/HU-XX-*`) | este repositorio |
 | GitHub Actions | CI + revisión de vulnerabilidades (CodeQL, Semgrep, Gitleaks, Trivy) | pestaña **Actions** |
 
+## Sistema en línea
+
+| Componente | Servicio | Dirección |
+|---|---|---|
+| Aplicación (frontend + API) | Render, plan gratuito | https://aduanatrack-frontend.onrender.com |
+| Base de datos | Neon (PostgreSQL), plan gratuito | no es pública |
+
+Usuarios demo: `agente`, `admin` y `cliente`. La contraseña se comparte por el grupo, no se guarda en el repositorio.
+
+- Se despliega desde la rama `develop`: cada push la vuelve a publicar.
+- Se duerme tras 15 minutos sin uso; la primera visita puede tardar hasta un minuto.
+- Los PDF subidos (cartas de poder, documentos, cargo de la DAM) se pierden cuando el servicio se reinicia.
+
+Guía de configuración: [`docs/despliegue.md`](docs/despliegue.md).
+
 ## Sprint actual
 
 **Sprint 1 (S7–S10, 14/09 – 10/10; S8 parciales) · 23 SP** — *Habilitar el flujo base de apertura y seguimiento inicial de despachos de importación marítima: acceso seguro al sistema, registro de clientes/importadores, apertura de un nuevo despacho y registro de la información de embarque (BL), con visibilidad centralizada del estado de los despachos en el Dashboard.*
