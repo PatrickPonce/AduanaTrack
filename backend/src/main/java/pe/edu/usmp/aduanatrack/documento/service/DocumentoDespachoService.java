@@ -47,16 +47,19 @@ public class DocumentoDespachoService {
     private final TipoDocumentoRepository tipoRepository;
     private final DespachoRepository despachoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final DocumentacionDespachoService documentacion;
     private final Clock clock;
     private final Path directorio;
 
     public DocumentoDespachoService(DocumentoDespachoRepository documentoRepository,
             TipoDocumentoRepository tipoRepository, DespachoRepository despachoRepository,
-            UsuarioRepository usuarioRepository, Clock clock, DocumentoProperties propiedades) {
+            UsuarioRepository usuarioRepository, DocumentacionDespachoService documentacion, Clock clock,
+            DocumentoProperties propiedades) {
         this.documentoRepository = documentoRepository;
         this.tipoRepository = tipoRepository;
         this.despachoRepository = despachoRepository;
         this.usuarioRepository = usuarioRepository;
+        this.documentacion = documentacion;
         this.clock = clock;
         this.directorio = Path.of(propiedades.directorio()).toAbsolutePath().normalize();
     }
@@ -109,7 +112,7 @@ public class DocumentoDespachoService {
                     AlmacenPdf.nombreOriginal(archivo, tipo.getCodigo().toLowerCase(Locale.ROOT) + ".pdf"),
                     despachoId + "/" + guardado.ruta().getFileName(), guardado.tamanoBytes(), guardado.sha256(),
                     usuarioRepository.getReferenceById(usuarioId), LocalDateTime.now(clock)));
-            // T-06.3 (SCRUM-55): aquí se evalúa el estado general y el paso a DOCUMENTACION_COMPLETA.
+            documentacion.actualizarEstado(despachoId);
             return new DocumentoCargadoResponse(nuevo.getId(), tipo.getCodigo(), nuevo.getVersion(),
                     EstadoDocumento.CARGADO);
         } catch (DataIntegrityViolationException e) {
