@@ -22,11 +22,13 @@ import pe.edu.usmp.aduanatrack.despacho.entity.TipoHito;
 import pe.edu.usmp.aduanatrack.despacho.repository.DespachoRepository;
 import pe.edu.usmp.aduanatrack.despacho.service.HitoDespachoService;
 import pe.edu.usmp.aduanatrack.liquidacion.dto.ItemCalculo;
+import pe.edu.usmp.aduanatrack.liquidacion.dto.LiquidacionConsultaResponse;
 import pe.edu.usmp.aduanatrack.liquidacion.dto.LiquidacionRequest;
 import pe.edu.usmp.aduanatrack.liquidacion.dto.LiquidacionResponse;
 import pe.edu.usmp.aduanatrack.liquidacion.dto.PagoRequest;
 import pe.edu.usmp.aduanatrack.liquidacion.dto.PagoResponse;
 import pe.edu.usmp.aduanatrack.liquidacion.dto.ResultadoCalculo;
+import pe.edu.usmp.aduanatrack.liquidacion.dto.ResultadoCalculo.Tasas;
 import pe.edu.usmp.aduanatrack.liquidacion.entity.Liquidacion;
 import pe.edu.usmp.aduanatrack.liquidacion.entity.PagoTributos;
 import pe.edu.usmp.aduanatrack.liquidacion.repository.LiquidacionRepository;
@@ -120,6 +122,24 @@ public class LiquidacionService {
         hitoService.registrar(despachoId, TipoHito.TRIBUTOS_PAGADOS, "Pago de tributos registrado (USD "
                 + solicitud.monto().toPlainString() + ", " + solicitud.medioPago().trim() + ")");
         return new PagoResponse(EstadoDespacho.TRIBUTOS_PAGADOS.name());
+    }
+
+    /** Liquidación y pago guardados del despacho; todo nulo si aún no se generó. 404 si el despacho no existe. */
+    @Transactional(readOnly = true)
+    public LiquidacionConsultaResponse consultar(Long despachoId) {
+        Despacho despacho = buscarDespacho(despachoId);
+        LiquidacionConsultaResponse.PagoConsulta pago = pagoRepository.findByDespachoId(despachoId)
+                .map(p -> new LiquidacionConsultaResponse.PagoConsulta(p.getFecha(), p.getMonto(), p.getMedioPago(),
+                        p.getNumeroOperacion(), p.getRegistradoPor().getNombre(), p.getRegistradoEn()))
+                .orElse(null);
+        return liquidacionRepository.findByDespachoId(despachoId)
+                .map(l -> new LiquidacionConsultaResponse(
+                        new LiquidacionResponse(l.getFob(), l.getFlete(), l.getSeguro(), l.getCif(), l.getAdValorem(),
+                                l.getIgv(), l.getIpm(), l.getPercepcion(), l.getTotal(), LiquidacionResponse.MONEDA,
+                                new Tasas(l.getTasaIgv(), l.getTasaIpm(), l.getTasaPercepcion()),
+                                despacho.getEstado().name()),
+                        l.getGeneradoPor().getNombre(), l.getGeneradoEn(), pago))
+                .orElse(new LiquidacionConsultaResponse(null, null, null, pago));
     }
 
     private Despacho buscarDespacho(Long despachoId) {

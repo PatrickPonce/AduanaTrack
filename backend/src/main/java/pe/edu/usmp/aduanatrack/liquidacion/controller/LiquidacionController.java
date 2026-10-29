@@ -2,6 +2,7 @@ package pe.edu.usmp.aduanatrack.liquidacion.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
+import pe.edu.usmp.aduanatrack.liquidacion.dto.LiquidacionConsultaResponse;
 import pe.edu.usmp.aduanatrack.liquidacion.dto.LiquidacionRequest;
 import pe.edu.usmp.aduanatrack.liquidacion.dto.LiquidacionResponse;
 import pe.edu.usmp.aduanatrack.liquidacion.dto.PagoRequest;
@@ -26,6 +28,11 @@ public class LiquidacionController {
 
     public LiquidacionController(LiquidacionService liquidacionService) {
         this.liquidacionService = liquidacionService;
+    }
+
+    @GetMapping("/liquidacion")
+    public LiquidacionConsultaResponse consultar(@PathVariable Long despachoId) {
+        return liquidacionService.consultar(despachoId);
     }
 
     @PostMapping("/liquidacion")

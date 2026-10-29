@@ -11,15 +11,16 @@ import {
   TableContainer,
   TableRow,
   TextField,
+  Typography,
 } from '@mui/material'
 import { useEffect, useState, type FormEvent } from 'react'
 
 import { leerError, mensajeDeError } from '../api/http'
-import { generarLiquidacion, registrarPago } from '../api/liquidacion'
-import type { EstadoDespacho, Liquidacion, PagoRequest } from '../types'
+import { generarLiquidacion, obtenerLiquidacion, registrarPago } from '../api/liquidacion'
+import type { EstadoDespacho, Liquidacion, LiquidacionConsulta, PagoConsulta, PagoRequest } from '../types'
 import { alcanzoEstado } from '../utils/estados'
-import { formatoMonto, hoyIso } from '../utils/formato'
-import { MEDIOS_PAGO } from '../utils/opciones'
+import { formatoFecha, formatoFechaHora, formatoMonto, hoyIso } from '../utils/formato'
+import { MEDIOS_PAGO, textoOpcion } from '../utils/opciones'
 import { DOS_COLUMNAS, TituloSeccion } from './Seccion'
 
 /** Valores que el agente escribe en el formulario de pago; el monto se edita como texto. */
@@ -84,14 +85,16 @@ interface Props {
 
 /**
  * HU-08 · T-08.3: pestaña «Liquidación» con el cálculo referencial de tributos (CA1 y CA2) y el
- * registro del pago hecho fuera del sistema (CA3 y CA4), según el contrato C3. El detalle de los
- * montos solo llega al generar la liquidación: no hay un GET que la vuelva a entregar.
+ * registro del pago hecho fuera del sistema (CA3 y CA4), según el contrato C3. Al abrirse muestra la
+ * liquidación y el pago ya guardados (GET), también cuando el despacho ya está pagado.
  */
 export function LiquidacionDespacho({ despachoId, estado, puedeEditar, onEstadoCambiado }: Props) {
   const [estadoActual, setEstadoActual] = useState(estado)
   const [flete, setFlete] = useState('')
   const [seguro, setSeguro] = useState('')
   const [liquidacion, setLiquidacion] = useState<Liquidacion | null>(null)
+  const [generada, setGenerada] = useState<{ por: string | null; en: string | null } | null>(null)
+  const [pagoRegistrado, setPagoRegistrado] = useState<PagoConsulta | null>(null)
   const [pago, setPago] = useState<FormPago>({ fecha: hoyIso(), monto: '', medioPago: '', numeroOperacion: '' })
   const [erroresLiquidacion, setErroresLiquidacion] = useState<Record<string, string>>({})
   const [erroresPago, setErroresPago] = useState<Record<string, string>>({})
@@ -100,6 +103,29 @@ export function LiquidacionDespacho({ despachoId, estado, puedeEditar, onEstadoC
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => setEstadoActual(estado), [estado])
+
+  /** Muestra lo guardado; si aún no hay liquidación no borra la que esté en pantalla. */
+  function mostrarGuardada(consulta: LiquidacionConsulta) {
+    const guardada = consulta.liquidacion
+    if (guardada) {
+      setLiquidacion(guardada)
+      setGenerada({ por: consulta.generadoPor, en: consulta.generadoEn })
+      setFlete((f) => f || guardada.flete.toFixed(2))
+      setSeguro((s) => s || guardada.seguro.toFixed(2))
+      setPago((p) => (p.monto ? p : { ...p, monto: guardada.total.toFixed(2) }))
+    }
+    setPagoRegistrado(consulta.pago)
+  }
+
+  useEffect(() => {
+    let activo = true
+    obtenerLiquidacion(despachoId)
+      .then((consulta) => activo && mostrarGuardada(consulta))
+      .catch((e) => activo && setError(mensajeDeError(e, 'No se pudo cargar la liquidación guardada.')))
+    return () => {
+      activo = false
+    }
+  }, [despachoId])
 
   const liquidado = estadoActual === 'LIQUIDADO'
   const pagado = alcanzoEstado(estadoActual, 'TRIBUTOS_PAGADOS')
@@ -144,6 +170,11 @@ export function LiquidacionDespacho({ despachoId, estado, puedeEditar, onEstadoC
       setEstadoActual(resultado.estado)
       setMensaje('Pago de tributos registrado. El despacho pasó a «Tributos pagados».')
       onEstadoCambiado?.()
+      obtenerLiquidacion(despachoId)
+        .then(mostrarGuardada)
+        .catch(() => {
+          // El pago ya quedó registrado; el detalle se ve al volver a abrir la pestaña.
+        })
     } catch (e) {
       const { status, body } = leerError(e)
       if (status === 400 && body?.campos) setErroresPago(body.campos)
@@ -176,12 +207,6 @@ export function LiquidacionDespacho({ despachoId, estado, puedeEditar, onEstadoC
         {error && <Alert severity="error">{error}</Alert>}
         {pagado && !mensaje && (
           <Alert severity="success">Los tributos ya fueron pagados. El despacho está en «Tributos pagados».</Alert>
-        )}
-        {liquidado && !liquidacion && (
-          <Alert severity="info">
-            La liquidación ya fue generada. Para ver el detalle de los montos, genérela de nuevo con el mismo flete y
-            seguro.
-          </Alert>
         )}
         {!puedeEditar && !pagado && (
           <Alert severity="info">Solo el agente de aduana puede generar la liquidación y registrar el pago.</Alert>
@@ -220,6 +245,11 @@ export function LiquidacionDespacho({ despachoId, estado, puedeEditar, onEstadoC
 
       {liquidacion && (
         <TableContainer sx={{ mb: 3 }}>
+          {generada?.por && (
+            <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 1 }}>
+              Generada por {generada.por} el {formatoFechaHora(generada.en)}
+            </Typography>
+          )}
           <Table size="small" aria-label="Detalle de la liquidación">
             <TableBody>
               <Fila concepto="Valor FOB" monto={liquidacion.fob} />
@@ -234,6 +264,26 @@ export function LiquidacionDespacho({ despachoId, estado, puedeEditar, onEstadoC
             </TableBody>
           </Table>
         </TableContainer>
+      )}
+
+      {pagoRegistrado && (
+        <>
+          <TituloSeccion>Pago de tributos registrado</TituloSeccion>
+          <TableContainer sx={{ mb: 3 }}>
+            <Table size="small" aria-label="Pago registrado">
+              <TableBody>
+                <FilaTexto concepto="Fecha del pago" valor={formatoFecha(pagoRegistrado.fecha)} />
+                <FilaTexto concepto="Monto pagado (USD)" valor={formatoMonto(pagoRegistrado.monto)} />
+                <FilaTexto concepto="Medio de pago" valor={textoOpcion(MEDIOS_PAGO, pagoRegistrado.medioPago)} />
+                <FilaTexto concepto="N° de operación" valor={pagoRegistrado.numeroOperacion} />
+                <FilaTexto
+                  concepto="Registrado por"
+                  valor={`${pagoRegistrado.registradoPor} · ${formatoFechaHora(pagoRegistrado.registradoEn)}`}
+                />
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </>
       )}
 
       {puedeEditar && liquidado && (
@@ -294,6 +344,15 @@ export function LiquidacionDespacho({ despachoId, estado, puedeEditar, onEstadoC
         </>
       )}
     </Box>
+  )
+}
+
+function FilaTexto({ concepto, valor }: { concepto: string; valor: string }) {
+  return (
+    <TableRow>
+      <TableCell sx={{ color: 'text.secondary', width: '40%' }}>{concepto}</TableCell>
+      <TableCell aria-label={concepto}>{valor}</TableCell>
+    </TableRow>
   )
 }
 

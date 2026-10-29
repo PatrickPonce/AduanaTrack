@@ -7,6 +7,7 @@ import * as canalApi from '../api/canal'
 import * as clasificacionApi from '../api/clasificacion'
 import * as despachosApi from '../api/despachos'
 import * as hitosApi from '../api/hitos'
+import * as liquidacionApi from '../api/liquidacion'
 import { renderEnRuta } from '../test/utils'
 import type { Despacho, EstadoDespacho, ItemFactura, Rol } from '../types'
 import { DespachoDetallePage } from './DespachoDetallePage'
@@ -53,6 +54,15 @@ function mostrar(rol: Rol = 'AGENTE') {
 }
 
 const nombresDePestanas = () => screen.getAllByRole('tab').map((t) => t.textContent)
+
+beforeEach(() => {
+  vi.mocked(liquidacionApi.obtenerLiquidacion).mockResolvedValue({
+    liquidacion: null,
+    generadoPor: null,
+    generadoEn: null,
+    pago: null,
+  })
+})
 
 describe('DespachoDetallePage · pestañas del Sprint 2', () => {
   beforeEach(() => {
