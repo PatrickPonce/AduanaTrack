@@ -26,11 +26,13 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockMultipartFile;
 
+import pe.edu.usmp.aduanatrack.auth.repository.UsuarioRepository;
 import pe.edu.usmp.aduanatrack.cliente.entity.Cliente;
 import pe.edu.usmp.aduanatrack.common.ApiException;
 import pe.edu.usmp.aduanatrack.common.CodigoError;
 import pe.edu.usmp.aduanatrack.config.DocumentoProperties;
 import pe.edu.usmp.aduanatrack.dam.dto.DamResponse;
+import pe.edu.usmp.aduanatrack.dam.repository.DamHistorialRepository;
 import pe.edu.usmp.aduanatrack.despacho.entity.Despacho;
 import pe.edu.usmp.aduanatrack.despacho.entity.EstadoDespacho;
 import pe.edu.usmp.aduanatrack.despacho.entity.TipoHito;
@@ -65,8 +67,8 @@ class NumeracionDamServiceTest {
         when(despachoRepository.saveAndFlush(any(Despacho.class))).thenAnswer(i -> i.getArgument(0));
 
         Clock reloj = Clock.fixed(Instant.parse("2026-10-28T15:00:00Z"), ZoneId.of("America/Lima"));
-        servicio = new NumeracionDamService(despachoRepository, hitoService, reloj,
-                new DocumentoProperties(directorio.toString()));
+        servicio = new NumeracionDamService(despachoRepository, mock(DamHistorialRepository.class),
+                mock(UsuarioRepository.class), hitoService, reloj, new DocumentoProperties(directorio.toString()));
     }
 
     // CA1: guarda el número junto con la fecha de numeración

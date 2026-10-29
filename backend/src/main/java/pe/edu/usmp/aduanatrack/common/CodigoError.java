@@ -24,6 +24,7 @@ public final class CodigoError {
     public static final String TRIBUTOS_PENDIENTES = "TRIBUTOS_PENDIENTES";
     /** HU-09: el N° de DAM ya está registrado en otro despacho. */
     public static final String DAM_DUPLICADA = "DAM_DUPLICADA";
+    public static final String DAM_NO_REGISTRADA = "DAM_NO_REGISTRADA";
     public static final String ERROR_INTERNO = "ERROR_INTERNO";
 
     private CodigoError() {
