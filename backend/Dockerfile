@@ -10,7 +10,7 @@ RUN mvn -B -ntp -DskipTests package && cp target/aduanatrack-*.jar app.jar
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 RUN groupadd --system aduana && useradd --system --gid aduana --no-create-home aduana \
-    && mkdir -p /data/cartas-poder && chown -R aduana:aduana /data
+    && mkdir -p /data/cartas-poder /data/documentos && chown -R aduana:aduana /data
 COPY --from=build --chown=aduana:aduana /app/app.jar app.jar
 USER aduana
 EXPOSE 8080
