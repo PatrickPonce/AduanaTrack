@@ -20,6 +20,7 @@ import pe.edu.usmp.aduanatrack.common.ApiException;
 import pe.edu.usmp.aduanatrack.despacho.dto.DespachoRequest;
 import pe.edu.usmp.aduanatrack.despacho.dto.DespachoResponse;
 import pe.edu.usmp.aduanatrack.despacho.entity.Despacho;
+import pe.edu.usmp.aduanatrack.despacho.entity.TipoHito;
 import pe.edu.usmp.aduanatrack.despacho.repository.CorrelativoDespachoRepository;
 import pe.edu.usmp.aduanatrack.despacho.repository.DespachoRepository;
 
@@ -37,12 +38,13 @@ public class DespachoService {
     private final UsuarioRepository usuarioRepository;
     private final CartaPoderService cartaPoder;
     private final CartaPoderEstadoService cartaPoderEstado;
+    private final HitoDespachoService hitos;
     private final Clock clock;
 
     public DespachoService(DespachoRepository despachoRepository, CorrelativoDespachoRepository correlativo,
             ClienteRepository clienteRepository, RegimenAduaneroRepository regimenRepository,
             AduanaRepository aduanaRepository, UsuarioRepository usuarioRepository, CartaPoderService cartaPoder,
-            CartaPoderEstadoService cartaPoderEstado, Clock clock) {
+            CartaPoderEstadoService cartaPoderEstado, HitoDespachoService hitos, Clock clock) {
         this.despachoRepository = despachoRepository;
         this.correlativo = correlativo;
         this.clienteRepository = clienteRepository;
@@ -51,6 +53,7 @@ public class DespachoService {
         this.usuarioRepository = usuarioRepository;
         this.cartaPoder = cartaPoder;
         this.cartaPoderEstado = cartaPoderEstado;
+        this.hitos = hitos;
         this.clock = clock;
     }
 
@@ -63,7 +66,11 @@ public class DespachoService {
         if (!solicitud.borrador()) {
             abrir(despacho);
         }
-        return respuesta(despachoRepository.save(despacho));
+        Despacho guardado = despachoRepository.save(despacho);
+        if (!solicitud.borrador()) {
+            registrarApertura(guardado);
+        }
+        return respuesta(guardado);
     }
 
     /**
@@ -81,6 +88,7 @@ public class DespachoService {
         aplicar(despacho, solicitud);
         if (eraBorrador && !solicitud.borrador()) {
             abrir(despacho);
+            registrarApertura(despacho);
         } else if (!eraBorrador && !clienteAnterior.equals(despacho.getCliente().getId())) {
             cartaPoder.exigirVigente(despacho.getCliente().getId(), LocalDate.now(clock));
         }
@@ -101,6 +109,11 @@ public class DespachoService {
         cartaPoder.exigirVigente(despacho.getCliente().getId(), hoy);
         int anio = hoy.getYear();
         despacho.abrir(formatearNumero(anio, correlativo.siguiente(anio)));
+    }
+
+    /** Primer hito de la línea de tiempo (HU-10 · T-10.1). */
+    private void registrarApertura(Despacho despacho) {
+        hitos.registrar(despacho.getId(), TipoHito.APERTURA, "Despacho abierto (" + despacho.getNumero() + ")");
     }
 
     static String formatearNumero(int anio, int correlativo) {

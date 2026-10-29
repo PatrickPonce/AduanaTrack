@@ -80,8 +80,17 @@ export interface Aduana {
   nombre: string
 }
 
-/** Sprint 1: BORRADOR y APERTURA; los demás estados llegan en los Sprints 2 y 3. */
-export type EstadoDespacho = 'BORRADOR' | 'APERTURA' | (string & {})
+/** Estados del despacho en el orden en que avanza (Sprints 1 y 2); los del Sprint 3 llegan después. */
+export type EstadoDespacho =
+  | 'BORRADOR'
+  | 'APERTURA'
+  | 'DOCUMENTACION_COMPLETA'
+  | 'CLASIFICADO'
+  | 'LIQUIDADO'
+  | 'TRIBUTOS_PAGADOS'
+  | 'DAM_NUMERADA'
+  | 'CANAL_ASIGNADO'
+  | (string & {})
 
 export interface CatalogoRef {
   id: number

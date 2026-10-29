@@ -14,6 +14,19 @@ describe('EstadoDespachoChip', () => {
     expect(screen.getByText('Borrador')).toBeInTheDocument()
   })
 
+  it('muestra los estados del Sprint 2 con su texto', () => {
+    render(
+      <>
+        <EstadoDespachoChip estado="DOCUMENTACION_COMPLETA" />
+        <EstadoDespachoChip estado="TRIBUTOS_PAGADOS" />
+        <EstadoDespachoChip estado="CANAL_ASIGNADO" />
+      </>,
+    )
+    expect(screen.getByText('Documentación completa')).toBeInTheDocument()
+    expect(screen.getByText('Tributos pagados')).toBeInTheDocument()
+    expect(screen.getByText('Canal asignado')).toBeInTheDocument()
+  })
+
   it('un estado futuro sin configurar se muestra tal cual', () => {
     render(<EstadoDespachoChip estado="LEVANTE" />)
     expect(screen.getByText('LEVANTE')).toBeInTheDocument()

@@ -39,6 +39,7 @@ Errores en formato único: `{"codigo", "mensaje", "campos"}`.
 | GET | `/despachos/{id}` | HU-03 · T-03.1 | Detalle con cliente, régimen, aduana, estado, número y agente |
 | GET | `/catalogos/regimenes`, `/catalogos/aduanas` | HU-03 · T-03.2 | Solo activos, por código: `[{id, codigo, descripcion}]` y `[{id, codigo, nombre}]` |
 | GET / PUT | `/despachos/{id}/embarque` | HU-05 · T-05.1 / T-05.3 | BL (con `numeroViaje`) + contenedores (con `pesoBrutoKg`) + `fechaLimiteAlmacenaje`, `diasRestantes`, `alertaAlmacenaje`, `etaModificada`, `etaAnterior`; 400 con la fila del contenedor (`contenedores[i].numero`); 409 `DESPACHO_EN_BORRADOR` |
+| GET | `/despachos/{id}/hitos` | HU-10 · T-10.1 | Línea de tiempo en orden cronológico: `[{tipo, descripcion, sugerido, usuario, fecha}]`; `usuario` = `Sistema` en los hitos sugeridos; 404 si el despacho no existe |
 | GET | `/dashboard/despachos?aduanaId=&clienteId=` | HU-02 · T-02.2 | Despachos no borradores por ETA ascendente (sin ETA al final) con `contenedor`, `totalContenedores`, `canalControl`, `diasAlmacenaje`, `alertaCritica` |
 | GET | `/dashboard/despachos/excel?aduanaId=&clienteId=` | HU-02 · T-02.2 | `despachos-AAAAMMDD.xlsx` con las mismas filas |
 | GET | `/dashboard/indicadores?aduanaId=&clienteId=` | HU-02 · T-02.1 | `{despachosActivos, enCanalNaranjaRojo, conLevante, conAlertasCriticas}` sobre los despachos no borradores; activos = sin levante; alertas críticas = filas con `alertaCritica` |
@@ -48,6 +49,12 @@ Permisos por rol: `POST` y `PUT` sobre `/clientes/**` y `/despachos/**` solo par
 Reglas configurables leídas de `parametro_sistema`: `DIAS_ALMACENAJE` (30), `DIAS_ALERTA_ALMACENAJE` (3), `DIAS_ALERTA_CARTA_PODER` (15).
 
 ## Contratos con otras tareas
+
+### Sprint 2
+
+- **Estados y línea de tiempo (T-10.1):** `EstadoDespacho` ya tiene los estados del Sprint 2 en orden (`APERTURA` → `DOCUMENTACION_COMPLETA` → `CLASIFICADO` → `LIQUIDADO` → `TRIBUTOS_PAGADOS` → `DAM_NUMERADA` → `CANAL_ASIGNADO`). Cada servicio valida el estado anterior, llama a `despacho.cambiarEstado(nuevo)` y, en la misma transacción, a `HitoDespachoService.registrar(despachoId, TipoHito.X, descripcion)`, que guarda el usuario de la sesión y la hora de Lima. Para el canal rojo (T-10.2) está `registrarSugerido(despachoId, "Programar inspección física")`. `EstadoDespacho.alcanzo(otro)` dice si el despacho ya llegó a un estado (p. ej. para habilitar una pestaña). Migración `V005__hito_despacho.sql`: crea la tabla y el hito de apertura de los despachos que ya estaban abiertos.
+
+### Sprint 1
 
 - **T-00.4 (migraciones, `src/main/resources/db/migration/`):** las entidades usan `ddl-auto=validate`, así que V001 debe crear las 13 tablas de la sección 2.5 de la guía con estos tipos: `id` `BIGSERIAL`/`BIGINT IDENTITY`; textos `VARCHAR`; fechas de calendario (`fecha_emision`, `fecha_vencimiento`, `fecha_levante`, `fecha_embarque`, `fecha_eta`, `fecha_limite_almacenaje`) `DATE`; marcas de tiempo (`bloqueado_hasta`, `creado_en`, `actualizado_en`, `fecha`, `alerta_generada_en`) `TIMESTAMP` sin zona (la app trabaja en hora de Lima); `tamano_bytes BIGINT`; `intentos_fallidos INTEGER`; `correlativo_despacho(anio INTEGER PK, ultimo_numero INTEGER)`; `contenedor` con `UNIQUE (embarque_id, numero)`; `despacho.estado`, `embarque.tipo_bl` y `auditoria_acceso.resultado` como `VARCHAR` (enums en texto).
 - **T-01.2 (auditoría):** implementar la interfaz `auditoria.AuditoriaAccesoService` (`@Service`, `REQUIRES_NEW`). El login la llama en cada intento; `usuarioId` es nulo si el usuario no existe. **Hasta que exista, la aplicación no arranca.**
