@@ -14,6 +14,22 @@ describe('EstadoDespachoChip', () => {
     expect(screen.getByText('Borrador')).toBeInTheDocument()
   })
 
+  it('muestra el texto de cada estado del Sprint 2', () => {
+    const esperados: Record<string, string> = {
+      DOCUMENTACION_COMPLETA: 'Documentación completa',
+      CLASIFICADO: 'Clasificado',
+      LIQUIDADO: 'Liquidado',
+      TRIBUTOS_PAGADOS: 'Tributos pagados',
+      DAM_NUMERADA: 'DAM numerada',
+      CANAL_ASIGNADO: 'Canal asignado',
+    }
+    for (const [estado, texto] of Object.entries(esperados)) {
+      const { unmount } = render(<EstadoDespachoChip estado={estado} />)
+      expect(screen.getByText(texto)).toBeInTheDocument()
+      unmount()
+    }
+  })
+
   it('un estado futuro sin configurar se muestra tal cual', () => {
     render(<EstadoDespachoChip estado="LEVANTE" />)
     expect(screen.getByText('LEVANTE')).toBeInTheDocument()

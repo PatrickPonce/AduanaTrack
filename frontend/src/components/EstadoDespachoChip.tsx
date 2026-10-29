@@ -9,6 +9,12 @@ import type { EstadoDespacho } from '../types'
 const ESTADOS: Record<string, { texto: string; color: ChipProps['color'] }> = {
   BORRADOR: { texto: 'Borrador', color: 'default' },
   APERTURA: { texto: 'Apertura', color: 'primary' },
+  DOCUMENTACION_COMPLETA: { texto: 'Documentación completa', color: 'info' },
+  CLASIFICADO: { texto: 'Clasificado', color: 'info' },
+  LIQUIDADO: { texto: 'Liquidado', color: 'warning' },
+  TRIBUTOS_PAGADOS: { texto: 'Tributos pagados', color: 'success' },
+  DAM_NUMERADA: { texto: 'DAM numerada', color: 'success' },
+  CANAL_ASIGNADO: { texto: 'Canal asignado', color: 'secondary' },
 }
 
 /** Texto del estado tal como se muestra en las tablas ("Apertura"). */
