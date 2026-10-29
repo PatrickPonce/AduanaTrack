@@ -16,6 +16,9 @@ const DespachoDetallePage = lazy(() =>
 )
 const EmbarquesPage = lazy(() => import('./pages/EmbarquesPage').then((m) => ({ default: m.EmbarquesPage })))
 const EmbarquePage = lazy(() => import('./pages/EmbarquePage').then((m) => ({ default: m.EmbarquePage })))
+const ModuloDespachoPage = lazy(() =>
+  import('./pages/ModuloDespachoPage').then((m) => ({ default: m.ModuloDespachoPage })),
+)
 
 const cargando = (
   <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
@@ -39,6 +42,11 @@ export function App() {
             <Route path="/despachos/:id" element={<DespachoDetallePage />} />
             <Route path="/embarques" element={<EmbarquesPage />} />
             <Route path="/embarques/:despachoId" element={<EmbarquePage />} />
+            <Route path="/documentos" element={<ModuloDespachoPage modulo="documentos" />} />
+            <Route path="/clasificacion" element={<ModuloDespachoPage modulo="clasificacion" />} />
+            <Route path="/tributos" element={<ModuloDespachoPage modulo="tributos" />} />
+            <Route path="/dam" element={<ModuloDespachoPage modulo="dam" />} />
+            <Route path="/canal-control" element={<ModuloDespachoPage modulo="canal" />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
