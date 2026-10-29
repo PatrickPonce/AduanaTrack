@@ -285,6 +285,46 @@ export interface ClasificacionGuardada {
   clasificadoEn: string
 }
 
+/** HU-08 (contrato C3): tasas aplicadas, en porcentaje. */
+export interface TasasLiquidacion {
+  igv: number
+  ipm: number
+  percepcion: number
+}
+
+/** Liquidación referencial: todos los montos en USD con 2 decimales. */
+export interface Liquidacion {
+  fob: number
+  flete: number
+  seguro: number
+  cif: number
+  adValorem: number
+  igv: number
+  ipm: number
+  percepcion: number
+  total: number
+  moneda: string
+  tasas: TasasLiquidacion
+  estado: EstadoDespacho
+}
+
+export interface LiquidacionRequest {
+  flete: number
+  seguro: number
+}
+
+/** Pago de tributos hecho fuera del sistema (banco o SUNAT). */
+export interface PagoRequest {
+  fecha: string
+  monto: number
+  medioPago: string
+  numeroOperacion: string
+}
+
+export interface PagoRegistrado {
+  estado: EstadoDespacho
+}
+
 /** Formato único de error del backend. */
 export interface ApiErrorBody {
   codigo: string

@@ -35,6 +35,14 @@ export const UNIDADES_ITEM: Opcion<string>[] = [
   { valor: 'PAR', texto: 'Pares (PAR)' },
 ]
 
+/** «Medio de pago» del registro de pago (HU-08): canales externos; el API guarda hasta 30 caracteres. */
+export const MEDIOS_PAGO: Opcion<string>[] = [
+  { valor: 'BANCA_POR_CONVENIO', texto: 'Banca por convenio' },
+  { valor: 'VENTANILLA', texto: 'Ventanilla' },
+  { valor: 'TRANSFERENCIA', texto: 'Transferencia bancaria' },
+  { valor: 'OTRO', texto: 'Otro canal externo' },
+]
+
 export function textoOpcion<T extends string>(opciones: Opcion<T>[], valor: T | null | undefined): string {
   return opciones.find((o) => o.valor === valor)?.texto ?? valor ?? '—'
 }
