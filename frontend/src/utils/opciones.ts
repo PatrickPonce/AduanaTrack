@@ -1,4 +1,4 @@
-import type { ModalidadDespacho, TipoOperacion } from '../types'
+import type { CanalControl, ModalidadDespacho, TipoOperacion } from '../types'
 
 export interface Opcion<T extends string> {
   valor: T
@@ -33,6 +33,13 @@ export const UNIDADES_ITEM: Opcion<string>[] = [
   { valor: 'M', texto: 'Metros (M)' },
   { valor: 'L', texto: 'Litros (L)' },
   { valor: 'PAR', texto: 'Pares (PAR)' },
+]
+
+/** «Canal informado por SUNAT» (HU-10): colores del estándar SUNAT. */
+export const CANALES_CONTROL: Opcion<CanalControl>[] = [
+  { valor: 'VERDE', texto: 'Verde' },
+  { valor: 'NARANJA', texto: 'Naranja' },
+  { valor: 'ROJO', texto: 'Rojo' },
 ]
 
 /** «Medio de pago» del registro de pago (HU-08): canales externos; el API guarda hasta 30 caracteres. */
