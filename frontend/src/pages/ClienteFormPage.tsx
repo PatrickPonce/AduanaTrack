@@ -40,7 +40,7 @@ import { DOS_COLUMNAS, TituloSeccion } from '../components/Seccion'
 import type { CambioCliente, CartaPoderResumen, Cliente, ClienteRequest } from '../types'
 import { formatoFecha, formatoFechaHora } from '../utils/formato'
 import { tipoContribuyente } from '../utils/opciones'
-import { validarArchivoCartaPoder, validarRuc } from '../utils/validaciones'
+import { validarArchivoPdf, validarRuc } from '../utils/validaciones'
 
 const VACIO: ClienteRequest = { ruc: '', razonSocial: '', direccion: '', correo: '', telefono: '', contacto: '' }
 
@@ -165,7 +165,7 @@ export function ClienteFormPage() {
     const archivo = e.target.files?.[0] ?? null
     e.target.value = ''
     if (!archivo) return
-    const problema = validarArchivoCartaPoder(archivo)
+    const problema = validarArchivoPdf(archivo)
     setErroresCarta((er) => ({ ...er, archivo: problema ?? '' }))
     setCarta((c) => ({ ...c, archivo: problema ? null : archivo }))
   }

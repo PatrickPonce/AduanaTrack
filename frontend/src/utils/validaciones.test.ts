@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { validarArchivoCartaPoder, validarContenedor, validarRuc } from './validaciones'
+import { validarArchivoPdf, validarContenedor, validarRuc } from './validaciones'
 
 describe('validarRuc', () => {
   it.each(['20787789324', '20230972151', '20923478826', '10688126342'])('acepta el RUC de prueba %s', (ruc) => {
@@ -30,21 +30,21 @@ describe('validarContenedor (ISO 6346)', () => {
   })
 })
 
-describe('validarArchivoCartaPoder', () => {
+describe('validarArchivoPdf (carta poder y documentos del despacho)', () => {
   it('rechaza un PDF de más de 10 MB', () => {
     const archivo = new File(['x'], 'carta.pdf', { type: 'application/pdf' })
     Object.defineProperty(archivo, 'size', { value: 12 * 1024 * 1024 })
-    expect(validarArchivoCartaPoder(archivo)).toMatch(/10 MB/)
+    expect(validarArchivoPdf(archivo)).toMatch(/10 MB/)
   })
 
   it('rechaza un archivo que no es PDF', () => {
     const archivo = new File(['x'], 'carta.docx', {
       type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     })
-    expect(validarArchivoCartaPoder(archivo)).toMatch(/PDF/)
+    expect(validarArchivoPdf(archivo)).toMatch(/PDF/)
   })
 
   it('acepta un PDF pequeño', () => {
-    expect(validarArchivoCartaPoder(new File(['%PDF-1.7'], 'carta.pdf', { type: 'application/pdf' }))).toBeNull()
+    expect(validarArchivoPdf(new File(['%PDF-1.7'], 'carta.pdf', { type: 'application/pdf' }))).toBeNull()
   })
 })
