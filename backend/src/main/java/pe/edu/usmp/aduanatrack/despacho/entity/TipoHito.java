@@ -12,6 +12,8 @@ public enum TipoHito {
     TRIBUTOS_PAGADOS,
     DAM_NUMERADA,
     CANAL_ASIGNADO,
+    /** Corrección del N° de DAM o de su fecha de numeración (HU-09); no cambia el estado. */
+    DAM_RECTIFICADA,
     /** Acción que el sistema propone al agente; no es un cambio de estado. */
     HITO_SUGERIDO
 }

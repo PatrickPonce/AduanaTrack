@@ -115,6 +115,12 @@ public class Despacho {
         this.estado = nuevo;
     }
 
+    /** Guarda el canal que informó SUNAT y pasa a CANAL_ASIGNADO (HU-10 · T-10.2). */
+    public void asignarCanal(CanalControl canal) {
+        this.canalControl = canal.name();
+        this.estado = EstadoDespacho.CANAL_ASIGNADO;
+    }
+
     /** HU-09: guarda la numeración y pasa a DAM_NUMERADA; el cargo es opcional. */
     public void registrarDam(String numeroDam, LocalDate fechaNumeracion, String cargoNombre, String cargoRuta) {
         this.numeroDam = numeroDam;
@@ -122,6 +128,19 @@ public class Despacho {
         this.cargoNombre = cargoNombre;
         this.cargoRuta = cargoRuta;
         this.estado = EstadoDespacho.DAM_NUMERADA;
+    }
+
+    /**
+     * HU-09: corrige el número y la fecha de numeración sin cambiar el estado. El cargo solo se
+     * reemplaza si llega uno nuevo ({@code cargoNombre} no nulo).
+     */
+    public void rectificarDam(String numeroDam, LocalDate fechaNumeracion, String cargoNombre, String cargoRuta) {
+        this.numeroDam = numeroDam;
+        this.fechaNumeracion = fechaNumeracion;
+        if (cargoNombre != null) {
+            this.cargoNombre = cargoNombre;
+            this.cargoRuta = cargoRuta;
+        }
     }
 
     public boolean esBorrador() {
@@ -228,3 +247,4 @@ public class Despacho {
         return creadoEn;
     }
 }
+

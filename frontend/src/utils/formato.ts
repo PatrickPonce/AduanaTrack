@@ -42,6 +42,20 @@ export function formatoPeso(kg: number | null | undefined): string {
   return `${kg.toLocaleString('en-US', { maximumFractionDigits: 2 })} kg`
 }
 
+/** Tamaño de archivo legible: 482113 → "470.8 KB", 5242880 → "5.0 MB". */
+export function formatoTamano(bytes: number | null | undefined): string {
+  if (bytes === null || bytes === undefined) return '—'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+/** Monto en USD con dos decimales y separador de miles: 4200 → "4,200.00". */
+export function formatoMonto(monto: number | null | undefined): string {
+  if (monto === null || monto === undefined) return '—'
+  return monto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
 /** Cadena vacía → null para los campos opcionales que se envían al API. */
 export function vacioANulo(valor: string): string | null {
   const recortado = valor.trim()

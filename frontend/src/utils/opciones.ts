@@ -1,4 +1,4 @@
-import type { ModalidadDespacho, TipoOperacion } from '../types'
+import type { CanalControl, ModalidadDespacho, TipoOperacion } from '../types'
 
 export interface Opcion<T extends string> {
   valor: T
@@ -24,6 +24,30 @@ export const TIPOS_CONTENEDOR: Opcion<string>[] = [
   { valor: '20GP', texto: "20' GP" },
   { valor: '40GP', texto: "40' GP" },
   { valor: '40HC', texto: "40' HC" },
+]
+
+/** Unidades de los ítems de la factura comercial (HU-07); el API acepta hasta 10 caracteres. */
+export const UNIDADES_ITEM: Opcion<string>[] = [
+  { valor: 'UND', texto: 'Unidades (UND)' },
+  { valor: 'KG', texto: 'Kilogramos (KG)' },
+  { valor: 'M', texto: 'Metros (M)' },
+  { valor: 'L', texto: 'Litros (L)' },
+  { valor: 'PAR', texto: 'Pares (PAR)' },
+]
+
+/** «Canal informado por SUNAT» (HU-10): colores del estándar SUNAT. */
+export const CANALES_CONTROL: Opcion<CanalControl>[] = [
+  { valor: 'VERDE', texto: 'Verde' },
+  { valor: 'NARANJA', texto: 'Naranja' },
+  { valor: 'ROJO', texto: 'Rojo' },
+]
+
+/** «Medio de pago» del registro de pago (HU-08): canales externos; el API guarda hasta 30 caracteres. */
+export const MEDIOS_PAGO: Opcion<string>[] = [
+  { valor: 'BANCA_POR_CONVENIO', texto: 'Banca por convenio' },
+  { valor: 'VENTANILLA', texto: 'Ventanilla' },
+  { valor: 'TRANSFERENCIA', texto: 'Transferencia bancaria' },
+  { valor: 'OTRO', texto: 'Otro canal externo' },
 ]
 
 export function textoOpcion<T extends string>(opciones: Opcion<T>[], valor: T | null | undefined): string {
