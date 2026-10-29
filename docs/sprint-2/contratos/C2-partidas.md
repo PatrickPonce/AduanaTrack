@@ -39,3 +39,22 @@ GET /api/v1/catalogos/partidas?q=rodam
 | `clasificado_en` | timestamp, nulo | |
 
 Entidad de partidas para T-07.2: `clasificacion.entity.PartidaReferencial` (`id`, `codigo`, `codigoFormateado`, `descripcion`, `tasaAdValorem`).
+
+## POST `/api/v1/despachos/{id}/clasificacion` (T-07.3 · SCRUM-60)
+
+Guarda la clasificación arancelaria. Solo `ADMIN` y `AGENTE`, con la cabecera `X-XSRF-TOKEN`. Sin cuerpo.
+
+```json
+200 { "estado": "CLASIFICADO", "clasificadoPor": "Agente Demo", "clasificadoEn": "2026-10-28T10:00:00" }
+```
+
+Llama a `exigirDocumentacionCompleta` (HU-06); si todos los ítems tienen partida pasa el despacho a `CLASIFICADO` y registra el hito (una sola vez: guardar de nuevo no lo repite).
+
+| Respuesta | Cuándo |
+|---|---|
+| 404 `NO_ENCONTRADO` | El despacho no existe |
+| 409 `DESPACHO_EN_BORRADOR` | El despacho todavía es borrador |
+| 409 `DOCUMENTACION_INCOMPLETA` con `pendientes` | Falta un documento obligatorio (códigos de tipo) |
+| 409 `SIN_ITEMS` | La factura no tiene ítems |
+| 409 `ITEMS_SIN_PARTIDA` con `items` | Hay ítems sin partida; `items` son sus números (`[2]`) |
+| 409 `CLASIFICACION_CERRADA` | El despacho ya está liquidado o más adelante |
