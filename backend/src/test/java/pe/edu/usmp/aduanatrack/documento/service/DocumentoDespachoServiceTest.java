@@ -58,6 +58,9 @@ class DocumentoDespachoServiceTest {
     private static final Long AGENTE = 9L;
     private static final LocalDateTime AHORA = LocalDateTime.of(2026, 10, 22, 10, 15);
     private static final byte[] PDF = "%PDF-1.7\nfactura comercial de prueba\n%%EOF".getBytes(StandardCharsets.US_ASCII);
+    /** Firma JPEG (FF D8 FF) seguida de un contenido cualquiera. */
+    private static final byte[] JPG = { (byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0x00, 0x10, 'J', 'F', 'I',
+            'F' };
     /** Un .docx es un ZIP: empieza con «PK». */
     private static final byte[] DOCX = { 'P', 'K', 3, 4, 20, 0, 6, 0 };
 
@@ -148,6 +151,32 @@ class DocumentoDespachoServiceTest {
                 .isInstanceOfSatisfying(ApiException.class, e -> {
                     assertThat(e.getStatus()).isEqualTo(HttpStatus.PAYLOAD_TOO_LARGE);
                     assertThat(e.getCodigo()).isEqualTo(CodigoError.ARCHIVO_MUY_GRANDE);
+                });
+        verify(documentoRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void jpgValido_seGuardaComoJpgYSeDescargaComoImagen_reglaDeNegocio1() throws Exception {
+        servicio.cargar(DESPACHO, "FACTURA_COMERCIAL",
+                new MockMultipartFile("archivo", "foto factura.jpeg", "image/jpeg", JPG), AGENTE);
+
+        DocumentoDespacho guardado = guardados().get(0);
+        assertThat(guardado.getRutaArchivo()).matches("5/[0-9a-f-]{36}\\.jpg");
+        assertThat(guardado.getNombreArchivo()).isEqualTo("foto factura.jpeg");
+        assertThat(Files.readAllBytes(directorio.resolve(guardado.getRutaArchivo()))).isEqualTo(JPG);
+
+        when(documentoRepository.findByIdAndDespachoId(42L, DESPACHO)).thenReturn(Optional.of(guardado));
+        assertThat(servicio.archivo(DESPACHO, 42L).tipoContenido()).isEqualTo("image/jpeg");
+    }
+
+    @Test
+    void pngNoSeAcepta_responde415ConElMensajeDePdfOJpg() {
+        byte[] png = { (byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A };
+        assertThatThrownBy(() -> servicio.cargar(DESPACHO, "FACTURA_COMERCIAL",
+                new MockMultipartFile("archivo", "factura.png", "image/png", png), AGENTE))
+                .isInstanceOfSatisfying(ApiException.class, e -> {
+                    assertThat(e.getStatus()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+                    assertThat(e.getMessage()).isEqualTo(AlmacenPdf.MENSAJE_NO_ES_PDF_NI_JPG);
                 });
         verify(documentoRepository, never()).saveAndFlush(any());
     }
@@ -306,6 +335,7 @@ class DocumentoDespachoServiceTest {
 
         assertThat(archivo.ruta()).isEqualTo(ruta.toAbsolutePath().normalize());
         assertThat(archivo.nombre()).isEqualTo("factura.pdf");
+        assertThat(archivo.tipoContenido()).isEqualTo("application/pdf");
     }
 
     @Test

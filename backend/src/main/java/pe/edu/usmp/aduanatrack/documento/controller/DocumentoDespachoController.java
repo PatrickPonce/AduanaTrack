@@ -61,7 +61,7 @@ public class DocumentoDespachoController {
     public ResponseEntity<Resource> archivo(@PathVariable Long despachoId, @PathVariable Long documentoId) {
         ArchivoDocumento archivo = documentoService.archivo(despachoId, documentoId);
         return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_PDF)
+                .contentType(MediaType.parseMediaType(archivo.tipoContenido()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
                         .filename(archivo.nombre(), StandardCharsets.UTF_8).build().toString())
                 .body(new FileSystemResource(archivo.ruta()));

@@ -6,7 +6,7 @@ import { cargarDocumento } from '../api/documentos'
 import { leerError, mensajeDeError } from '../api/http'
 import type { DocumentoCargado, DocumentoRequerido } from '../types'
 import { formatoTamano } from '../utils/formato'
-import { validarArchivoPdf } from '../utils/validaciones'
+import { ACEPTA_DOCUMENTO, validarArchivoDocumento } from '../utils/validaciones'
 
 interface Props {
   despachoId: number
@@ -17,7 +17,7 @@ interface Props {
 }
 
 /**
- * HU-06 · T-06.4: carga por arrastre o selección de un PDF (CA1). Si el documento ya tiene una
+ * HU-06 · T-06.4: carga por arrastre o selección de un PDF o JPG (CA1 y regla de negocio 1). Si el documento ya tiene una
  * versión vigente, el diálogo confirma que la anterior se conserva en el historial (CA3).
  */
 export function CargaDocumentoDialog({ despachoId, documento, onCerrar, onCargado }: Props) {
@@ -32,10 +32,10 @@ export function CargaDocumentoDialog({ despachoId, documento, onCerrar, onCargad
     setArrastrando(false)
   }, [documento])
 
-  /** El tamaño y el tipo se revisan antes de enviar; el backend vuelve a validar la firma %PDF. */
+  /** El tamaño y el tipo se revisan antes de enviar; el backend vuelve a validar la firma del archivo. */
   function elegir(seleccionado: File | undefined) {
     if (!seleccionado) return
-    const error = validarArchivoPdf(seleccionado)
+    const error = validarArchivoDocumento(seleccionado)
     setProblema(error)
     setArchivo(error ? null : seleccionado)
   }
@@ -78,7 +78,7 @@ export function CargaDocumentoDialog({ despachoId, documento, onCerrar, onCargad
           </Alert>
         )}
         <Box
-          aria-label="Zona de arrastre del PDF"
+          aria-label="Zona de arrastre del documento"
           onDragOver={(e) => {
             e.preventDefault()
             setArrastrando(true)
@@ -99,13 +99,13 @@ export function CargaDocumentoDialog({ despachoId, documento, onCerrar, onCargad
           }}
         >
           <UploadFileIcon color="action" />
-          <Typography variant="body2">Arrastre el PDF aquí o</Typography>
+          <Typography variant="body2">Arrastre el PDF o JPG aquí o</Typography>
           <Button component="label" variant="outlined" size="small">
-            Seleccionar PDF
+            Seleccionar archivo
             <input
               hidden
               type="file"
-              accept="application/pdf"
+              accept={ACEPTA_DOCUMENTO}
               onChange={seleccionar}
               aria-label="Archivo del documento"
             />
@@ -116,7 +116,7 @@ export function CargaDocumentoDialog({ despachoId, documento, onCerrar, onCargad
             sx={{ fontSize: 12.5 }}
             color={problema ? 'error' : 'text.secondary'}
           >
-            {problema || (archivo ? `${archivo.name} · ${formatoTamano(archivo.size)}` : 'Solo PDF, máximo 10 MB')}
+            {problema || (archivo ? `${archivo.name} · ${formatoTamano(archivo.size)}` : 'PDF o JPG, máximo 10 MB')}
           </Typography>
         </Box>
       </DialogContent>
@@ -136,7 +136,7 @@ export function CargaDocumentoDialog({ despachoId, documento, onCerrar, onCargad
 function mensajeCarga(error: unknown): string {
   const { status, body } = leerError(error)
   if (status === 413) return 'El archivo supera el tamaño máximo de 10 MB.'
-  if (status === 415) return 'El archivo no es un PDF válido.'
+  if (status === 415) return 'El archivo no es un PDF ni una imagen JPG válida.'
   if (status === 400 && body?.campos?.archivo) return body.campos.archivo
   return mensajeDeError(error, 'No se pudo cargar el documento.')
 }
