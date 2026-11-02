@@ -64,7 +64,7 @@ beforeEach(() => {
   })
 })
 
-describe('DespachoDetallePage · pestañas del Sprint 2', () => {
+describe('DespachoDetallePage · pestañas de los Sprints 2 y 3', () => {
   beforeEach(() => {
     vi.mocked(hitosApi.listarHitos).mockResolvedValue([])
   })
@@ -82,6 +82,32 @@ describe('DespachoDetallePage · pestañas del Sprint 2', () => {
     [
       'CANAL_ASIGNADO',
       ['Datos generales', 'Documentos', 'Clasificación', 'Liquidación', 'DAM', 'Canal de control', 'Línea de tiempo'],
+    ],
+    [
+      'INSPECCION_PROGRAMADA',
+      [
+        'Datos generales',
+        'Documentos',
+        'Clasificación',
+        'Liquidación',
+        'DAM',
+        'Canal de control',
+        'Inspección',
+        'Línea de tiempo',
+      ],
+    ],
+    [
+      'LEVANTE_OTORGADO',
+      [
+        'Datos generales',
+        'Documentos',
+        'Clasificación',
+        'Liquidación',
+        'DAM',
+        'Canal de control',
+        'Inspección',
+        'Línea de tiempo',
+      ],
     ],
   ])('con el despacho en %s muestra las pestañas que le corresponden', async (estado, esperadas) => {
     vi.mocked(despachosApi.obtenerDespacho).mockResolvedValue(despacho(estado))
