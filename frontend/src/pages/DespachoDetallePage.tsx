@@ -13,6 +13,7 @@ import { DocumentosDespacho } from '../components/DocumentosDespacho'
 import { useEncabezado } from '../components/Encabezado'
 import { EstadoDespachoChip } from '../components/EstadoDespachoChip'
 import { CanalChip } from '../components/EtiquetaColor'
+import { InspeccionDespacho } from '../components/InspeccionDespacho'
 import { LineaTiempoDespacho } from '../components/LineaTiempoDespacho'
 import { LiquidacionDespacho } from '../components/LiquidacionDespacho'
 import { NumeracionDam } from '../components/NumeracionDam'
@@ -23,7 +24,15 @@ import { alcanzoEstado } from '../utils/estados'
 import { formatoFecha } from '../utils/formato'
 import { MODALIDADES_DESPACHO, TIPOS_OPERACION, textoOpcion } from '../utils/opciones'
 
-export type Pestana = 'generales' | 'documentos' | 'clasificacion' | 'liquidacion' | 'dam' | 'canal' | 'linea'
+export type Pestana =
+  | 'generales'
+  | 'documentos'
+  | 'clasificacion'
+  | 'liquidacion'
+  | 'dam'
+  | 'canal'
+  | 'inspeccion'
+  | 'linea'
 
 interface EstadoNavegacion {
   mensaje?: string
@@ -37,7 +46,8 @@ interface EstadoNavegacion {
  * HU-03 · T-03.5 y HU-02 · T-02.4: detalle completo del despacho con su estado. Sprint 2: pestañas
  * «Documentos» (HU-06 · T-06.4), «Clasificación» desde DOCUMENTACION_COMPLETA (HU-07 · T-07.4),
  * «Liquidación» desde CLASIFICADO (HU-08 · T-08.3), «DAM» desde TRIBUTOS_PAGADOS (HU-09 · T-09.2),
- * «Canal de control» desde DAM_NUMERADA y «Línea de tiempo» siempre (HU-10 · T-10.3).
+ * «Canal de control» desde DAM_NUMERADA y «Línea de tiempo» siempre (HU-10 · T-10.3). Sprint 3:
+ * «Inspección» desde INSPECCION_PROGRAMADA (HU-12 · T-12.3).
  */
 export function DespachoDetallePage() {
   const { id } = useParams()
@@ -99,6 +109,7 @@ export function DespachoDetallePage() {
   const conLiquidacion = alcanzoEstado(despacho.estado, 'CLASIFICADO')
   const conDam = alcanzoEstado(despacho.estado, 'TRIBUTOS_PAGADOS')
   const conCanal = alcanzoEstado(despacho.estado, 'DAM_NUMERADA')
+  const conInspeccion = alcanzoEstado(despacho.estado, 'INSPECCION_PROGRAMADA')
   // Un borrador todavía no tiene expediente (el API responde 409 DESPACHO_EN_BORRADOR) y cada pestaña
   // de un paso posterior solo se abre cuando el despacho llegó a ese estado.
   const visible =
@@ -106,7 +117,8 @@ export function DespachoDetallePage() {
     (pestana === 'clasificacion' && !conClasificacion) ||
     (pestana === 'liquidacion' && !conLiquidacion) ||
     (pestana === 'dam' && !conDam) ||
-    (pestana === 'canal' && !conCanal)
+    (pestana === 'canal' && !conCanal) ||
+    (pestana === 'inspeccion' && !conInspeccion)
       ? 'generales'
       : pestana
 
@@ -146,6 +158,7 @@ export function DespachoDetallePage() {
             {conLiquidacion && <Tab value="liquidacion" label="Liquidación" />}
             {conDam && <Tab value="dam" label="DAM" />}
             {conCanal && <Tab value="canal" label="Canal de control" />}
+            {conInspeccion && <Tab value="inspeccion" label="Inspección" />}
             <Tab value="linea" label="Línea de tiempo" />
           </Tabs>
         )}
@@ -159,6 +172,15 @@ export function DespachoDetallePage() {
             puedeEditar={registra}
             onCanalGuardado={recargarDespacho}
             onVerLineaTiempo={() => setPestana('linea')}
+          />
+        )}
+
+        {visible === 'inspeccion' && (
+          <InspeccionDespacho
+            despachoId={despacho.id}
+            estado={despacho.estado}
+            puedeEditar={registra}
+            onInspeccionRegistrada={recargarDespacho}
           />
         )}
 
