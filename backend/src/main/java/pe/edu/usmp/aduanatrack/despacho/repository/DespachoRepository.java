@@ -23,4 +23,7 @@ public interface DespachoRepository extends JpaRepository<Despacho, Long> {
 
     /** HU-09: el N° de DAM es único entre todos los despachos. */
     boolean existsByNumeroDam(String numeroDam);
+
+    /** HU-13: el N° de levante es único entre todos los despachos. */
+    boolean existsByNumeroLevante(String numeroLevante);
 }
