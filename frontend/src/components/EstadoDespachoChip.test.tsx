@@ -27,8 +27,23 @@ describe('EstadoDespachoChip', () => {
     expect(screen.getByText('Canal asignado')).toBeInTheDocument()
   })
 
+  it('HU-11: muestra los estados del Sprint 3 con su texto', () => {
+    render(
+      <>
+        <EstadoDespachoChip estado="INSPECCION_PROGRAMADA" />
+        <EstadoDespachoChip estado="INSPECCION_CONFORME" />
+        <EstadoDespachoChip estado="LEVANTE_OTORGADO" />
+        <EstadoDespachoChip estado="RETIRO_PROGRAMADO" />
+      </>,
+    )
+    expect(screen.getByText('Inspección programada')).toBeInTheDocument()
+    expect(screen.getByText('Inspección conforme')).toBeInTheDocument()
+    expect(screen.getByText('Levante otorgado')).toBeInTheDocument()
+    expect(screen.getByText('Retiro programado')).toBeInTheDocument()
+  })
+
   it('un estado futuro sin configurar se muestra tal cual', () => {
-    render(<EstadoDespachoChip estado="LEVANTE" />)
-    expect(screen.getByText('LEVANTE')).toBeInTheDocument()
+    render(<EstadoDespachoChip estado="ESTADO_FUTURO" />)
+    expect(screen.getByText('ESTADO_FUTURO')).toBeInTheDocument()
   })
 })
