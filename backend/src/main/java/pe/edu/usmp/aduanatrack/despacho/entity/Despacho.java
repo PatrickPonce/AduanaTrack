@@ -66,9 +66,24 @@ public class Despacho {
     @Column(name = "canal_control")
     private String canalControl;
 
-    /** Se registra en HU-13 (Sprint 3); nulo en el Sprint 1. */
+    /** Se registra en HU-13 (Sprint 3); nulo hasta LEVANTE_OTORGADO. */
     @Column(name = "fecha_levante")
     private LocalDate fechaLevante;
+
+    /** HU-13: código de autorización de SUNAT; nulo hasta LEVANTE_OTORGADO. */
+    @Column(name = "numero_levante", unique = true)
+    private String numeroLevante;
+
+    /** Constancia del levante en PDF (opcional): nombre original y ruta relativa al directorio de documentos. */
+    @Column(name = "constancia_levante_nombre")
+    private String constanciaLevanteNombre;
+
+    @Column(name = "constancia_levante_ruta")
+    private String constanciaLevanteRuta;
+
+    /** HU-13: el agente confirmó el levante sin pago de tributos o sin inspección conforme. */
+    @Column(name = "levante_con_advertencia", nullable = false)
+    private boolean levanteConAdvertencia;
 
     /** HU-09: N° de DAM numerada en el sistema externo; nulo hasta DAM_NUMERADA. */
     @Column(name = "numero_dam", unique = true)
@@ -141,6 +156,17 @@ public class Despacho {
             this.cargoNombre = cargoNombre;
             this.cargoRuta = cargoRuta;
         }
+    }
+
+    /** HU-13: guarda el levante y pasa a LEVANTE_OTORGADO; la constancia es opcional. */
+    public void registrarLevante(String numeroLevante, LocalDate fechaLevante, String constanciaNombre,
+            String constanciaRuta, boolean conAdvertencia) {
+        this.numeroLevante = numeroLevante;
+        this.fechaLevante = fechaLevante;
+        this.constanciaLevanteNombre = constanciaNombre;
+        this.constanciaLevanteRuta = constanciaRuta;
+        this.levanteConAdvertencia = conAdvertencia;
+        this.estado = EstadoDespacho.LEVANTE_OTORGADO;
     }
 
     public boolean esBorrador() {
@@ -221,6 +247,22 @@ public class Despacho {
 
     public LocalDate getFechaLevante() {
         return fechaLevante;
+    }
+
+    public String getNumeroLevante() {
+        return numeroLevante;
+    }
+
+    public String getConstanciaLevanteNombre() {
+        return constanciaLevanteNombre;
+    }
+
+    public String getConstanciaLevanteRuta() {
+        return constanciaLevanteRuta;
+    }
+
+    public boolean isLevanteConAdvertencia() {
+        return levanteConAdvertencia;
     }
 
     public String getNumeroDam() {
