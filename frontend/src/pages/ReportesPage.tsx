@@ -69,8 +69,7 @@ export function textoMes(mes: string): string {
 /** 9.4 → "9,4 días"; sin despachos con levante en el rango, "—". */
 export function textoTiempoPromedio(dias: number | null): string {
   if (dias === null) return '—'
-  const texto = dias.toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
-  return `${texto} ${dias === 1 ? 'día' : 'días'}`
+  return `${dias.toFixed(1).replace('.', ',')} ${dias === 1 ? 'día' : 'días'}`
 }
 
 /**
