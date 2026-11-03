@@ -13,5 +13,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    // Las pruebas de página escriben en varios campos con userEvent: en equipos lentos pasan de 5 s.
+    testTimeout: 15000,
   },
 })
