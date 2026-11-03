@@ -1,5 +1,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { AxiosError, AxiosHeaders } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as authApi from '../api/auth'
@@ -8,6 +9,7 @@ import * as citasApi from '../api/citas'
 import * as clasificacionApi from '../api/clasificacion'
 import * as despachosApi from '../api/despachos'
 import * as hitosApi from '../api/hitos'
+import * as levanteApi from '../api/levante'
 import * as liquidacionApi from '../api/liquidacion'
 import { renderEnRuta } from '../test/utils'
 import type { Despacho, EstadoDespacho, ItemFactura, Rol } from '../types'
@@ -307,5 +309,104 @@ describe('DespachoDetallePage · HU-11 · T-11.4 (QA de los criterios de aceptac
     expect(await screen.findByText('Ingrese la fecha y hora confirmada de la cita')).toBeInTheDocument()
     expect(citasApi.registrarCita).not.toHaveBeenCalled()
     expect(despachosApi.obtenerDespacho).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('DespachoDetallePage · HU-13 · T-13.4 (QA de los criterios de aceptación)', () => {
+  const OTORGADO = {
+    numeroLevante: 'LEV-2026-000318',
+    fechaLevante: '2026-10-30',
+    constanciaNombre: null,
+    conAdvertencia: false,
+    retiroHabilitado: true,
+    estadoDespacho: 'LEVANTE_OTORGADO',
+  }
+
+  beforeEach(() => {
+    vi.mocked(hitosApi.listarHitos).mockResolvedValue([])
+    vi.mocked(citasApi.listarDepositos).mockResolvedValue([
+      { id: 4, codigo: 'AL-01', nombre: 'Almacén 1 (ejemplo)', tipo: 'ALMACEN' },
+    ])
+    vi.mocked(citasApi.listarCitas).mockResolvedValue([])
+    vi.mocked(levanteApi.obtenerLevante).mockResolvedValue({
+      ...OTORGADO,
+      numeroLevante: null,
+      fechaLevante: null,
+      retiroHabilitado: false,
+      estadoDespacho: 'INSPECCION_CONFORME',
+    })
+    vi.mocked(levanteApi.registrarLevante).mockResolvedValue(OTORGADO)
+  })
+
+  it('CA1: con número y fecha el despacho pasa a «Levante otorgado» en la cabecera', async () => {
+    vi.mocked(despachosApi.obtenerDespacho)
+      .mockResolvedValueOnce(despacho('INSPECCION_CONFORME', 'ROJO'))
+      .mockResolvedValue({ ...despacho('LEVANTE_OTORGADO', 'ROJO'), fechaLevante: '2026-10-30' })
+    const user = userEvent.setup()
+    mostrar()
+
+    await user.click(await screen.findByRole('tab', { name: 'Levante' }))
+    await user.type(await screen.findByLabelText(/N° de levante \/ código de autorización SUNAT/), 'LEV-2026-000318')
+    fireEvent.change(screen.getByLabelText(/Fecha del levante/), { target: { value: '2026-10-30' } })
+    await user.click(screen.getByRole('button', { name: 'Registrar levante' }))
+
+    expect(await screen.findByText('Levante otorgado')).toBeInTheDocument()
+    expect(despachosApi.obtenerDespacho).toHaveBeenCalledTimes(2)
+  })
+
+  it('CA2: sin inspección conforme se confirma la advertencia y el levante se reenvía con la confirmación', async () => {
+    vi.mocked(despachosApi.obtenerDespacho).mockResolvedValue(despacho('CANAL_ASIGNADO', 'ROJO'))
+    vi.mocked(levanteApi.registrarLevante)
+      .mockRejectedValueOnce(
+        new AxiosError('409', '409', undefined, undefined, {
+          status: 409,
+          statusText: '',
+          headers: {},
+          config: { headers: new AxiosHeaders() },
+          data: {
+            codigo: 'LEVANTE_REQUISITOS_PENDIENTES',
+            mensaje: 'Faltan requisitos previos al levante: inspección conforme.',
+            pendientes: ['Inspección conforme'],
+          },
+        }),
+      )
+      .mockResolvedValueOnce({ ...OTORGADO, conAdvertencia: true })
+    const user = userEvent.setup()
+    mostrar()
+
+    await user.click(await screen.findByRole('tab', { name: 'Levante' }))
+    await user.type(await screen.findByLabelText(/N° de levante \/ código de autorización SUNAT/), 'LEV-2026-000318')
+    await user.click(screen.getByRole('button', { name: 'Registrar levante' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Requisitos previos pendientes' })
+    expect(within(dialogo).getByText('Inspección conforme')).toBeInTheDocument()
+    await user.click(within(dialogo).getByRole('button', { name: 'Registrar de todas formas' }))
+
+    expect(await screen.findByText('Registrado con advertencia')).toBeInTheDocument()
+    expect(levanteApi.registrarLevante).toHaveBeenLastCalledWith(7, expect.objectContaining({ confirmarSinRequisitos: true }))
+  })
+
+  it('CA4: con el levante, «Registrar cita de retiro» abre «Citas» con el retiro elegido', async () => {
+    vi.mocked(despachosApi.obtenerDespacho).mockResolvedValue(despacho('LEVANTE_OTORGADO', 'ROJO'))
+    vi.mocked(levanteApi.obtenerLevante).mockResolvedValue(OTORGADO)
+    const user = userEvent.setup()
+    mostrar()
+
+    await user.click(await screen.findByRole('tab', { name: 'Levante' }))
+    await user.click(await screen.findByRole('button', { name: 'Registrar cita de retiro' }))
+
+    expect(screen.getByRole('tab', { name: 'Citas' })).toHaveAttribute('aria-selected', 'true')
+    expect(await screen.findByRole('combobox', { name: /Tipo de cita/ })).toHaveTextContent('Retiro de mercancía')
+    expect(screen.getByLabelText('Datos del transportista')).toBeInTheDocument()
+  })
+
+  it('CA4: antes del levante la cita de retiro no se puede elegir', async () => {
+    vi.mocked(despachosApi.obtenerDespacho).mockResolvedValue(despacho('INSPECCION_PROGRAMADA', 'ROJO'))
+    const user = userEvent.setup()
+    mostrar()
+
+    await user.click(await screen.findByRole('tab', { name: 'Citas' }))
+    await user.click(await screen.findByRole('combobox', { name: /Tipo de cita/ }))
+
+    expect(await screen.findByRole('option', { name: 'Retiro de mercancía' })).toHaveAttribute('aria-disabled', 'true')
   })
 })
