@@ -54,6 +54,25 @@ describe('ModuloDespachoPage (menú de los módulos del Sprint 2)', () => {
     expect(screen.getByLabelText('Por gestionar')).toHaveTextContent('1')
   })
 
+  it('«Depósitos / Citas» (HU-11) tiene por gestionar los despachos con el canal asignado', async () => {
+    vi.mocked(dashboardApi.listarDespachosTablero).mockResolvedValue([
+      fila(1, 'DAM_NUMERADA'),
+      fila(2, 'CANAL_ASIGNADO'),
+      fila(3, 'LEVANTE_OTORGADO'),
+      fila(4, 'RETIRO_PROGRAMADO'),
+    ])
+    const user = userEvent.setup()
+    renderEnRuta(<ModuloDespachoPage modulo="citas" />, { ruta: '/citas', patron: '/citas' })
+
+    expect(await screen.findByText('Citas en depósito')).toBeInTheDocument()
+    expect(screen.getByLabelText('Por gestionar')).toHaveTextContent('2')
+    expect(screen.getByLabelText('Completados')).toHaveTextContent('1')
+    expect(screen.getByLabelText('En espera')).toHaveTextContent('1')
+
+    await user.click(screen.getByText('DESP-2026-0002'))
+    expect(JSON.parse(screen.getByTestId('ubicacion').dataset.state!)).toEqual({ pestana: 'citas', volverA: '/citas' })
+  })
+
   it('abre el despacho directo en la pestaña del módulo', async () => {
     const user = userEvent.setup()
     renderEnRuta(<ModuloDespachoPage modulo="dam" />, { ruta: '/dam', patron: '/dam' })
