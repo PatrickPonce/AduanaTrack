@@ -99,6 +99,8 @@ export function ReportesPage() {
       const { status, body } = leerError(e)
       setIndicadores(null)
       if (status === 400 && body?.campos) setErrores(body.campos)
+      // Mientras el cálculo de indicadores (T-15.1) no esté publicado, la exportación sí funciona.
+      else if (status === 404) setError('Los indicadores todavía no están disponibles en el servidor. Puede exportar el reporte.')
       else setError(mensajeDeError(e, 'No se pudieron cargar los indicadores del rango.'))
     } finally {
       setCargando(false)

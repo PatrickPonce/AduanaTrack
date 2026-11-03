@@ -222,6 +222,17 @@ describe('ReportesPage (HU-15 · T-15.4)', () => {
     expect(screen.getByRole('button', { name: 'Exportar a Excel' })).toBeEnabled()
   })
 
+  it('mientras los indicadores no estén publicados (404) lo explica y deja exportar', async () => {
+    vi.mocked(reportesApi.obtenerIndicadoresGestion).mockRejectedValue(
+      errorApi(404, { codigo: 'NO_ENCONTRADO', mensaje: 'Recurso no encontrado.' }),
+    )
+    mostrar()
+
+    expect(await screen.findByText(/Los indicadores todavía no están disponibles en el servidor/)).toBeInTheDocument()
+    expect(screen.queryByText('Recurso no encontrado.')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Exportar a PDF' })).toBeEnabled()
+  })
+
   it('el perfil Cliente no ve los reportes de gestión', async () => {
     mostrar('CLIENTE')
 
