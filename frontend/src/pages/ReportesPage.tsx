@@ -15,6 +15,7 @@ import {
 } from '../api/reportes'
 import { useAuth } from '../auth/AuthContext'
 import { useEncabezado } from '../components/Encabezado'
+import { EnvioProgramadoReporte } from '../components/EnvioProgramadoReporte'
 import { EtiquetaColor, type Tono } from '../components/EtiquetaColor'
 import { TituloSeccion } from '../components/Seccion'
 import { COLORES, fadeInUp } from '../theme'
@@ -75,7 +76,8 @@ export function textoTiempoPromedio(dias: number | null): string {
 /**
  * HU-15 · T-15.4: página «Reportes». El jefe de operaciones elige un rango de fechas y ve el total de
  * despachos, los que tienen levante y el tiempo promedio de despacho (CA1), y el gráfico «Despachos por
- * mes» con el resumen por canal, que se actualizan al cambiar el rango (CA2). Contrato C10.
+ * mes» con el resumen por canal, que se actualizan al cambiar el rango (CA2). El reporte se exporta a
+ * Excel y PDF (CA3) y se puede programar su envío por correo (CA4). Contrato C10.
  */
 export function ReportesPage() {
   useEncabezado('Reportes', 'Reportes e Indicadores de Gestión')
@@ -292,6 +294,10 @@ export function ReportesPage() {
             ))}
           </Box>
         )}
+      </Paper>
+
+      <Paper sx={{ p: { xs: 2, md: 2.5 } }}>
+        <EnvioProgramadoReporte />
       </Paper>
     </Stack>
   )
