@@ -55,3 +55,13 @@ Contratos que consume (en `docs/sprint-2/contratos/`): C1 · documentos del desp
 El detalle de los montos de la liquidación solo llega en la respuesta de «Generar liquidación» (el contrato C3 no tiene un GET): si se recarga la pantalla con el despacho ya en `LIQUIDADO`, se invita a generarla de nuevo. El botón «Ir al módulo de levante» apunta a `/levante/:id`; esa pantalla llega con HU-13 (Sprint 3), y hasta entonces la ruta redirige al panel.
 
 Endpoints de otras tareas que consume: `GET /catalogos/regimenes` y `/catalogos/aduanas` (T-03.2), `POST /clientes/{id}/carta-poder` (T-04.2) y `GET /dashboard/indicadores` (T-02.1). Mientras no existan, la pantalla muestra un aviso o «—» en lugar del dato.
+
+## Pantallas del Sprint 3
+
+| Ruta | HU · Tarea |
+|---|---|
+| `/despachos/:id`, pestaña «Citas» desde `CANAL_ASIGNADO` («Registrar cita» con depósito, N° de cita, tipo y fecha y hora confirmada; datos del transportista solo en el retiro; listado con estado) | HU-11 · T-11.3 |
+| `/citas` («Depósitos / Citas» en el menú: despachos por gestionar, completados y en espera) | HU-11 · T-11.3 |
+| `/despachos/:id`, pestaña «Inspección» desde `INSPECCION_PROGRAMADA` | HU-12 · T-12.3 |
+
+Contratos que consume (en `docs/sprint-3/contratos/`): C6 · citas en depósito (`api/citas.ts`). La cita de inspección solo se ofrece en canal naranja o rojo, desde `CANAL_ASIGNADO` y mientras la inspección no sea conforme; la de retiro, desde `LEVANTE_OTORGADO`.
