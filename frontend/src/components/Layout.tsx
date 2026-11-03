@@ -78,11 +78,22 @@ const MENU: SeccionMenu[] = [
     ],
   },
   {
+    titulo: 'Gestión',
+    items: [
+      {
+        texto: 'Reportes',
+        icono: <AssessmentOutlinedIcon />,
+        a: '/reportes',
+        prefijo: '/reportes',
+        soloRegistro: true,
+      },
+    ],
+  },
+  {
     titulo: 'Próximamente',
     items: [
       { texto: 'Inspecciones', icono: <ManageSearchOutlinedIcon /> },
       { texto: 'Notificaciones', icono: <NotificationsNoneOutlinedIcon /> },
-      { texto: 'Reportes', icono: <AssessmentOutlinedIcon /> },
     ],
   },
 ]
