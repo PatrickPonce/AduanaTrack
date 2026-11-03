@@ -21,6 +21,7 @@ vi.mock('../api/despachos')
 vi.mock('../api/dam')
 vi.mock('../api/documentos')
 vi.mock('../api/hitos')
+vi.mock('../api/levante')
 vi.mock('../api/liquidacion')
 
 const RODAMIENTOS = { id: 1, codigoFormateado: '8482.10.00.00', descripcion: 'Rodamientos de bolas' }
@@ -84,9 +85,9 @@ describe('DespachoDetallePage · pestañas de los Sprints 2 y 3', () => {
       'DAM_NUMERADA',
       ['Datos generales', 'Documentos', 'Clasificación', 'Liquidación', 'DAM', 'Canal de control', 'Línea de tiempo'],
     ],
-    ['CANAL_ASIGNADO', [...HASTA_CANAL, 'Citas', 'Línea de tiempo']],
-    ['INSPECCION_PROGRAMADA', [...HASTA_CANAL, 'Citas', 'Inspección', 'Línea de tiempo']],
-    ['LEVANTE_OTORGADO', [...HASTA_CANAL, 'Citas', 'Inspección', 'Línea de tiempo']],
+    ['CANAL_ASIGNADO', [...HASTA_CANAL, 'Citas', 'Levante', 'Línea de tiempo']],
+    ['INSPECCION_PROGRAMADA', [...HASTA_CANAL, 'Citas', 'Inspección', 'Levante', 'Línea de tiempo']],
+    ['LEVANTE_OTORGADO', [...HASTA_CANAL, 'Citas', 'Inspección', 'Levante', 'Línea de tiempo']],
   ])('con el despacho en %s muestra las pestañas que le corresponden', async (estado, esperadas) => {
     vi.mocked(despachosApi.obtenerDespacho).mockResolvedValue(despacho(estado))
     mostrar()
