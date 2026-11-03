@@ -1,6 +1,7 @@
 import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
+import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined'
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import TrafficOutlinedIcon from '@mui/icons-material/TrafficOutlined'
@@ -34,7 +35,7 @@ import type { DespachoTablero, EstadoDespacho } from '../types'
 import { alcanzoEstado } from '../utils/estados'
 import type { Pestana } from './DespachoDetallePage'
 
-export type Modulo = 'documentos' | 'clasificacion' | 'tributos' | 'dam' | 'canal' | 'citas'
+export type Modulo = 'documentos' | 'clasificacion' | 'tributos' | 'dam' | 'canal' | 'citas' | 'levante'
 
 interface ConfigModulo {
   titulo: string
@@ -110,6 +111,16 @@ const MODULOS: Record<Modulo, ConfigModulo> = {
     requiere: 'CANAL_ASIGNADO',
     completa: 'RETIRO_PROGRAMADO',
   },
+  levante: {
+    titulo: 'Levante de la mercancía',
+    hu: 'HU-13',
+    descripcion: 'Registro del levante obtenido en SUNAT con su número, fecha y constancia en PDF.',
+    icono: <FactCheckOutlinedIcon />,
+    acento: '#16a34a',
+    pestana: 'levante',
+    requiere: 'CANAL_ASIGNADO',
+    completa: 'LEVANTE_OTORGADO',
+  },
 }
 
 type Situacion = 'pendiente' | 'completado' | 'espera'
@@ -127,7 +138,7 @@ function situacionDe(d: DespachoTablero, config: ConfigModulo): Situacion {
   return 'espera'
 }
 
-/** Sprints 2 y 3 (HU-06 a HU-11): lista los despachos según su avance en el módulo y abre la pestaña que corresponde. */
+/** Sprints 2 y 3 (HU-06 a HU-11 y HU-13): lista los despachos según su avance en el módulo y abre la pestaña que corresponde. */
 export function ModuloDespachoPage({ modulo }: { modulo: Modulo }) {
   const config = MODULOS[modulo]
   useEncabezado(`Operación aduanera / ${config.hu}`, config.titulo)

@@ -74,13 +74,13 @@ const MENU: SeccionMenu[] = [
       { texto: 'DAM (Registro)', icono: <ReceiptLongOutlinedIcon />, a: '/dam', prefijo: '/dam' },
       { texto: 'Canal de Control', icono: <TrafficOutlinedIcon />, a: '/canal-control', prefijo: '/canal-control' },
       { texto: 'Depósitos / Citas', icono: <WarehouseOutlinedIcon />, a: '/citas', prefijo: '/citas' },
+      { texto: 'Levante', icono: <FactCheckOutlinedIcon />, a: '/levante', prefijo: '/levante' },
     ],
   },
   {
     titulo: 'Próximamente',
     items: [
       { texto: 'Inspecciones', icono: <ManageSearchOutlinedIcon /> },
-      { texto: 'Levante', icono: <FactCheckOutlinedIcon /> },
       { texto: 'Notificaciones', icono: <NotificationsNoneOutlinedIcon /> },
       { texto: 'Reportes', icono: <AssessmentOutlinedIcon /> },
     ],

@@ -3,6 +3,7 @@ import { Alert, Box, Button, CircularProgress, Paper, Stack, Tab, Tabs, Typograp
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link as RouterLink, useLocation, useParams } from 'react-router'
 
+import type { TipoCita } from '../api/citas'
 import { obtenerDespacho } from '../api/despachos'
 import { mensajeDeError } from '../api/http'
 import { useAuth } from '../auth/AuthContext'
@@ -15,6 +16,7 @@ import { useEncabezado } from '../components/Encabezado'
 import { EstadoDespachoChip } from '../components/EstadoDespachoChip'
 import { CanalChip } from '../components/EtiquetaColor'
 import { InspeccionDespacho } from '../components/InspeccionDespacho'
+import { LevanteDespacho } from '../components/LevanteDespacho'
 import { LineaTiempoDespacho } from '../components/LineaTiempoDespacho'
 import { LiquidacionDespacho } from '../components/LiquidacionDespacho'
 import { NumeracionDam } from '../components/NumeracionDam'
@@ -34,14 +36,17 @@ export type Pestana =
   | 'canal'
   | 'citas'
   | 'inspeccion'
+  | 'levante'
   | 'linea'
 
-interface EstadoNavegacion {
+export interface EstadoNavegacion {
   mensaje?: string
   /** Filtros del Dashboard (?aduanaId=&clienteId=) para volver con ellos intactos (T-02.4). */
   volverA?: string
   /** Pestaña con la que se abre el despacho al llegar desde un módulo del menú (Documentos, DAM…). */
   pestana?: Pestana
+  /** Tipo con el que se abre «Citas», p. ej. RETIRO al llegar desde «Registrar cita de retiro» (HU-13). */
+  tipoCita?: TipoCita
 }
 
 /**
@@ -49,7 +54,8 @@ interface EstadoNavegacion {
  * «Documentos» (HU-06 · T-06.4), «Clasificación» desde DOCUMENTACION_COMPLETA (HU-07 · T-07.4),
  * «Liquidación» desde CLASIFICADO (HU-08 · T-08.3), «DAM» desde TRIBUTOS_PAGADOS (HU-09 · T-09.2),
  * «Canal de control» desde DAM_NUMERADA y «Línea de tiempo» siempre (HU-10 · T-10.3). Sprint 3:
- * «Citas» desde CANAL_ASIGNADO (HU-11 · T-11.3) e «Inspección» desde INSPECCION_PROGRAMADA (HU-12 · T-12.3).
+ * «Citas» desde CANAL_ASIGNADO (HU-11 · T-11.3), «Inspección» desde INSPECCION_PROGRAMADA (HU-12 · T-12.3)
+ * y «Levante» desde CANAL_ASIGNADO (HU-13 · T-13.3).
  */
 export function DespachoDetallePage() {
   const { id } = useParams()
@@ -60,6 +66,7 @@ export function DespachoDetallePage() {
   const [error, setError] = useState<string | null>(null)
   const pestanaInicial = navegacion.pestana ?? 'generales'
   const [pestana, setPestana] = useState<Pestana>(pestanaInicial)
+  const [tipoCita, setTipoCita] = useState<TipoCita | undefined>(navegacion.tipoCita)
 
   useEncabezado(`Despachos / ${despacho?.numero ?? 'Borrador'}`, 'Detalle del Despacho de Importación')
 
@@ -111,6 +118,7 @@ export function DespachoDetallePage() {
   const conLiquidacion = alcanzoEstado(despacho.estado, 'CLASIFICADO')
   const conDam = alcanzoEstado(despacho.estado, 'TRIBUTOS_PAGADOS')
   const conCanal = alcanzoEstado(despacho.estado, 'DAM_NUMERADA')
+  // Citas y levante empiezan con el canal asignado: inspección en naranja o rojo, levante directo en verde.
   const conCitas = alcanzoEstado(despacho.estado, 'CANAL_ASIGNADO')
   const conInspeccion = alcanzoEstado(despacho.estado, 'INSPECCION_PROGRAMADA')
   // Un borrador todavía no tiene expediente (el API responde 409 DESPACHO_EN_BORRADOR) y cada pestaña
@@ -121,7 +129,7 @@ export function DespachoDetallePage() {
     (pestana === 'liquidacion' && !conLiquidacion) ||
     (pestana === 'dam' && !conDam) ||
     (pestana === 'canal' && !conCanal) ||
-    (pestana === 'citas' && !conCitas) ||
+    ((pestana === 'citas' || pestana === 'levante') && !conCitas) ||
     (pestana === 'inspeccion' && !conInspeccion)
       ? 'generales'
       : pestana
@@ -164,6 +172,7 @@ export function DespachoDetallePage() {
             {conCanal && <Tab value="canal" label="Canal de control" />}
             {conCitas && <Tab value="citas" label="Citas" />}
             {conInspeccion && <Tab value="inspeccion" label="Inspección" />}
+            {conCitas && <Tab value="levante" label="Levante" />}
             <Tab value="linea" label="Línea de tiempo" />
           </Tabs>
         )}
@@ -186,7 +195,21 @@ export function DespachoDetallePage() {
             estado={despacho.estado}
             canal={despacho.canalControl}
             puedeEditar={registra}
+            tipoInicial={tipoCita}
             onCitaRegistrada={recargarDespacho}
+          />
+        )}
+
+        {visible === 'levante' && (
+          <LevanteDespacho
+            despachoId={despacho.id}
+            estado={despacho.estado}
+            puedeEditar={registra}
+            onLevanteRegistrado={recargarDespacho}
+            onRegistrarRetiro={() => {
+              setTipoCita('RETIRO')
+              setPestana('citas')
+            }}
           />
         )}
 
