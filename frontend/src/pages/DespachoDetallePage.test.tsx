@@ -1,6 +1,7 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AxiosError, AxiosHeaders } from 'axios'
+import { MemoryRouter, Route, Routes } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as authApi from '../api/auth'
@@ -9,11 +10,14 @@ import * as citasApi from '../api/citas'
 import * as clasificacionApi from '../api/clasificacion'
 import * as despachosApi from '../api/despachos'
 import * as hitosApi from '../api/hitos'
+import * as inspeccionApi from '../api/inspeccion'
 import * as levanteApi from '../api/levante'
 import * as liquidacionApi from '../api/liquidacion'
+import { AuthProvider } from '../auth/AuthContext'
 import { renderEnRuta } from '../test/utils'
 import type { Despacho, EstadoDespacho, ItemFactura, Rol } from '../types'
 import { DespachoDetallePage } from './DespachoDetallePage'
+import { LevantePage } from './LevantePage'
 
 vi.mock('../api/auth')
 vi.mock('../api/canal')
@@ -23,6 +27,7 @@ vi.mock('../api/despachos')
 vi.mock('../api/dam')
 vi.mock('../api/documentos')
 vi.mock('../api/hitos')
+vi.mock('../api/inspeccion')
 vi.mock('../api/levante')
 vi.mock('../api/liquidacion')
 
@@ -408,5 +413,141 @@ describe('DespachoDetallePage · HU-13 · T-13.4 (QA de los criterios de aceptac
     await user.click(await screen.findByRole('combobox', { name: /Tipo de cita/ }))
 
     expect(await screen.findByRole('option', { name: 'Retiro de mercancía' })).toHaveAttribute('aria-disabled', 'true')
+  })
+})
+
+describe('DespachoDetallePage · HU-12 · T-12.4 (QA de los criterios de aceptación)', () => {
+  const CATALOGO = [
+    'Cantidad de bultos',
+    'Descripción de la mercancía',
+    'Marcas y numeración',
+    'Estado del contenedor y precintos',
+    'Coincidencia con la factura comercial',
+  ]
+
+  /** Detalle del despacho y sección de levante, para seguir «Ir a levante» de punta a punta (CA3). */
+  function mostrarConLevante() {
+    vi.mocked(authApi.sesionActual).mockResolvedValue({ usuario: 'agente', nombre: 'Agente', rol: 'AGENTE' })
+    return render(
+      <MemoryRouter initialEntries={['/despachos/7']}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/despachos/:id" element={<DespachoDetallePage />} />
+            <Route path="/levante/:despachoId" element={<LevantePage />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    )
+  }
+
+  beforeEach(() => {
+    vi.mocked(hitosApi.listarHitos).mockResolvedValue([])
+    vi.mocked(inspeccionApi.listarItemsInspeccion).mockResolvedValue(CATALOGO)
+    vi.mocked(inspeccionApi.obtenerUltimaInspeccion).mockResolvedValue(null)
+    vi.mocked(inspeccionApi.urlActaInspeccion).mockReturnValue('/api/v1/despachos/7/inspeccion/acta')
+    vi.mocked(levanteApi.obtenerLevante).mockResolvedValue({
+      numeroLevante: null,
+      fechaLevante: null,
+      constanciaNombre: null,
+      conAdvertencia: false,
+      retiroHabilitado: false,
+      estadoDespacho: 'INSPECCION_CONFORME',
+    })
+  })
+
+  it('CA1: el resultado se calcula con los ítems: «Conforme» con todos y «Con observaciones» con uno que no lo es', async () => {
+    vi.mocked(despachosApi.obtenerDespacho).mockResolvedValue(despacho('INSPECCION_PROGRAMADA', 'ROJO'))
+    const user = userEvent.setup()
+    mostrar()
+
+    await user.click(await screen.findByRole('tab', { name: 'Inspección' }))
+    const resultado = await screen.findByRole('status', { name: 'Resultado calculado' })
+    expect(within(resultado).getByText('Conforme')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('switch', { name: 'Conforme: Marcas y numeración' }))
+
+    expect(within(resultado).getByText('Con observaciones')).toBeInTheDocument()
+  })
+
+  it('CA2: con observaciones avisa al agente, el despacho sigue en inspección y el levante no se habilita', async () => {
+    vi.mocked(despachosApi.obtenerDespacho).mockResolvedValue(despacho('INSPECCION_PROGRAMADA', 'ROJO'))
+    vi.mocked(inspeccionApi.registrarInspeccion).mockResolvedValue({
+      resultado: 'CON_OBSERVACIONES',
+      estadoDespacho: 'INSPECCION_PROGRAMADA',
+      levanteHabilitado: false,
+      actaNombre: null,
+    })
+    const user = userEvent.setup()
+    mostrar()
+
+    await user.click(await screen.findByRole('tab', { name: 'Inspección' }))
+    await user.click(await screen.findByRole('switch', { name: 'Conforme: Marcas y numeración' }))
+    await user.type(screen.getByLabelText(/^Observación: Marcas y numeración/), 'Marcas no coinciden con el BL')
+    await user.click(screen.getByRole('button', { name: 'Registrar resultado de inspección' }))
+
+    expect(await screen.findByText(/Se avisó al agente responsable del despacho/)).toBeInTheDocument()
+    expect(inspeccionApi.registrarInspeccion).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({
+        items: expect.arrayContaining([
+          { descripcion: 'Marcas y numeración', conforme: false, observacion: 'Marcas no coinciden con el BL' },
+        ]),
+      }),
+    )
+    expect(screen.queryByRole('link', { name: 'Ir a levante' })).not.toBeInTheDocument()
+    await waitFor(() => expect(despachosApi.obtenerDespacho).toHaveBeenCalledTimes(2))
+    expect(screen.getByText('Inspección programada')).toBeInTheDocument()
+  })
+
+  it('CA3: conforme deja el despacho en «Inspección conforme» y «Ir a levante» abre el registro del levante', async () => {
+    vi.mocked(despachosApi.obtenerDespacho)
+      .mockResolvedValueOnce(despacho('INSPECCION_PROGRAMADA', 'ROJO'))
+      .mockResolvedValue(despacho('INSPECCION_CONFORME', 'ROJO'))
+    vi.mocked(inspeccionApi.registrarInspeccion).mockResolvedValue({
+      resultado: 'CONFORME',
+      estadoDespacho: 'INSPECCION_CONFORME',
+      levanteHabilitado: true,
+      actaNombre: null,
+    })
+    const user = userEvent.setup()
+    mostrarConLevante()
+
+    await user.click(await screen.findByRole('tab', { name: 'Inspección' }))
+    await user.click(await screen.findByRole('button', { name: 'Registrar resultado de inspección' }))
+
+    expect(await screen.findByText('Inspección conforme registrada. El levante quedó habilitado.')).toBeInTheDocument()
+    expect(await screen.findByText('Inspección conforme')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('link', { name: 'Ir a levante' }))
+
+    expect(await screen.findByRole('button', { name: 'Registrar levante' })).toBeInTheDocument()
+    expect(screen.getByText('Levante de la mercancía')).toBeInTheDocument()
+  })
+
+  it('CA4: el acta en PDF se adjunta y queda para descargar; una de 11 MB se rechaza', async () => {
+    vi.mocked(despachosApi.obtenerDespacho).mockResolvedValue(despacho('INSPECCION_PROGRAMADA', 'ROJO'))
+    vi.mocked(inspeccionApi.registrarInspeccion).mockResolvedValue({
+      resultado: 'CONFORME',
+      estadoDespacho: 'INSPECCION_CONFORME',
+      levanteHabilitado: true,
+      actaNombre: 'acta.pdf',
+    })
+    const user = userEvent.setup()
+    mostrar()
+
+    await user.click(await screen.findByRole('tab', { name: 'Inspección' }))
+    const archivo = await screen.findByLabelText('Archivo del acta de inspección')
+    await user.upload(archivo, new File([new Uint8Array(11 * 1024 * 1024)], 'grande.pdf', { type: 'application/pdf' }))
+    expect(screen.getByText('El archivo supera el tamaño máximo de 10 MB')).toBeInTheDocument()
+
+    const acta = new File([new Uint8Array(2048)], 'acta.pdf', { type: 'application/pdf' })
+    await user.upload(archivo, acta)
+    await user.click(screen.getByRole('button', { name: 'Registrar resultado de inspección' }))
+
+    expect(inspeccionApi.registrarInspeccion).toHaveBeenCalledWith(7, expect.objectContaining({ acta }))
+    expect(await screen.findByRole('link', { name: /Descargar acta · acta\.pdf/ })).toHaveAttribute(
+      'href',
+      '/api/v1/despachos/7/inspeccion/acta',
+    )
   })
 })
