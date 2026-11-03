@@ -1,3 +1,4 @@
+import DownloadIcon from '@mui/icons-material/FileDownloadOutlined'
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined'
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined'
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined'
@@ -5,7 +6,13 @@ import { Alert, Box, Button, CircularProgress, Paper, Stack, TextField, Typograp
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 
 import { leerError, mensajeDeError } from '../api/http'
-import { obtenerIndicadoresGestion, type IndicadoresGestion, type RangoFechas } from '../api/reportes'
+import {
+  exportarReporte,
+  obtenerIndicadoresGestion,
+  type FormatoReporte,
+  type IndicadoresGestion,
+  type RangoFechas,
+} from '../api/reportes'
 import { useAuth } from '../auth/AuthContext'
 import { useEncabezado } from '../components/Encabezado'
 import { EtiquetaColor, type Tono } from '../components/EtiquetaColor'
@@ -79,6 +86,8 @@ export function ReportesPage() {
   const [indicadores, setIndicadores] = useState<IndicadoresGestion | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [exportando, setExportando] = useState<FormatoReporte | null>(null)
+  const [errorExportacion, setErrorExportacion] = useState<string | null>(null)
 
   const consultar = useCallback(async (actual: RangoFechas) => {
     setCargando(true)
@@ -113,6 +122,22 @@ export function ReportesPage() {
     setRango({ ...form })
   }
 
+  /** CA3: descarga el reporte del rango aplicado (indicadores y tabla de despachos). */
+  async function exportar(formato: FormatoReporte) {
+    setExportando(formato)
+    setErrorExportacion(null)
+    try {
+      await exportarReporte(formato, rango)
+    } catch (e) {
+      const { body } = leerError(e)
+      const campos = body?.campos ? Object.values(body.campos).join(' ') : null
+      const formatoTexto = formato === 'pdf' ? 'PDF' : 'Excel'
+      setErrorExportacion(campos || mensajeDeError(e, `No se pudo exportar el reporte a ${formatoTexto}.`))
+    } finally {
+      setExportando(null)
+    }
+  }
+
   if (usuario?.rol === 'CLIENTE') {
     return <Alert severity="info">Los reportes de gestión son para el administrador y el agente de aduana.</Alert>
   }
@@ -122,7 +147,37 @@ export function ReportesPage() {
   return (
     <Stack spacing={2.5}>
       <Paper component="form" onSubmit={aplicar} noValidate sx={{ p: { xs: 2, md: 2.5 } }}>
-        <TituloSeccion>Rango del reporte</TituloSeccion>
+        <TituloSeccion
+          accion={
+            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<DownloadIcon />}
+                onClick={() => void exportar('xlsx')}
+                disabled={exportando !== null}
+              >
+                {exportando === 'xlsx' ? 'Exportando…' : 'Exportar a Excel'}
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<DownloadIcon />}
+                onClick={() => void exportar('pdf')}
+                disabled={exportando !== null}
+              >
+                {exportando === 'pdf' ? 'Exportando…' : 'Exportar a PDF'}
+              </Button>
+            </Stack>
+          }
+        >
+          Rango del reporte
+        </TituloSeccion>
+        {errorExportacion && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {errorExportacion}
+          </Alert>
+        )}
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'flex-start' } }}>
           <TextField
             label="Desde"
