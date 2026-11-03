@@ -14,6 +14,7 @@ import { DespachoDetallePage } from './DespachoDetallePage'
 
 vi.mock('../api/auth')
 vi.mock('../api/canal')
+vi.mock('../api/citas')
 vi.mock('../api/clasificacion')
 vi.mock('../api/despachos')
 vi.mock('../api/dam')
@@ -55,6 +56,9 @@ function mostrar(rol: Rol = 'AGENTE') {
 
 const nombresDePestanas = () => screen.getAllByRole('tab').map((t) => t.textContent)
 
+/** Pestañas que el despacho ya tiene al llegar al canal de control (Sprint 2). */
+const HASTA_CANAL = ['Datos generales', 'Documentos', 'Clasificación', 'Liquidación', 'DAM', 'Canal de control']
+
 beforeEach(() => {
   vi.mocked(liquidacionApi.obtenerLiquidacion).mockResolvedValue({
     liquidacion: null,
@@ -79,36 +83,9 @@ describe('DespachoDetallePage · pestañas de los Sprints 2 y 3', () => {
       'DAM_NUMERADA',
       ['Datos generales', 'Documentos', 'Clasificación', 'Liquidación', 'DAM', 'Canal de control', 'Línea de tiempo'],
     ],
-    [
-      'CANAL_ASIGNADO',
-      ['Datos generales', 'Documentos', 'Clasificación', 'Liquidación', 'DAM', 'Canal de control', 'Línea de tiempo'],
-    ],
-    [
-      'INSPECCION_PROGRAMADA',
-      [
-        'Datos generales',
-        'Documentos',
-        'Clasificación',
-        'Liquidación',
-        'DAM',
-        'Canal de control',
-        'Inspección',
-        'Línea de tiempo',
-      ],
-    ],
-    [
-      'LEVANTE_OTORGADO',
-      [
-        'Datos generales',
-        'Documentos',
-        'Clasificación',
-        'Liquidación',
-        'DAM',
-        'Canal de control',
-        'Inspección',
-        'Línea de tiempo',
-      ],
-    ],
+    ['CANAL_ASIGNADO', [...HASTA_CANAL, 'Citas', 'Línea de tiempo']],
+    ['INSPECCION_PROGRAMADA', [...HASTA_CANAL, 'Citas', 'Inspección', 'Línea de tiempo']],
+    ['LEVANTE_OTORGADO', [...HASTA_CANAL, 'Citas', 'Inspección', 'Línea de tiempo']],
   ])('con el despacho en %s muestra las pestañas que le corresponden', async (estado, esperadas) => {
     vi.mocked(despachosApi.obtenerDespacho).mockResolvedValue(despacho(estado))
     mostrar()
