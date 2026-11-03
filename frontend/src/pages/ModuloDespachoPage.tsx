@@ -4,6 +4,7 @@ import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import TrafficOutlinedIcon from '@mui/icons-material/TrafficOutlined'
+import WarehouseOutlinedIcon from '@mui/icons-material/WarehouseOutlined'
 import {
   Alert,
   Box,
@@ -33,7 +34,7 @@ import type { DespachoTablero, EstadoDespacho } from '../types'
 import { alcanzoEstado } from '../utils/estados'
 import type { Pestana } from './DespachoDetallePage'
 
-export type Modulo = 'documentos' | 'clasificacion' | 'tributos' | 'dam' | 'canal'
+export type Modulo = 'documentos' | 'clasificacion' | 'tributos' | 'dam' | 'canal' | 'citas'
 
 interface ConfigModulo {
   titulo: string
@@ -99,6 +100,16 @@ const MODULOS: Record<Modulo, ConfigModulo> = {
     requiere: 'DAM_NUMERADA',
     completa: 'CANAL_ASIGNADO',
   },
+  citas: {
+    titulo: 'Citas en depósito',
+    hu: 'HU-11',
+    descripcion: 'Citas de inspección y de retiro coordinadas con el depósito temporal o almacén.',
+    icono: <WarehouseOutlinedIcon />,
+    acento: '#0f766e',
+    pestana: 'citas',
+    requiere: 'CANAL_ASIGNADO',
+    completa: 'RETIRO_PROGRAMADO',
+  },
 }
 
 type Situacion = 'pendiente' | 'completado' | 'espera'
@@ -116,7 +127,7 @@ function situacionDe(d: DespachoTablero, config: ConfigModulo): Situacion {
   return 'espera'
 }
 
-/** Sprint 2 (HU-06 a HU-10): lista los despachos según su avance en el módulo y abre la pestaña que corresponde. */
+/** Sprints 2 y 3 (HU-06 a HU-11): lista los despachos según su avance en el módulo y abre la pestaña que corresponde. */
 export function ModuloDespachoPage({ modulo }: { modulo: Modulo }) {
   const config = MODULOS[modulo]
   useEncabezado(`Operación aduanera / ${config.hu}`, config.titulo)

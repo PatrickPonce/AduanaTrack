@@ -8,6 +8,7 @@ import { mensajeDeError } from '../api/http'
 import { useAuth } from '../auth/AuthContext'
 import { CanalControlDespacho } from '../components/CanalControlDespacho'
 import { CartaPoderChip } from '../components/CartaPoderChip'
+import { CitasDespacho } from '../components/CitasDespacho'
 import { ClasificacionDespacho } from '../components/ClasificacionDespacho'
 import { DocumentosDespacho } from '../components/DocumentosDespacho'
 import { useEncabezado } from '../components/Encabezado'
@@ -31,6 +32,7 @@ export type Pestana =
   | 'liquidacion'
   | 'dam'
   | 'canal'
+  | 'citas'
   | 'inspeccion'
   | 'linea'
 
@@ -47,7 +49,7 @@ interface EstadoNavegacion {
  * «Documentos» (HU-06 · T-06.4), «Clasificación» desde DOCUMENTACION_COMPLETA (HU-07 · T-07.4),
  * «Liquidación» desde CLASIFICADO (HU-08 · T-08.3), «DAM» desde TRIBUTOS_PAGADOS (HU-09 · T-09.2),
  * «Canal de control» desde DAM_NUMERADA y «Línea de tiempo» siempre (HU-10 · T-10.3). Sprint 3:
- * «Inspección» desde INSPECCION_PROGRAMADA (HU-12 · T-12.3).
+ * «Citas» desde CANAL_ASIGNADO (HU-11 · T-11.3) e «Inspección» desde INSPECCION_PROGRAMADA (HU-12 · T-12.3).
  */
 export function DespachoDetallePage() {
   const { id } = useParams()
@@ -109,6 +111,7 @@ export function DespachoDetallePage() {
   const conLiquidacion = alcanzoEstado(despacho.estado, 'CLASIFICADO')
   const conDam = alcanzoEstado(despacho.estado, 'TRIBUTOS_PAGADOS')
   const conCanal = alcanzoEstado(despacho.estado, 'DAM_NUMERADA')
+  const conCitas = alcanzoEstado(despacho.estado, 'CANAL_ASIGNADO')
   const conInspeccion = alcanzoEstado(despacho.estado, 'INSPECCION_PROGRAMADA')
   // Un borrador todavía no tiene expediente (el API responde 409 DESPACHO_EN_BORRADOR) y cada pestaña
   // de un paso posterior solo se abre cuando el despacho llegó a ese estado.
@@ -118,6 +121,7 @@ export function DespachoDetallePage() {
     (pestana === 'liquidacion' && !conLiquidacion) ||
     (pestana === 'dam' && !conDam) ||
     (pestana === 'canal' && !conCanal) ||
+    (pestana === 'citas' && !conCitas) ||
     (pestana === 'inspeccion' && !conInspeccion)
       ? 'generales'
       : pestana
@@ -158,6 +162,7 @@ export function DespachoDetallePage() {
             {conLiquidacion && <Tab value="liquidacion" label="Liquidación" />}
             {conDam && <Tab value="dam" label="DAM" />}
             {conCanal && <Tab value="canal" label="Canal de control" />}
+            {conCitas && <Tab value="citas" label="Citas" />}
             {conInspeccion && <Tab value="inspeccion" label="Inspección" />}
             <Tab value="linea" label="Línea de tiempo" />
           </Tabs>
@@ -172,6 +177,16 @@ export function DespachoDetallePage() {
             puedeEditar={registra}
             onCanalGuardado={recargarDespacho}
             onVerLineaTiempo={() => setPestana('linea')}
+          />
+        )}
+
+        {visible === 'citas' && (
+          <CitasDespacho
+            despachoId={despacho.id}
+            estado={despacho.estado}
+            canal={despacho.canalControl}
+            puedeEditar={registra}
+            onCitaRegistrada={recargarDespacho}
           />
         )}
 

@@ -73,12 +73,12 @@ const MENU: SeccionMenu[] = [
       { texto: 'Tributos', icono: <PaymentsOutlinedIcon />, a: '/tributos', prefijo: '/tributos' },
       { texto: 'DAM (Registro)', icono: <ReceiptLongOutlinedIcon />, a: '/dam', prefijo: '/dam' },
       { texto: 'Canal de Control', icono: <TrafficOutlinedIcon />, a: '/canal-control', prefijo: '/canal-control' },
+      { texto: 'Depósitos / Citas', icono: <WarehouseOutlinedIcon />, a: '/citas', prefijo: '/citas' },
     ],
   },
   {
     titulo: 'Próximamente',
     items: [
-      { texto: 'Depósitos / Citas', icono: <WarehouseOutlinedIcon /> },
       { texto: 'Inspecciones', icono: <ManageSearchOutlinedIcon /> },
       { texto: 'Levante', icono: <FactCheckOutlinedIcon /> },
       { texto: 'Notificaciones', icono: <NotificationsNoneOutlinedIcon /> },

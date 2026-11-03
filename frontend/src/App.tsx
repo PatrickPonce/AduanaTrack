@@ -47,6 +47,7 @@ export function App() {
             <Route path="/tributos" element={<ModuloDespachoPage modulo="tributos" />} />
             <Route path="/dam" element={<ModuloDespachoPage modulo="dam" />} />
             <Route path="/canal-control" element={<ModuloDespachoPage modulo="canal" />} />
+            <Route path="/citas" element={<ModuloDespachoPage modulo="citas" />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
