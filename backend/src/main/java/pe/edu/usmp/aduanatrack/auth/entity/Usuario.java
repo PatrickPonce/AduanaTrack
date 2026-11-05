@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -11,6 +13,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import pe.edu.usmp.aduanatrack.notificacion.entity.CanalNotificacion;
 
 @Entity
 @Table(name = "usuario")
@@ -49,6 +52,11 @@ public class Usuario {
 
     @Column(name = "bloqueado_hasta")
     private LocalDateTime bloqueadoHasta;
+
+    /** HU-14: canal preferido para recibir las notificaciones. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "canal_notificacion", nullable = false)
+    private CanalNotificacion canalNotificacion = CanalNotificacion.SISTEMA;
 
     protected Usuario() {
     }
@@ -124,5 +132,13 @@ public class Usuario {
 
     public LocalDateTime getBloqueadoHasta() {
         return bloqueadoHasta;
+    }
+
+    public CanalNotificacion getCanalNotificacion() {
+        return canalNotificacion;
+    }
+
+    public void setCanalNotificacion(CanalNotificacion canalNotificacion) {
+        this.canalNotificacion = canalNotificacion;
     }
 }
