@@ -26,6 +26,7 @@ import pe.edu.usmp.aduanatrack.despacho.entity.Despacho;
 import pe.edu.usmp.aduanatrack.despacho.entity.EstadoDespacho;
 import pe.edu.usmp.aduanatrack.despacho.entity.TipoHito;
 import pe.edu.usmp.aduanatrack.despacho.repository.DespachoRepository;
+import pe.edu.usmp.aduanatrack.notificacion.service.AvisoDespachoService;
 
 /** Canal de control de HU-10 · T-10.2 (SCRUM-70); los comentarios CAn son los criterios de HU-10. */
 class CanalControlServiceTest {
@@ -34,6 +35,7 @@ class CanalControlServiceTest {
     private static final LocalDateTime AHORA = LocalDateTime.of(2026, 10, 28, 9, 0);
 
     private HitoDespachoService hitos;
+    private AvisoDespachoService avisos;
     private Despacho despacho;
     private CanalControlService servicio;
 
@@ -41,11 +43,12 @@ class CanalControlServiceTest {
     void preparar() {
         DespachoRepository despachoRepository = mock(DespachoRepository.class);
         hitos = mock(HitoDespachoService.class);
+        avisos = mock(AvisoDespachoService.class);
         despacho = new Despacho(new Cliente("20787789324", AHORA), null, AHORA);
         despacho.abrir("DESP-2026-0001");
         despacho.cambiarEstado(EstadoDespacho.DAM_NUMERADA);
         when(despachoRepository.findById(DESPACHO)).thenReturn(Optional.of(despacho));
-        servicio = new CanalControlService(despachoRepository, hitos);
+        servicio = new CanalControlService(despachoRepository, hitos, avisos);
     }
 
     // CA1: el canal naranja se muestra en el despacho
@@ -121,6 +124,42 @@ class CanalControlServiceTest {
 
         verify(hitos, times(1)).registrarSugerido(any(), anyString());
         assertThat(repetida.hitoSugerido()).isEqualTo("Programar inspección física");
+    }
+
+    // HU-14 · T-14.2 (CA2): guardar un canal avisa al agente del despacho
+
+    @Test
+    void guardarUnCanal_avisaAlAgenteDelDespacho() {
+        servicio.guardar(DESPACHO, CanalControl.ROJO);
+
+        verify(avisos).canalAsignado(despacho, CanalControl.ROJO);
+    }
+
+    @Test
+    void cadaCambioDeCanal_avisaDeNuevo() {
+        servicio.guardar(DESPACHO, CanalControl.NARANJA);
+        servicio.guardar(DESPACHO, CanalControl.VERDE);
+
+        verify(avisos).canalAsignado(despacho, CanalControl.NARANJA);
+        verify(avisos).canalAsignado(despacho, CanalControl.VERDE);
+    }
+
+    @Test
+    void guardarElMismoCanalOtraVez_noRepiteElAviso() {
+        servicio.guardar(DESPACHO, CanalControl.NARANJA);
+
+        servicio.guardar(DESPACHO, CanalControl.NARANJA);
+
+        verify(avisos, times(1)).canalAsignado(any(), any());
+    }
+
+    @Test
+    void sinDamNumerada_noAvisaNada() {
+        despacho.cambiarEstado(EstadoDespacho.TRIBUTOS_PAGADOS);
+
+        assertThatThrownBy(() -> servicio.guardar(DESPACHO, CanalControl.VERDE)).isInstanceOf(ApiException.class);
+
+        verify(avisos, never()).canalAsignado(any(), any());
     }
 
     // Reglas de estado
