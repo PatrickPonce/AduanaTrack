@@ -33,8 +33,11 @@ final class Textos {
         };
     }
 
-    /** Tiempo promedio con coma decimal, o un guion si ningún despacho del rango tiene levante. */
+    /**
+     * Tiempo promedio con coma decimal, igual que la página «Reportes», o un guion si ningún despacho del rango
+     * tiene levante. No se usa {@code ES}: en es-PE el separador decimal de Java es el punto.
+     */
     static String dias(Double dias) {
-        return dias == null ? "—" : String.format(ES, "%.1f", dias);
+        return dias == null ? "—" : String.format(Locale.ROOT, "%.1f", dias).replace('.', ',');
     }
 }
