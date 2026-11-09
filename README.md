@@ -75,6 +75,7 @@ AduanaTrack/
 ├── backend/            # API (stack por definir por el equipo)
 ├── frontend/           # Interfaz web
 ├── database/           # Scripts de esquema y migraciones
+├── e2e/                # Prueba de extremo a extremo del despacho (node e2e/flujo-despacho.mjs)
 ├── docs/
 │   ├── product-backlog.md
 │   ├── sprint-1/       # Sprint backlog y evidencias del sprint
