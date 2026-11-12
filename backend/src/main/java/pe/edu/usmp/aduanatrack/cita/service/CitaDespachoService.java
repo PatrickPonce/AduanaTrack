@@ -31,6 +31,7 @@ import pe.edu.usmp.aduanatrack.despacho.entity.EstadoDespacho;
 import pe.edu.usmp.aduanatrack.despacho.entity.TipoHito;
 import pe.edu.usmp.aduanatrack.despacho.repository.DespachoRepository;
 import pe.edu.usmp.aduanatrack.despacho.service.HitoDespachoService;
+import pe.edu.usmp.aduanatrack.notificacion.service.AvisoClienteService;
 
 /**
  * Registro de citas en depósito temporal o almacén (HU-11 · T-11.1 y T-11.2, contrato C6). El agente
@@ -59,16 +60,18 @@ public class CitaDespachoService {
     private final CitaDespachoRepository citaRepository;
     private final UsuarioRepository usuarioRepository;
     private final HitoDespachoService hitos;
+    private final AvisoClienteService avisosCliente;
     private final Clock clock;
 
     public CitaDespachoService(DespachoRepository despachoRepository, DepositoRepository depositoRepository,
             CitaDespachoRepository citaRepository, UsuarioRepository usuarioRepository, HitoDespachoService hitos,
-            Clock clock) {
+            AvisoClienteService avisosCliente, Clock clock) {
         this.despachoRepository = despachoRepository;
         this.depositoRepository = depositoRepository;
         this.citaRepository = citaRepository;
         this.usuarioRepository = usuarioRepository;
         this.hitos = hitos;
+        this.avisosCliente = avisosCliente;
         this.clock = clock;
     }
 
@@ -124,6 +127,9 @@ public class CitaDespachoService {
         hitos.registrar(despachoId, TipoHito.CITA_REGISTRADA,
                 "Cita de " + solicitud.tipo().texto().toLowerCase(Locale.ROOT) + " registrada: " + detalle);
         avanzarEstado(despachoId, despacho, solicitud.tipo(), detalle);
+        if (solicitud.tipo() == TipoCita.RETIRO) {
+            avisosCliente.retiroProgramado(despacho, detalle);
+        }
         return CitaResponse.de(cita, despacho.getEstado());
     }
 

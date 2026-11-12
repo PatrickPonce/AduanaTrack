@@ -56,6 +56,7 @@ import pe.edu.usmp.aduanatrack.notificacion.entity.TipoNotificacion;
 import pe.edu.usmp.aduanatrack.notificacion.repository.AlmacenajeRepository;
 import pe.edu.usmp.aduanatrack.notificacion.repository.NotificacionRepository;
 import pe.edu.usmp.aduanatrack.notificacion.service.AlmacenajeAlertaService;
+import pe.edu.usmp.aduanatrack.notificacion.service.AvisoClienteService;
 import pe.edu.usmp.aduanatrack.notificacion.service.AvisoDespachoService;
 import pe.edu.usmp.aduanatrack.notificacion.service.CorreoService;
 import pe.edu.usmp.aduanatrack.notificacion.service.NotificacionService;
@@ -107,7 +108,8 @@ class Hu14CriteriosAceptacionTest {
 
         notificaciones = new NotificacionService(notificacionesEnMemoria(), usuarioRepository, despachoRepository,
                 reloj);
-        AvisoDespachoService avisos = new AvisoDespachoService(notificaciones, correoHaciaMailpit());
+        AvisoDespachoService avisos = new AvisoDespachoService(notificaciones, correoHaciaMailpit(),
+                mock(AvisoClienteService.class));
 
         almacenaje = mock(AlmacenajeRepository.class);
         ParametroService parametros = mock(ParametroService.class);

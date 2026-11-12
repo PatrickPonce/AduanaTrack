@@ -1,5 +1,6 @@
 package pe.edu.usmp.aduanatrack.levante.service;
 
+import pe.edu.usmp.aduanatrack.notificacion.service.AvisoClienteService;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -55,6 +56,7 @@ class LevanteServiceTest {
     private DespachoRepository despachoRepository;
     private HitoDespachoService hitos;
     private Despacho despacho;
+    private AvisoClienteService avisosCliente;
     private LevanteService servicio;
 
     @BeforeEach
@@ -66,8 +68,9 @@ class LevanteServiceTest {
         despacho.asignarCanal(CanalControl.ROJO);
         despacho.cambiarEstado(EstadoDespacho.INSPECCION_CONFORME);
         when(despachoRepository.findById(DESPACHO)).thenReturn(Optional.of(despacho));
+        avisosCliente = mock(AvisoClienteService.class);
         Clock reloj = Clock.fixed(AHORA.atZone(ZoneId.of("America/Lima")).toInstant(), ZoneId.of("America/Lima"));
-        servicio = new LevanteService(despachoRepository, hitos, reloj,
+        servicio = new LevanteService(despachoRepository, hitos, avisosCliente, reloj,
                 new DocumentoProperties(carpeta.toString()));
     }
 
@@ -98,6 +101,7 @@ class LevanteServiceTest {
         verify(hitos).registrar(DESPACHO, TipoHito.LEVANTE_OTORGADO, "Levante otorgado: LEV-2026-000318 (13/11/2026)");
         verify(hitos, never()).registrar(any(), eq(TipoHito.LEVANTE_CON_ADVERTENCIA), anyString());
         verify(despachoRepository).saveAndFlush(despacho);
+        verify(avisosCliente).levanteOtorgado(despacho, "LEV-2026-000318", HOY);
     }
 
     @Test
