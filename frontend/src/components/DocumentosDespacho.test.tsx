@@ -123,13 +123,13 @@ describe('DocumentosDespacho (HU-06)', () => {
     const docx = new File(['x'], 'poliza.docx', {
       type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     })
-    fireEvent.drop(screen.getByLabelText('Zona de arrastre del PDF'), { dataTransfer: { files: [docx] } })
-    expect(screen.getByRole('status')).toHaveTextContent('Solo se permiten archivos PDF')
+    fireEvent.drop(screen.getByLabelText('Zona de arrastre del documento'), { dataTransfer: { files: [docx] } })
+    expect(screen.getByRole('status')).toHaveTextContent('Solo se permiten archivos PDF o JPG')
     expect(screen.getByRole('button', { name: 'Cargar documento' })).toBeDisabled()
     expect(documentosApi.cargarDocumento).not.toHaveBeenCalled()
   })
 
-  it('CA1: si el backend rechaza el contenido (415) muestra que no es un PDF válido', async () => {
+  it('CA1: si el backend rechaza el contenido (415) muestra que no es un PDF ni un JPG válido', async () => {
     vi.mocked(documentosApi.cargarDocumento).mockRejectedValue(
       new AxiosError('415', '415', undefined, undefined, {
         status: 415,
@@ -143,12 +143,12 @@ describe('DocumentosDespacho (HU-06)', () => {
     render(<DocumentosDespacho despachoId={7} puedeCargar />)
     await user.click(await screen.findByRole('button', { name: 'Cargar Póliza de seguro' }))
 
-    fireEvent.drop(screen.getByLabelText('Zona de arrastre del PDF'), {
+    fireEvent.drop(screen.getByLabelText('Zona de arrastre del documento'), {
       dataTransfer: { files: [pdf('renombrado.pdf')] },
     })
     await user.click(screen.getByRole('button', { name: 'Cargar documento' }))
 
-    expect(await screen.findByText('El archivo no es un PDF válido.')).toBeInTheDocument()
+    expect(await screen.findByText('El archivo no es un PDF ni una imagen JPG válida.')).toBeInTheDocument()
   })
 
   it('CA2: con un obligatorio pendiente avisa que bloquea la clasificación y lo nombra', async () => {
@@ -215,13 +215,32 @@ describe('DocumentosDespacho (HU-06)', () => {
     render(<DocumentosDespacho despachoId={7} puedeCargar onDocumentacionCompleta={alCompletar} />)
 
     await user.click(await screen.findByRole('button', { name: 'Cargar Póliza de seguro' }))
-    fireEvent.drop(screen.getByLabelText('Zona de arrastre del PDF'), { dataTransfer: { files: [pdf('poliza.pdf')] } })
+    fireEvent.drop(screen.getByLabelText('Zona de arrastre del documento'), { dataTransfer: { files: [pdf('poliza.pdf')] } })
     vi.mocked(documentosApi.listarDocumentos).mockResolvedValue(COMPLETO)
     await user.click(screen.getByRole('button', { name: 'Cargar documento' }))
 
     await waitFor(() => expect(alCompletar).toHaveBeenCalledTimes(1))
     expect(screen.getByLabelText('Estado general de la documentación')).toHaveTextContent('Completo')
     expect(screen.queryByText(/documento obligatorio/)).not.toBeInTheDocument()
+  })
+
+  it('regla de negocio 1: acepta una foto JPG del documento además del PDF', async () => {
+    vi.mocked(documentosApi.cargarDocumento).mockResolvedValue({
+      documentoId: 43,
+      tipo: 'POLIZA_SEGURO',
+      version: 1,
+      estado: 'CARGADO',
+    })
+    const user = userEvent.setup()
+    render(<DocumentosDespacho despachoId={7} puedeCargar />)
+
+    await user.click(await screen.findByRole('button', { name: 'Cargar Póliza de seguro' }))
+    const foto = new File(['\xFF\xD8\xFF'], 'poliza.jpg', { type: 'image/jpeg' })
+    fireEvent.drop(screen.getByLabelText('Zona de arrastre del documento'), { dataTransfer: { files: [foto] } })
+    expect(screen.getByRole('status')).toHaveTextContent('poliza.jpg')
+    await user.click(screen.getByRole('button', { name: 'Cargar documento' }))
+
+    await waitFor(() => expect(documentosApi.cargarDocumento).toHaveBeenCalledWith(7, 'POLIZA_SEGURO', foto))
   })
 
   it('el perfil Cliente consulta y descarga, pero no carga ni reemplaza', async () => {

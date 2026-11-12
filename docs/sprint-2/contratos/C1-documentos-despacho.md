@@ -50,7 +50,9 @@ Carga la primera versión o reemplaza la vigente. La versión anterior queda con
 | 404 `NO_ENCONTRADO` | El despacho o el tipo de documento no existen |
 | 409 `DESPACHO_EN_BORRADOR` | El despacho todavía es borrador |
 | 413 `ARCHIVO_MUY_GRANDE` | El archivo pasa de 10 MB |
-| 415 `FORMATO_NO_PERMITIDO` | El contenido no empieza con `%PDF-` (p. ej. un .docx renombrado) |
+| 415 `FORMATO_NO_PERMITIDO` | El contenido no es PDF (`%PDF-`) ni JPG (`FF D8 FF`), p. ej. un .docx o .png renombrado |
+
+Se aceptan **PDF y JPG** (regla de negocio 1 de HU-06). El formato se reconoce por la firma del archivo, no por la extensión, y se guarda como `{uuid}.pdf` o `{uuid}.jpg`.
 
 > **Cambio respecto a la guía (avisado a Kiara):** la guía proponía `400 ARCHIVO_NO_PDF` y `400 ARCHIVO_EXCEDE_10MB`. Se usan los mismos códigos que la carta poder (HU-04) porque un archivo de más de 10 MB lo rechaza Spring antes de llegar al servicio con `413 ARCHIVO_MUY_GRANDE` (`GlobalExceptionHandler`). Así el frontend trata igual las dos cargas de PDF.
 
@@ -70,7 +72,7 @@ Todas las versiones del tipo, de la más reciente a la más antigua. Lista vací
 
 ## GET `/documentos/{documentoId}/archivo`
 
-Descarga cualquier versión (vigente o histórica) como `application/pdf` con `Content-Disposition: attachment` y el nombre original. 404 si el documento es de otro despacho o el archivo no está en el volumen.
+Descarga cualquier versión (vigente o histórica) como `application/pdf` o `image/jpeg` (según el formato con que se guardó) con `Content-Disposition: attachment` y el nombre original. 404 si el documento es de otro despacho o el archivo no está en el volumen.
 
 ## Bloqueo usado por HU-07 (T-06.3 · Fabio)
 

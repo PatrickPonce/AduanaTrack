@@ -136,7 +136,8 @@ class DocumentoDespachoControllerTest {
     @Test
     void archivo_descargaElPdfConElNombreOriginal() throws Exception {
         Path ruta = Files.write(directorio.resolve("uuid.pdf"), PDF);
-        when(documentoService.archivo(1L, 41L)).thenReturn(new ArchivoDocumento(ruta, "Factura 001.pdf"));
+        when(documentoService.archivo(1L, 41L)).thenReturn(new ArchivoDocumento(ruta, "Factura 001.pdf",
+                "application/pdf"));
 
         mvc.perform(get("/api/v1/despachos/1/documentos/41/archivo").cookie(sesion("CLIENTE")))
                 .andExpect(status().isOk())

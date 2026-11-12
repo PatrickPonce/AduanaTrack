@@ -108,7 +108,6 @@ export function CanalControlDespacho({ despachoId, canal, puedeEditar, onCanalGu
             <Typography component="div" sx={{ fontSize: 12.5, fontWeight: 600, color: '#334155', mb: 0.5 }}>
               Levante
             </Typography>
-            {/* El módulo de levante (HU-13) llega en el Sprint 3: hasta entonces esta ruta redirige al panel. */}
             <Button component={RouterLink} to={`/levante/${despachoId}`} variant="contained" size="small">
               Ir al módulo de levante
             </Button>

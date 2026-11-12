@@ -1,6 +1,7 @@
 package pe.edu.usmp.aduanatrack.dashboard.controller;
 
 import static org.hamcrest.Matchers.matchesPattern;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -12,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Duration;
 import java.util.List;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -21,6 +23,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import jakarta.servlet.http.Cookie;
+import pe.edu.usmp.aduanatrack.acceso.service.AccesoClienteService;
 import pe.edu.usmp.aduanatrack.dashboard.dto.IndicadoresResponse;
 import pe.edu.usmp.aduanatrack.dashboard.service.IndicadoresService;
 import pe.edu.usmp.aduanatrack.dashboard.service.TableroExcelService;
@@ -48,6 +51,15 @@ class DashboardControllerTest {
 
     @MockitoBean
     private TableroExcelService excelService;
+
+    @MockitoBean
+    private AccesoClienteService acceso;
+
+    /** Para el agente el filtro de empresa es el que pidió (HU-16): el servicio de acceso lo deja pasar. */
+    @BeforeEach
+    void accesoSinRestriccion() {
+        when(acceso.filtroCliente(any(), any())).thenAnswer(inv -> inv.getArgument(1));
+    }
 
     @Test
     void indicadores_respondeLosCuatroCamposConLosFiltros() throws Exception {

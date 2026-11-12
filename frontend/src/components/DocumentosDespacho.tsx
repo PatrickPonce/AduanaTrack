@@ -191,7 +191,7 @@ export function DocumentosDespacho({ despachoId, puedeCargar, onDocumentacionCom
                     </Tooltip>
                   )}
                   {d.documentoId !== null && (
-                    <Tooltip title="Descargar PDF vigente">
+                    <Tooltip title="Descargar archivo vigente">
                       <IconButton
                         size="small"
                         component="a"
@@ -289,7 +289,7 @@ function VersionesDialog({
                       )}
                     </TableCell>
                     <TableCell>
-                      <Tooltip title="Descargar PDF">
+                      <Tooltip title="Descargar archivo">
                         <IconButton
                           size="small"
                           component="a"

@@ -4,7 +4,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router'
 
 import { leerError } from '../api/http'
 import { useAuth } from '../auth/AuthContext'
-import { COLORES } from '../theme'
+import { COLORES, fadeInUp } from '../theme'
 
 export const MENSAJE_CREDENCIALES = 'Usuario o contraseña incorrectos'
 export const MENSAJE_BLOQUEO = 'Cuenta bloqueada temporalmente. Intente nuevamente en 15 minutos.'
@@ -59,14 +59,42 @@ export function LoginPage() {
         display: 'grid',
         placeItems: 'center',
         p: 2,
-        background: `linear-gradient(160deg, ${COLORES.marino} 0%, #123a63 100%)`,
+        position: 'relative',
+        overflow: 'hidden',
+        background: `
+          radial-gradient(900px circle at 85% 10%, rgba(46,139,87,0.25), transparent 55%),
+          radial-gradient(700px circle at 10% 90%, rgba(26,111,220,0.25), transparent 55%),
+          linear-gradient(160deg, ${COLORES.marino} 0%, #123a63 100%)`,
       }}
     >
+      {/* Decoración: olas sutiles al pie de la pantalla, sin tocar logros o pruebas (aria-hidden). */}
+      <Box
+        aria-hidden
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          opacity: 0.5,
+          pointerEvents: 'none',
+          backgroundImage:
+            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='120' viewBox='0 0 1200 120'%3E%3Cpath d='M0 60c150 40 350 40 500 0s350-40 500 0 150 40 200 0v60H0z' fill='%231a6fdc' fill-opacity='0.18'/%3E%3C/svg%3E\")",
+          backgroundPosition: 'bottom',
+          backgroundRepeat: 'repeat-x',
+          backgroundSize: '1200px 120px',
+        }}
+      />
       <Paper
         component="form"
         onSubmit={enviar}
         noValidate
-        sx={{ p: { xs: 3, sm: 3.5 }, width: '100%', maxWidth: 380, border: 0, boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}
+        sx={{
+          position: 'relative',
+          p: { xs: 3, sm: 3.5 },
+          width: '100%',
+          maxWidth: 380,
+          border: 0,
+          boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+          animation: `${fadeInUp} .5s ease`,
+        }}
       >
         <Stack spacing={2.25}>
           <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>

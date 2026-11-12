@@ -80,7 +80,7 @@ export interface Aduana {
   nombre: string
 }
 
-/** Estados del despacho en el orden en que avanza (Sprints 1 y 2); los del Sprint 3 llegan después. */
+/** Estados del despacho en el orden en que avanza (Sprints 1 a 3). */
 export type EstadoDespacho =
   | 'BORRADOR'
   | 'APERTURA'
@@ -90,6 +90,10 @@ export type EstadoDespacho =
   | 'TRIBUTOS_PAGADOS'
   | 'DAM_NUMERADA'
   | 'CANAL_ASIGNADO'
+  | 'INSPECCION_PROGRAMADA'
+  | 'INSPECCION_CONFORME'
+  | 'LEVANTE_OTORGADO'
+  | 'RETIRO_PROGRAMADO'
   | (string & {})
 
 export interface CatalogoRef {
@@ -332,6 +336,24 @@ export interface PagoRequest {
 
 export interface PagoRegistrado {
   estado: EstadoDespacho
+}
+
+/** Pago guardado, tal como lo devuelve GET /despachos/{id}/liquidacion. */
+export interface PagoConsulta {
+  fecha: string
+  monto: number
+  medioPago: string
+  numeroOperacion: string
+  registradoPor: string
+  registradoEn: string
+}
+
+/** GET /despachos/{id}/liquidacion (contrato C3): todo nulo mientras no se genera la liquidación. */
+export interface LiquidacionConsulta {
+  liquidacion: Liquidacion | null
+  generadoPor: string | null
+  generadoEn: string | null
+  pago: PagoConsulta | null
 }
 
 /** HU-09 (contrato C4): numeración de la DAM; los tres datos vienen nulos mientras no se registra. */

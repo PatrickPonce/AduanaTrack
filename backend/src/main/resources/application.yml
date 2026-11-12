@@ -18,6 +18,13 @@ spring:
       max-request-size: 11MB
   jackson:
     time-zone: America/Lima
+  # Servidor SMTP de las notificaciones (HU-14). En local es Mailpit (puerto 1025, bandeja en el 8025);
+  # en Render no hay SMTP, así que el envío queda apagado con aduanatrack.correo.habilitado=false.
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USER:}
+    password: ${SMTP_PASSWORD:}
 
 server:
   port: 8080
@@ -34,6 +41,13 @@ aduanatrack:
   documentos:
     # Documentos del despacho (HU-06): {directorio}/{despachoId}/{uuid}.pdf. En Docker Compose es el volumen documentos.
     directorio: ${DOCUMENTOS_DIR:/data/documentos}
+  correo:
+    # Envío de las notificaciones por correo (HU-14): solo si el usuario eligió CORREO o AMBOS.
+    habilitado: ${CORREO_HABILITADO:false}
+    remitente: ${CORREO_REMITENTE:no-responder@aduanatrack.local}
+  notificaciones:
+    # Alerta de almacenaje por vencer: todos los días a las 7:00 (hora de Lima).
+    cron-almacenaje: ${ALERTA_ALMACENAJE_CRON:0 0 7 * * *}
   seguridad:
     # Secreto HS256 de al menos 32 caracteres; se inyecta desde .env (nunca en el repositorio).
     jwt-secret: ${JWT_SECRET}

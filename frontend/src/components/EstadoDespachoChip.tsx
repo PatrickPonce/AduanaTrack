@@ -4,8 +4,8 @@ import type { EstadoDespacho } from '../types'
 
 /**
  * Estado → texto y color. Sprint 1: BORRADOR (gris) y APERTURA (azul); Sprint 2: de
- * DOCUMENTACION_COMPLETA (HU-06) a CANAL_ASIGNADO (HU-10). Los estados del Sprint 3 se agregan
- * aquí sin tocar las pantallas.
+ * DOCUMENTACION_COMPLETA (HU-06) a CANAL_ASIGNADO (HU-10); Sprint 3: de INSPECCION_PROGRAMADA
+ * (HU-11) a RETIRO_PROGRAMADO.
  */
 const ESTADOS: Record<string, { texto: string; color: ChipProps['color'] }> = {
   BORRADOR: { texto: 'Borrador', color: 'default' },
@@ -16,6 +16,10 @@ const ESTADOS: Record<string, { texto: string; color: ChipProps['color'] }> = {
   TRIBUTOS_PAGADOS: { texto: 'Tributos pagados', color: 'secondary' },
   DAM_NUMERADA: { texto: 'DAM numerada', color: 'secondary' },
   CANAL_ASIGNADO: { texto: 'Canal asignado', color: 'success' },
+  INSPECCION_PROGRAMADA: { texto: 'Inspección programada', color: 'warning' },
+  INSPECCION_CONFORME: { texto: 'Inspección conforme', color: 'success' },
+  LEVANTE_OTORGADO: { texto: 'Levante otorgado', color: 'success' },
+  RETIRO_PROGRAMADO: { texto: 'Retiro programado', color: 'info' },
 }
 
 /** Texto del estado tal como se muestra en las tablas ("Apertura"). */

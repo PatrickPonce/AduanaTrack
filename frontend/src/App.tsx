@@ -16,6 +16,14 @@ const DespachoDetallePage = lazy(() =>
 )
 const EmbarquesPage = lazy(() => import('./pages/EmbarquesPage').then((m) => ({ default: m.EmbarquesPage })))
 const EmbarquePage = lazy(() => import('./pages/EmbarquePage').then((m) => ({ default: m.EmbarquePage })))
+const LevantePage = lazy(() => import('./pages/LevantePage').then((m) => ({ default: m.LevantePage })))
+const ReportesPage = lazy(() => import('./pages/ReportesPage').then((m) => ({ default: m.ReportesPage })))
+const ModuloDespachoPage = lazy(() =>
+  import('./pages/ModuloDespachoPage').then((m) => ({ default: m.ModuloDespachoPage })),
+)
+const NotificacionesPage = lazy(() =>
+  import('./pages/NotificacionesPage').then((m) => ({ default: m.NotificacionesPage })),
+)
 
 const cargando = (
   <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
@@ -39,6 +47,17 @@ export function App() {
             <Route path="/despachos/:id" element={<DespachoDetallePage />} />
             <Route path="/embarques" element={<EmbarquesPage />} />
             <Route path="/embarques/:despachoId" element={<EmbarquePage />} />
+            <Route path="/documentos" element={<ModuloDespachoPage modulo="documentos" />} />
+            <Route path="/clasificacion" element={<ModuloDespachoPage modulo="clasificacion" />} />
+            <Route path="/tributos" element={<ModuloDespachoPage modulo="tributos" />} />
+            <Route path="/dam" element={<ModuloDespachoPage modulo="dam" />} />
+            <Route path="/canal-control" element={<ModuloDespachoPage modulo="canal" />} />
+            <Route path="/citas" element={<ModuloDespachoPage modulo="citas" />} />
+            <Route path="/inspecciones" element={<ModuloDespachoPage modulo="inspeccion" />} />
+            <Route path="/levante" element={<ModuloDespachoPage modulo="levante" />} />
+            <Route path="/levante/:despachoId" element={<LevantePage />} />
+            <Route path="/reportes" element={<ReportesPage />} />
+            <Route path="/notificaciones" element={<NotificacionesPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

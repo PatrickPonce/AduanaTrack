@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import jakarta.servlet.http.Cookie;
+import pe.edu.usmp.aduanatrack.acceso.service.AccesoClienteService;
 import pe.edu.usmp.aduanatrack.cliente.dto.ClienteRequest;
 import pe.edu.usmp.aduanatrack.cliente.dto.ClienteResponse;
 import pe.edu.usmp.aduanatrack.cliente.dto.EstadoCartaPoder;
@@ -46,6 +47,9 @@ class ClienteControllerTest {
 
     @MockitoBean
     private ClienteService clienteService;
+
+    @MockitoBean
+    private AccesoClienteService acceso;
 
     @Test
     void crear_rucValido_responde201() throws Exception {

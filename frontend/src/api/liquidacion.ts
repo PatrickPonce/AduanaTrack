@@ -1,7 +1,13 @@
-import type { Liquidacion, LiquidacionRequest, PagoRegistrado, PagoRequest } from '../types'
+import type { Liquidacion, LiquidacionConsulta, LiquidacionRequest, PagoRegistrado, PagoRequest } from '../types'
 import { http } from './http'
 
 // HU-08 · contrato C3 (docs/sprint-2/contratos/C3-liquidacion-pago.md).
+
+/** Liquidación y pago guardados del despacho; los campos vienen nulos si aún no se generó. */
+export async function obtenerLiquidacion(despachoId: number): Promise<LiquidacionConsulta> {
+  const { data } = await http.get<LiquidacionConsulta>(`/despachos/${despachoId}/liquidacion`)
+  return data
+}
 
 /**
  * Calcula CIF, Ad Valorem, IGV, IPM y percepción con las tasas configuradas y pasa el despacho a

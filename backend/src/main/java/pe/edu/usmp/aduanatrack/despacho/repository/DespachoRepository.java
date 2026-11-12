@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import pe.edu.usmp.aduanatrack.despacho.entity.Despacho;
+import pe.edu.usmp.aduanatrack.despacho.entity.EstadoDespacho;
 
 public interface DespachoRepository extends JpaRepository<Despacho, Long> {
 
@@ -23,4 +24,19 @@ public interface DespachoRepository extends JpaRepository<Despacho, Long> {
 
     /** HU-09: el N° de DAM es único entre todos los despachos. */
     boolean existsByNumeroDam(String numeroDam);
+
+    /** HU-13: el N° de levante es único entre todos los despachos. */
+    boolean existsByNumeroLevante(String numeroLevante);
+
+    /** HU-16: empresa dueña y estado del despacho, para decidir si un CLIENTE puede verlo. */
+    @Query("select d.cliente.id as clienteId, d.estado as estado from Despacho d where d.id = :id")
+    Optional<DespachoAcceso> accesoDe(@Param("id") Long id);
+
+    /** Proyección de {@link #accesoDe}. */
+    interface DespachoAcceso {
+
+        Long getClienteId();
+
+        EstadoDespacho getEstado();
+    }
 }

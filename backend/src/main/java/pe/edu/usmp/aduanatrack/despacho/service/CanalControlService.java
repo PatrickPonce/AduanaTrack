@@ -12,11 +12,13 @@ import pe.edu.usmp.aduanatrack.despacho.entity.Despacho;
 import pe.edu.usmp.aduanatrack.despacho.entity.EstadoDespacho;
 import pe.edu.usmp.aduanatrack.despacho.entity.TipoHito;
 import pe.edu.usmp.aduanatrack.despacho.repository.DespachoRepository;
+import pe.edu.usmp.aduanatrack.notificacion.service.AvisoDespachoService;
 
 /**
  * Registro del canal de control (HU-10 · T-10.2). Exige {@code DAM_NUMERADA}; guarda el canal en
  * {@code canal_control}, pasa el despacho a {@code CANAL_ASIGNADO} y registra el hito. Mientras el
- * despacho siga en {@code CANAL_ASIGNADO} el canal se puede corregir y cada cambio registra otro hito.
+ * despacho siga en {@code CANAL_ASIGNADO} el canal se puede corregir y cada cambio registra otro hito y
+ * avisa al agente responsable del despacho (HU-14 · T-14.2).
  */
 @Service
 public class CanalControlService {
@@ -26,10 +28,13 @@ public class CanalControlService {
 
     private final DespachoRepository despachoRepository;
     private final HitoDespachoService hitos;
+    private final AvisoDespachoService avisos;
 
-    public CanalControlService(DespachoRepository despachoRepository, HitoDespachoService hitos) {
+    public CanalControlService(DespachoRepository despachoRepository, HitoDespachoService hitos,
+            AvisoDespachoService avisos) {
         this.despachoRepository = despachoRepository;
         this.hitos = hitos;
+        this.avisos = avisos;
     }
 
     @Transactional
@@ -51,6 +56,7 @@ public class CanalControlService {
             hitos.registrar(despachoId, TipoHito.CANAL_ASIGNADO, anterior == null
                     ? "Canal de control asignado: " + canal
                     : "Canal de control cambiado de " + anterior + " a " + canal);
+            avisos.canalAsignado(despacho, canal);
             if (canal == CanalControl.ROJO) {
                 hitoSugerido = HITO_SUGERIDO_ROJO;
                 hitos.registrarSugerido(despachoId, hitoSugerido);

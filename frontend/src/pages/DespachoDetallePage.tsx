@@ -3,38 +3,59 @@ import { Alert, Box, Button, CircularProgress, Paper, Stack, Tab, Tabs, Typograp
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link as RouterLink, useLocation, useParams } from 'react-router'
 
+import type { TipoCita } from '../api/citas'
 import { obtenerDespacho } from '../api/despachos'
 import { mensajeDeError } from '../api/http'
 import { useAuth } from '../auth/AuthContext'
 import { CanalControlDespacho } from '../components/CanalControlDespacho'
 import { CartaPoderChip } from '../components/CartaPoderChip'
+import { CitasDespacho } from '../components/CitasDespacho'
 import { ClasificacionDespacho } from '../components/ClasificacionDespacho'
 import { DocumentosDespacho } from '../components/DocumentosDespacho'
 import { useEncabezado } from '../components/Encabezado'
 import { EstadoDespachoChip } from '../components/EstadoDespachoChip'
 import { CanalChip } from '../components/EtiquetaColor'
+import { InspeccionDespacho } from '../components/InspeccionDespacho'
+import { LevanteDespacho } from '../components/LevanteDespacho'
 import { LineaTiempoDespacho } from '../components/LineaTiempoDespacho'
 import { LiquidacionDespacho } from '../components/LiquidacionDespacho'
 import { NumeracionDam } from '../components/NumeracionDam'
 import { DOS_COLUMNAS, TituloSeccion } from '../components/Seccion'
+import { fadeIn } from '../theme'
 import type { Despacho } from '../types'
 import { alcanzoEstado } from '../utils/estados'
 import { formatoFecha } from '../utils/formato'
 import { MODALIDADES_DESPACHO, TIPOS_OPERACION, textoOpcion } from '../utils/opciones'
 
-interface EstadoNavegacion {
+export type Pestana =
+  | 'generales'
+  | 'documentos'
+  | 'clasificacion'
+  | 'liquidacion'
+  | 'dam'
+  | 'canal'
+  | 'citas'
+  | 'inspeccion'
+  | 'levante'
+  | 'linea'
+
+export interface EstadoNavegacion {
   mensaje?: string
   /** Filtros del Dashboard (?aduanaId=&clienteId=) para volver con ellos intactos (T-02.4). */
   volverA?: string
+  /** Pestaña con la que se abre el despacho al llegar desde un módulo del menú (Documentos, DAM…). */
+  pestana?: Pestana
+  /** Tipo con el que se abre «Citas», p. ej. RETIRO al llegar desde «Registrar cita de retiro» (HU-13). */
+  tipoCita?: TipoCita
 }
-
-type Pestana = 'generales' | 'documentos' | 'clasificacion' | 'liquidacion' | 'dam' | 'canal' | 'linea'
 
 /**
  * HU-03 · T-03.5 y HU-02 · T-02.4: detalle completo del despacho con su estado. Sprint 2: pestañas
  * «Documentos» (HU-06 · T-06.4), «Clasificación» desde DOCUMENTACION_COMPLETA (HU-07 · T-07.4),
  * «Liquidación» desde CLASIFICADO (HU-08 · T-08.3), «DAM» desde TRIBUTOS_PAGADOS (HU-09 · T-09.2),
- * «Canal de control» desde DAM_NUMERADA y «Línea de tiempo» siempre (HU-10 · T-10.3).
+ * «Canal de control» desde DAM_NUMERADA y «Línea de tiempo» siempre (HU-10 · T-10.3). Sprint 3:
+ * «Citas» desde CANAL_ASIGNADO (HU-11 · T-11.3), «Inspección» desde INSPECCION_PROGRAMADA (HU-12 · T-12.3)
+ * y «Levante» desde CANAL_ASIGNADO (HU-13 · T-13.3).
  */
 export function DespachoDetallePage() {
   const { id } = useParams()
@@ -43,18 +64,20 @@ export function DespachoDetallePage() {
   const navegacion = (ubicacion.state as EstadoNavegacion | null) ?? {}
   const [despacho, setDespacho] = useState<Despacho | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [pestana, setPestana] = useState<Pestana>('generales')
+  const pestanaInicial = navegacion.pestana ?? 'generales'
+  const [pestana, setPestana] = useState<Pestana>(pestanaInicial)
+  const [tipoCita, setTipoCita] = useState<TipoCita | undefined>(navegacion.tipoCita)
 
   useEncabezado(`Despachos / ${despacho?.numero ?? 'Borrador'}`, 'Detalle del Despacho de Importación')
 
   useEffect(() => {
     setDespacho(null)
     setError(null)
-    setPestana('generales')
+    setPestana(pestanaInicial)
     obtenerDespacho(Number(id))
       .then(setDespacho)
       .catch((e) => setError(mensajeDeError(e, 'No se pudo cargar el despacho.')))
-  }, [id])
+  }, [id, pestanaInicial])
 
   /** Tras un cambio de estado (p. ej. DOCUMENTACION_COMPLETA) se actualiza la cabecera sin perder la pestaña. */
   function recargarDespacho() {
@@ -67,7 +90,9 @@ export function DespachoDetallePage() {
 
   const volver = (
     <Button component={RouterLink} to={navegacion.volverA ?? '/dashboard'} startIcon={<ArrowBackIcon />}>
-      Volver al panel
+      {navegacion.volverA && navegacion.volverA !== '/dashboard' && !navegacion.volverA.startsWith('/dashboard?')
+        ? 'Volver'
+        : 'Volver al panel'}
     </Button>
   )
 
@@ -93,6 +118,9 @@ export function DespachoDetallePage() {
   const conLiquidacion = alcanzoEstado(despacho.estado, 'CLASIFICADO')
   const conDam = alcanzoEstado(despacho.estado, 'TRIBUTOS_PAGADOS')
   const conCanal = alcanzoEstado(despacho.estado, 'DAM_NUMERADA')
+  // Citas y levante empiezan con el canal asignado: inspección en naranja o rojo, levante directo en verde.
+  const conCitas = alcanzoEstado(despacho.estado, 'CANAL_ASIGNADO')
+  const conInspeccion = alcanzoEstado(despacho.estado, 'INSPECCION_PROGRAMADA')
   // Un borrador todavía no tiene expediente (el API responde 409 DESPACHO_EN_BORRADOR) y cada pestaña
   // de un paso posterior solo se abre cuando el despacho llegó a ese estado.
   const visible =
@@ -100,7 +128,9 @@ export function DespachoDetallePage() {
     (pestana === 'clasificacion' && !conClasificacion) ||
     (pestana === 'liquidacion' && !conLiquidacion) ||
     (pestana === 'dam' && !conDam) ||
-    (pestana === 'canal' && !conCanal)
+    (pestana === 'canal' && !conCanal) ||
+    ((pestana === 'citas' || pestana === 'levante') && !conCitas) ||
+    (pestana === 'inspeccion' && !conInspeccion)
       ? 'generales'
       : pestana
 
@@ -140,10 +170,15 @@ export function DespachoDetallePage() {
             {conLiquidacion && <Tab value="liquidacion" label="Liquidación" />}
             {conDam && <Tab value="dam" label="DAM" />}
             {conCanal && <Tab value="canal" label="Canal de control" />}
+            {conCitas && <Tab value="citas" label="Citas" />}
+            {conInspeccion && <Tab value="inspeccion" label="Inspección" />}
+            {conCitas && <Tab value="levante" label="Levante" />}
             <Tab value="linea" label="Línea de tiempo" />
           </Tabs>
         )}
 
+        {/* key={visible} retriggera la animación de entrada al cambiar de pestaña. */}
+        <Box key={visible} sx={{ animation: `${fadeIn} .25s ease` }}>
         {visible === 'canal' && (
           <CanalControlDespacho
             despachoId={despacho.id}
@@ -151,6 +186,39 @@ export function DespachoDetallePage() {
             puedeEditar={registra}
             onCanalGuardado={recargarDespacho}
             onVerLineaTiempo={() => setPestana('linea')}
+          />
+        )}
+
+        {visible === 'citas' && (
+          <CitasDespacho
+            despachoId={despacho.id}
+            estado={despacho.estado}
+            canal={despacho.canalControl}
+            puedeEditar={registra}
+            tipoInicial={tipoCita}
+            onCitaRegistrada={recargarDespacho}
+          />
+        )}
+
+        {visible === 'levante' && (
+          <LevanteDespacho
+            despachoId={despacho.id}
+            estado={despacho.estado}
+            puedeEditar={registra}
+            onLevanteRegistrado={recargarDespacho}
+            onRegistrarRetiro={() => {
+              setTipoCita('RETIRO')
+              setPestana('citas')
+            }}
+          />
+        )}
+
+        {visible === 'inspeccion' && (
+          <InspeccionDespacho
+            despachoId={despacho.id}
+            estado={despacho.estado}
+            puedeEditar={registra}
+            onInspeccionRegistrada={recargarDespacho}
           />
         )}
 
@@ -224,6 +292,7 @@ export function DespachoDetallePage() {
             </Box>
           </>
         )}
+        </Box>
       </Paper>
 
       {esBorrador && (

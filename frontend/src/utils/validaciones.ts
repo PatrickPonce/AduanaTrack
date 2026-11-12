@@ -40,10 +40,23 @@ export function validarContenedor(numero: string): string | null {
 
 export const TAMANO_MAXIMO_PDF = 10 * 1024 * 1024
 
-/** PDF de máximo 10 MB, revisado antes de enviar: carta poder (HU-04) y documentos del despacho (HU-06, CA1). */
+/** PDF de máximo 10 MB, revisado antes de enviar: carta poder (HU-04) y cargo de la DAM (HU-09). */
 export function validarArchivoPdf(archivo: File): string | null {
   const esPdf = archivo.type === 'application/pdf' || archivo.name.toLowerCase().endsWith('.pdf')
   if (!esPdf) return 'Solo se permiten archivos PDF'
+  if (archivo.size > TAMANO_MAXIMO_PDF) return 'El archivo supera el tamaño máximo de 10 MB'
+  return null
+}
+
+/** Formatos del input de documentos del despacho (HU-06, regla de negocio 1: PDF y JPG). */
+export const ACEPTA_DOCUMENTO = 'application/pdf,image/jpeg,.pdf,.jpg,.jpeg'
+
+/** PDF o JPG de máximo 10 MB: documentos del despacho (HU-06, CA1 y regla de negocio 1). */
+export function validarArchivoDocumento(archivo: File): string | null {
+  const nombre = archivo.name.toLowerCase()
+  const esPdf = archivo.type === 'application/pdf' || nombre.endsWith('.pdf')
+  const esJpg = archivo.type === 'image/jpeg' || nombre.endsWith('.jpg') || nombre.endsWith('.jpeg')
+  if (!esPdf && !esJpg) return 'Solo se permiten archivos PDF o JPG'
   if (archivo.size > TAMANO_MAXIMO_PDF) return 'El archivo supera el tamaño máximo de 10 MB'
   return null
 }
