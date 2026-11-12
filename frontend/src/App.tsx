@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router'
 
 import { ProtectedRoute } from './auth/ProtectedRoute'
+import { ROLES_AGENCIA } from './auth/roles'
 import { Layout } from './components/Layout'
 
 // Cada pantalla se descarga al visitarla por primera vez.
@@ -24,6 +25,10 @@ const ModuloDespachoPage = lazy(() =>
 const NotificacionesPage = lazy(() =>
   import('./pages/NotificacionesPage').then((m) => ({ default: m.NotificacionesPage })),
 )
+const MisDespachosPage = lazy(() => import('./pages/MisDespachosPage').then((m) => ({ default: m.MisDespachosPage })))
+const UsuariosClientePage = lazy(() =>
+  import('./pages/UsuariosClientePage').then((m) => ({ default: m.UsuariosClientePage })),
+)
 
 const cargando = (
   <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
@@ -31,6 +36,10 @@ const cargando = (
   </Box>
 )
 
+/**
+ * Rutas por rol (HU-16): quien abre a mano una pantalla que no es de su rol vuelve a su inicio
+ * (el CLIENTE a /portal-cliente/mis-despachos). El backend filtra igual los datos: esto es solo UI.
+ */
 export function App() {
   return (
     <Suspense fallback={cargando}>
@@ -38,28 +47,44 @@ export function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/clientes" element={<ClientesPage />} />
-            <Route path="/clientes/nuevo" element={<ClienteFormPage />} />
-            <Route path="/clientes/:id" element={<ClienteFormPage />} />
-            <Route path="/despachos/nuevo" element={<DespachoFormPage />} />
-            <Route path="/despachos/:id/editar" element={<DespachoFormPage />} />
-            <Route path="/despachos/:id" element={<DespachoDetallePage />} />
-            <Route path="/embarques" element={<EmbarquesPage />} />
-            <Route path="/embarques/:despachoId" element={<EmbarquePage />} />
-            <Route path="/documentos" element={<ModuloDespachoPage modulo="documentos" />} />
-            <Route path="/clasificacion" element={<ModuloDespachoPage modulo="clasificacion" />} />
-            <Route path="/tributos" element={<ModuloDespachoPage modulo="tributos" />} />
-            <Route path="/dam" element={<ModuloDespachoPage modulo="dam" />} />
-            <Route path="/canal-control" element={<ModuloDespachoPage modulo="canal" />} />
-            <Route path="/citas" element={<ModuloDespachoPage modulo="citas" />} />
-            <Route path="/inspecciones" element={<ModuloDespachoPage modulo="inspeccion" />} />
-            <Route path="/levante" element={<ModuloDespachoPage modulo="levante" />} />
-            <Route path="/levante/:despachoId" element={<LevantePage />} />
-            <Route path="/reportes" element={<ReportesPage />} />
+            {/* Administrador y agente de aduana. */}
+            <Route element={<ProtectedRoute roles={ROLES_AGENCIA} />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/clientes" element={<ClientesPage />} />
+              <Route path="/clientes/nuevo" element={<ClienteFormPage />} />
+              <Route path="/clientes/:id" element={<ClienteFormPage />} />
+              <Route path="/despachos/nuevo" element={<DespachoFormPage />} />
+              <Route path="/despachos/:id/editar" element={<DespachoFormPage />} />
+              <Route path="/despachos/:id" element={<DespachoDetallePage />} />
+              <Route path="/embarques" element={<EmbarquesPage />} />
+              <Route path="/embarques/:despachoId" element={<EmbarquePage />} />
+              <Route path="/documentos" element={<ModuloDespachoPage modulo="documentos" />} />
+              <Route path="/clasificacion" element={<ModuloDespachoPage modulo="clasificacion" />} />
+              <Route path="/tributos" element={<ModuloDespachoPage modulo="tributos" />} />
+              <Route path="/dam" element={<ModuloDespachoPage modulo="dam" />} />
+              <Route path="/canal-control" element={<ModuloDespachoPage modulo="canal" />} />
+              <Route path="/citas" element={<ModuloDespachoPage modulo="citas" />} />
+              <Route path="/inspecciones" element={<ModuloDespachoPage modulo="inspeccion" />} />
+              <Route path="/levante" element={<ModuloDespachoPage modulo="levante" />} />
+              <Route path="/levante/:despachoId" element={<LevantePage />} />
+              <Route path="/reportes" element={<ReportesPage />} />
+            </Route>
+
+            {/* Solo el administrador. */}
+            <Route element={<ProtectedRoute roles={['ADMIN']} />}>
+              <Route path="/administracion/usuarios-cliente" element={<UsuariosClientePage />} />
+            </Route>
+
+            {/* Solo el cliente / importador (HU-16). */}
+            <Route element={<ProtectedRoute roles={['CLIENTE']} />}>
+              <Route path="/portal-cliente/mis-despachos" element={<MisDespachosPage />} />
+            </Route>
+
+            {/* Todos los roles. */}
             <Route path="/notificaciones" element={<NotificacionesPage />} />
           </Route>
         </Route>
+        {/* /dashboard manda al login sin sesión y al portal al CLIENTE. */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Suspense>

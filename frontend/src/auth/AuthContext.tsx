@@ -6,7 +6,8 @@ import type { UsuarioSesion } from '../types'
 interface AuthContextValue {
   usuario: UsuarioSesion | null
   cargando: boolean
-  iniciarSesion: (usuario: string, password: string, recordarme: boolean) => Promise<void>
+  /** Devuelve el usuario de la sesión para decidir adónde ir según su rol. */
+  iniciarSesion: (usuario: string, password: string, recordarme: boolean) => Promise<UsuarioSesion>
   cerrarSesion: () => Promise<void>
 }
 
@@ -30,7 +31,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const iniciarSesion = useCallback(async (u: string, password: string, recordarme: boolean) => {
-    setUsuario(await authApi.login(u, password, recordarme))
+    const sesion = await authApi.login(u, password, recordarme)
+    setUsuario(sesion)
+    return sesion
   }, [])
 
   const cerrarSesion = useCallback(async () => {

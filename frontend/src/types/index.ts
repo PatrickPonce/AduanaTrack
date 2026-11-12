@@ -6,6 +6,18 @@ export interface UsuarioSesion {
   usuario: string
   nombre: string
   rol: Rol
+  /**
+   * HU-16 (contrato C11, SUPUESTO): empresa asignada al usuario CLIENTE; nula si el administrador
+   * aún no se la asigna, y ausente para ADMIN y AGENTE.
+   */
+  empresa?: EmpresaCliente | null
+}
+
+/** HU-16: empresa importadora (un cliente registrado) a la que pertenece un usuario CLIENTE. */
+export interface EmpresaCliente {
+  id: number
+  ruc: string
+  razonSocial: string
 }
 
 export interface Pagina<T> {
@@ -412,4 +424,58 @@ export interface ApiErrorBody {
   mensaje: string
   campos?: Record<string, string>
   [extra: string]: unknown
+}
+
+// ---------------------------------------------------------------------------------------------
+// HU-16 · Portal del cliente (contrato C11, SUPUESTO hasta que Patrick lo publique).
+// ---------------------------------------------------------------------------------------------
+
+/** Fila de «Mis despachos»: solo los despachos de la empresa del usuario CLIENTE. */
+export interface DespachoPortal {
+  id: number
+  numero: string
+  numeroBl: string | null
+  fechaEta: string | null
+  estado: EstadoDespacho
+  /** VERDE, NARANJA o ROJO; nulo mientras no se asigna. */
+  canalControl: string | null
+  /** Fecha y hora del último cambio del despacho (último hito). */
+  actualizadoEn: string
+}
+
+/** Documento del despacho que el cliente puede descargar (solo la versión vigente). */
+export interface DocumentoPortal {
+  id: number
+  /** Nombre legible del tipo: «Factura comercial», «Bill of Lading»… */
+  tipo: string
+  nombreArchivo: string
+  tamanoBytes: number | null
+  cargadoEn: string
+}
+
+/** Detalle de un despacho del portal, con su línea de tiempo y sus documentos. */
+export interface DetalleDespachoPortal extends DespachoPortal {
+  aduana: string | null
+  hitos: Hito[]
+  documentos: DocumentoPortal[]
+}
+
+/** Usuario con rol CLIENTE y la empresa que tiene asignada (nula = «Sin asignar»). */
+export interface UsuarioCliente {
+  id: number
+  usuario: string
+  nombre: string
+  empresa: EmpresaCliente | null
+}
+
+/** Intento de un usuario CLIENTE de ver algo que no es de su empresa (lo registra el backend). */
+export interface AccesoDenegado {
+  id: number
+  fecha: string
+  usuario: string
+  /** Razón social de la empresa del usuario; nula si no tenía empresa asignada. */
+  empresa: string | null
+  /** Ruta solicitada, p. ej. «/api/v1/portal-cliente/despachos/12». */
+  recurso: string
+  motivo: string
 }
