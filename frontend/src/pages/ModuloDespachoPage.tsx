@@ -2,6 +2,7 @@ import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined'
+import ManageSearchOutlinedIcon from '@mui/icons-material/ManageSearchOutlined'
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import TrafficOutlinedIcon from '@mui/icons-material/TrafficOutlined'
@@ -9,7 +10,6 @@ import WarehouseOutlinedIcon from '@mui/icons-material/WarehouseOutlined'
 import {
   Alert,
   Box,
-  Chip,
   Paper,
   Stack,
   Table,
@@ -35,11 +35,18 @@ import type { DespachoTablero, EstadoDespacho } from '../types'
 import { alcanzoEstado } from '../utils/estados'
 import type { Pestana } from './DespachoDetallePage'
 
-export type Modulo = 'documentos' | 'clasificacion' | 'tributos' | 'dam' | 'canal' | 'citas' | 'levante'
+export type Modulo =
+  | 'documentos'
+  | 'clasificacion'
+  | 'tributos'
+  | 'dam'
+  | 'canal'
+  | 'citas'
+  | 'inspeccion'
+  | 'levante'
 
 interface ConfigModulo {
   titulo: string
-  hu: string
   descripcion: string
   icono: ReactNode
   acento: string
@@ -53,7 +60,6 @@ interface ConfigModulo {
 const MODULOS: Record<Modulo, ConfigModulo> = {
   documentos: {
     titulo: 'Documentos del despacho',
-    hu: 'HU-06',
     descripcion: 'Carga y versiones de la factura, el BL, la lista de empaque y la póliza de seguro.',
     icono: <DescriptionOutlinedIcon />,
     acento: '#1a6fdc',
@@ -63,7 +69,6 @@ const MODULOS: Record<Modulo, ConfigModulo> = {
   },
   clasificacion: {
     titulo: 'Clasificación arancelaria',
-    hu: 'HU-07',
     descripcion: 'Asignación de la partida arancelaria a cada ítem de la factura comercial.',
     icono: <CategoryOutlinedIcon />,
     acento: '#7c3aed',
@@ -73,7 +78,6 @@ const MODULOS: Record<Modulo, ConfigModulo> = {
   },
   tributos: {
     titulo: 'Tributos y liquidación',
-    hu: 'HU-08',
     descripcion: 'Cálculo referencial de CIF, Ad Valorem, IGV, IPM y percepción, y registro del pago.',
     icono: <PaymentsOutlinedIcon />,
     acento: '#d97706',
@@ -83,7 +87,6 @@ const MODULOS: Record<Modulo, ConfigModulo> = {
   },
   dam: {
     titulo: 'Numeración de la DAM',
-    hu: 'HU-09',
     descripcion: 'Registro del N° de DAM, su fecha de numeración y el cargo en PDF.',
     icono: <ReceiptLongOutlinedIcon />,
     acento: '#0891b2',
@@ -93,7 +96,6 @@ const MODULOS: Record<Modulo, ConfigModulo> = {
   },
   canal: {
     titulo: 'Canal de control',
-    hu: 'HU-10',
     descripcion: 'Registro del canal asignado (verde, naranja o rojo) y seguimiento en la línea de tiempo.',
     icono: <TrafficOutlinedIcon />,
     acento: COLORES.verde,
@@ -103,7 +105,6 @@ const MODULOS: Record<Modulo, ConfigModulo> = {
   },
   citas: {
     titulo: 'Citas en depósito',
-    hu: 'HU-11',
     descripcion: 'Citas de inspección y de retiro coordinadas con el depósito temporal o almacén.',
     icono: <WarehouseOutlinedIcon />,
     acento: '#0f766e',
@@ -111,9 +112,18 @@ const MODULOS: Record<Modulo, ConfigModulo> = {
     requiere: 'CANAL_ASIGNADO',
     completa: 'RETIRO_PROGRAMADO',
   },
+  inspeccion: {
+    titulo: 'Inspecciones',
+    descripcion: 'Resultado del reconocimiento físico o documentario: conforme o con observaciones.',
+    icono: <ManageSearchOutlinedIcon />,
+    acento: '#c2410c',
+    pestana: 'inspeccion',
+    // «En espera» mientras no tenga cita de inspección; «Por gestionar» con la cita programada.
+    requiere: 'INSPECCION_PROGRAMADA',
+    completa: 'INSPECCION_CONFORME',
+  },
   levante: {
     titulo: 'Levante de la mercancía',
-    hu: 'HU-13',
     descripcion: 'Registro del levante obtenido en SUNAT con su número, fecha y constancia en PDF.',
     icono: <FactCheckOutlinedIcon />,
     acento: '#16a34a',
@@ -138,10 +148,10 @@ function situacionDe(d: DespachoTablero, config: ConfigModulo): Situacion {
   return 'espera'
 }
 
-/** Sprints 2 y 3 (HU-06 a HU-11 y HU-13): lista los despachos según su avance en el módulo y abre la pestaña que corresponde. */
+/** Sprints 2 y 3 (HU-06 a HU-13): lista los despachos según su avance en el módulo y abre la pestaña que corresponde. */
 export function ModuloDespachoPage({ modulo }: { modulo: Modulo }) {
   const config = MODULOS[modulo]
-  useEncabezado(`Operación aduanera / ${config.hu}`, config.titulo)
+  useEncabezado('Operación aduanera', config.titulo)
   const navegar = useNavigate()
   const ruta = useLocation().pathname
   const [despachos, setDespachos] = useState<DespachoTablero[] | null>(null)
@@ -207,12 +217,9 @@ export function ModuloDespachoPage({ modulo }: { modulo: Modulo }) {
             {config.icono}
           </Box>
           <Box sx={{ minWidth: 0 }}>
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-              <Typography component="h2" sx={{ fontSize: 20, fontWeight: 700 }}>
-                {config.titulo}
-              </Typography>
-              <Chip label={config.hu} size="small" sx={{ bgcolor: `${config.acento}1f`, color: config.acento }} />
-            </Stack>
+            <Typography component="h2" sx={{ fontSize: 20, fontWeight: 700 }}>
+              {config.titulo}
+            </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               {config.descripcion}
             </Typography>

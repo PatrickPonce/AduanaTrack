@@ -74,7 +74,11 @@ const TARJETAS: { clave: keyof Indicadores; titulo: string; color: string; acent
   },
 ]
 
-/** Etapas del Sprint 2 y el módulo del menú donde se trabaja cada una. */
+/**
+ * Etapas del despacho en el orden de utils/estados.ts y el módulo del menú donde se trabaja el
+ * paso siguiente: con el canal asignado toca la cita de inspección (naranja/rojo) o el levante
+ * (verde); con la inspección conforme, el levante; con el levante, la cita de retiro.
+ */
 const ETAPAS: { estado: EstadoDespacho; a: string }[] = [
   { estado: 'APERTURA', a: '/documentos' },
   { estado: 'DOCUMENTACION_COMPLETA', a: '/clasificacion' },
@@ -82,7 +86,11 @@ const ETAPAS: { estado: EstadoDespacho; a: string }[] = [
   { estado: 'LIQUIDADO', a: '/tributos' },
   { estado: 'TRIBUTOS_PAGADOS', a: '/dam' },
   { estado: 'DAM_NUMERADA', a: '/canal-control' },
-  { estado: 'CANAL_ASIGNADO', a: '/canal-control' },
+  { estado: 'CANAL_ASIGNADO', a: '/citas' },
+  { estado: 'INSPECCION_PROGRAMADA', a: '/inspecciones' },
+  { estado: 'INSPECCION_CONFORME', a: '/levante' },
+  { estado: 'LEVANTE_OTORGADO', a: '/citas' },
+  { estado: 'RETIRO_PROGRAMADO', a: '/citas' },
 ]
 
 const COLUMNAS = 7
@@ -229,7 +237,7 @@ export function DashboardPage() {
           Seguimiento aduanero de importaciones marítimas
         </Typography>
         <Typography sx={{ position: 'relative', fontSize: 13.5, opacity: 0.8, mt: 0.5 }}>
-          Del registro del despacho a la asignación del canal de control, en un solo lugar.
+          Del registro del despacho al retiro de la mercancía, en un solo lugar.
         </Typography>
       </Box>
 
@@ -294,44 +302,64 @@ export function DashboardPage() {
       </Box>
 
       <Paper sx={{ p: { xs: 2, md: 2.5 }, animation: `${fadeInUp} .45s ease` }}>
-        <TituloSeccion>Flujo del despacho · Sprint 2</TituloSeccion>
+        <TituloSeccion>Flujo del despacho</TituloSeccion>
+        {/* 11 etapas: las columnas se reparten solas según el ancho (2 en un móvil) y nunca se desbordan. */}
         <Box
+          component="ol"
+          aria-label="Etapas del despacho"
           sx={{
             display: 'grid',
             gap: 1.25,
-            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)', lg: 'repeat(7, 1fr)' },
+            m: 0,
+            p: 0,
+            listStyle: 'none',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 118px), 1fr))',
           }}
         >
           {ETAPAS.map((e, i) => {
             const cantidad = despachos?.filter((d) => d.estado === e.estado).length
             return (
-              <ButtonBase
-                key={e.estado}
-                onClick={() => navegar(e.a)}
-                sx={{
-                  display: 'block',
-                  textAlign: 'left',
-                  p: 1.5,
-                  borderRadius: 2,
-                  border: 1,
-                  borderColor: 'divider',
-                  bgcolor: cantidad ? '#f5f9ff' : '#fff',
-                  transition: 'transform .18s ease, box-shadow .18s ease, border-color .18s ease',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    borderColor: COLORES.azul,
-                    boxShadow: '0 8px 18px rgba(26,111,220,0.12)',
-                  },
-                }}
-              >
-                <Typography sx={{ fontSize: 11, color: 'text.secondary', fontWeight: 600 }}>Paso {i + 1}</Typography>
-                <Typography sx={{ fontSize: 22, fontWeight: 800, lineHeight: 1.2, color: COLORES.azul }}>
-                  {despachos ? cantidad : '—'}
-                </Typography>
-                <Typography sx={{ fontSize: 12.5, fontWeight: 600, lineHeight: 1.25 }}>
-                  {textoEstado(e.estado)}
-                </Typography>
-              </ButtonBase>
+              <Box component="li" key={e.estado} sx={{ minWidth: 0, display: 'flex' }}>
+                <ButtonBase
+                  onClick={() => navegar(e.a)}
+                  aria-label={`Paso ${i + 1}, ${textoEstado(e.estado)}: ${despachos ? cantidad : 'cargando'}`}
+                  sx={{
+                    display: 'block',
+                    width: '100%',
+                    minWidth: 0,
+                    textAlign: 'left',
+                    p: 1.5,
+                    borderRadius: 2,
+                    border: 1,
+                    borderColor: 'divider',
+                    bgcolor: cantidad ? '#f5f9ff' : '#fff',
+                    transition: 'transform .18s ease, box-shadow .18s ease, border-color .18s ease',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      borderColor: COLORES.azul,
+                      boxShadow: '0 8px 18px rgba(26,111,220,0.12)',
+                    },
+                    '&.Mui-focusVisible': { outline: 2, outlineColor: 'primary.main', outlineOffset: 2 },
+                  }}
+                >
+                  {/* span y no p: un botón solo admite contenido en línea. */}
+                  <Typography component="span" sx={{ display: 'block', fontSize: 11, color: 'text.secondary', fontWeight: 600 }}>
+                    Paso {i + 1}
+                  </Typography>
+                  <Typography
+                    component="span"
+                    sx={{ display: 'block', fontSize: 22, fontWeight: 800, lineHeight: 1.2, color: COLORES.azul }}
+                  >
+                    {despachos ? cantidad : '—'}
+                  </Typography>
+                  <Typography
+                    component="span"
+                    sx={{ display: 'block', fontSize: 12.5, fontWeight: 600, lineHeight: 1.25, overflowWrap: 'anywhere' }}
+                  >
+                    {textoEstado(e.estado)}
+                  </Typography>
+                </ButtonBase>
+              </Box>
             )
           })}
         </Box>
