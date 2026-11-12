@@ -1,62 +1,101 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AxiosError, AxiosHeaders } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as authApi from '../api/auth'
+import * as despachosApi from '../api/despachos'
+import * as documentosApi from '../api/documentos'
+import * as hitosApi from '../api/hitos'
 import * as portalApi from '../api/portalCliente'
 import { renderEnRuta } from '../test/utils'
-import type { DespachoPortal, DetalleDespachoPortal, UsuarioSesion } from '../types'
+import type { Despacho, DespachoPortal, DocumentosDespacho, MiEmpresa } from '../types'
 import { MisDespachosPage } from './MisDespachosPage'
 
 vi.mock('../api/auth')
+vi.mock('../api/despachos')
+vi.mock('../api/hitos')
+vi.mock('../api/documentos', async (original) => ({
+  ...(await original<typeof import('../api/documentos')>()),
+  listarDocumentos: vi.fn(),
+}))
 vi.mock('../api/portalCliente', async (original) => ({
   ...(await original<typeof import('../api/portalCliente')>()),
+  obtenerMiEmpresa: vi.fn(),
   listarMisDespachos: vi.fn(),
-  obtenerMiDespacho: vi.fn(),
 }))
 
 const RUTA = '/portal-cliente/mis-despachos'
 
-const CLIENTE: UsuarioSesion = {
-  usuario: 'rquispe',
-  nombre: 'Rosa Quispe',
-  rol: 'CLIENTE',
-  empresa: { id: 1, ruc: '20100047218', razonSocial: 'Importadora Andina SAC' },
-}
+/** Ejemplos con la forma del contrato C11. */
+const ANDINA: MiEmpresa = { clienteId: 1, ruc: '20512345671', razonSocial: 'Importadora Andina S.A.C.' }
 
-function despacho(id: number, cambios: Partial<DespachoPortal> = {}): DespachoPortal {
-  return {
-    id,
-    numero: `DESP-2026-000${id}`,
-    numeroBl: `HBL-00${id}`,
-    fechaEta: '2026-11-10',
-    estado: 'CANAL_ASIGNADO',
-    canalControl: 'VERDE',
-    actualizadoEn: '2026-11-08T10:30:00',
-    ...cambios,
-  }
-}
+const DESPACHOS: DespachoPortal[] = [
+  {
+    id: 318,
+    numero: 'DESP-2026-0318',
+    numeroBl: 'MSCU-BL-55120',
+    fechaEta: '2026-10-21',
+    estado: 'INSPECCION_PROGRAMADA',
+    canalControl: 'NARANJA',
+    ultimaActualizacion: '2026-11-05T18:40:00',
+  },
+  {
+    id: 355,
+    numero: 'DESP-2026-0355',
+    numeroBl: null,
+    fechaEta: null,
+    estado: 'DOCUMENTACION_COMPLETA',
+    canalControl: null,
+    ultimaActualizacion: '2026-11-04T09:12:00',
+  },
+]
 
-const DETALLE: DetalleDespachoPortal = {
-  ...despacho(2, { estado: 'LEVANTE_OTORGADO' }),
-  aduana: 'Marítima del Callao',
-  hitos: [
-    { tipo: 'APERTURA', descripcion: 'Apertura del despacho', sugerido: false, usuario: 'Agente Demo', fecha: '2026-11-01T09:00:00' },
-    { tipo: 'LEVANTE_OTORGADO', descripcion: 'Levante otorgado', sugerido: false, usuario: 'Agente Demo', fecha: '2026-11-08T10:30:00' },
-  ],
+const DESPACHO_318 = {
+  id: 318,
+  numero: 'DESP-2026-0318',
+  estado: 'INSPECCION_PROGRAMADA',
+  canalControl: 'NARANJA',
+  aduana: { id: 1, codigo: '118', descripcion: 'Marítima del Callao' },
+} as Despacho
+
+const DOCUMENTOS: DocumentosDespacho = {
+  estadoGeneral: 'PENDIENTE',
   documentos: [
-    { id: 31, tipo: 'Factura comercial', nombreArchivo: 'factura.pdf', tamanoBytes: 204800, cargadoEn: '2026-11-02T11:00:00' },
+    {
+      tipo: 'FACTURA',
+      nombre: 'Factura comercial',
+      obligatorio: true,
+      estado: 'CARGADO',
+      version: 1,
+      documentoId: 31,
+      archivo: 'factura.pdf',
+      tamanoBytes: 204800,
+      cargadoPor: 'Agente Demo',
+      cargadoEn: '2026-11-02T11:00:00',
+    },
+    {
+      tipo: 'POLIZA',
+      nombre: 'Póliza de seguro',
+      obligatorio: false,
+      estado: 'PENDIENTE',
+      version: null,
+      documentoId: null,
+      archivo: null,
+      tamanoBytes: null,
+      cargadoPor: null,
+      cargadoEn: null,
+    },
   ],
 }
 
-function errorHttp(status: number) {
+function errorHttp(status: number, data: Record<string, unknown> = { codigo: 'NO_ENCONTRADO', mensaje: 'Despacho no encontrado' }) {
   return new AxiosError('error', String(status), undefined, undefined, {
     status,
     statusText: '',
     headers: {},
     config: { headers: new AxiosHeaders() },
-    data: { codigo: 'NO_ENCONTRADO', mensaje: 'No encontrado' },
+    data,
   })
 }
 
@@ -66,143 +105,142 @@ const numeros = () =>
     .slice(1)
     .map((f) => within(f).queryAllByRole('cell')[0]?.textContent)
 
-describe('MisDespachosPage (HU-16 · Portal del cliente)', () => {
+describe('MisDespachosPage (HU-16 · contrato C11)', () => {
   beforeEach(() => {
-    vi.mocked(authApi.sesionActual).mockResolvedValue(CLIENTE)
-    vi.mocked(portalApi.listarMisDespachos).mockResolvedValue([
-      despacho(1, { estado: 'INSPECCION_PROGRAMADA', canalControl: 'ROJO', fechaEta: '2026-10-20' }),
-      despacho(2, { estado: 'LEVANTE_OTORGADO', fechaEta: '2026-11-05' }),
-      despacho(3, { estado: 'APERTURA', canalControl: null, numeroBl: null, fechaEta: null }),
+    vi.mocked(authApi.sesionActual).mockResolvedValue({ usuario: 'jperez', nombre: 'Jorge Pérez', rol: 'CLIENTE' })
+    vi.mocked(portalApi.obtenerMiEmpresa).mockResolvedValue(ANDINA)
+    vi.mocked(portalApi.listarMisDespachos).mockResolvedValue(DESPACHOS)
+    vi.mocked(despachosApi.obtenerDespacho).mockResolvedValue(DESPACHO_318)
+    vi.mocked(hitosApi.listarHitos).mockResolvedValue([
+      { tipo: 'APERTURA', descripcion: 'Apertura del despacho', sugerido: false, usuario: 'Agente Demo', fecha: '2026-10-01T09:00:00' },
+      { tipo: 'INSPECCION_PROGRAMADA', descripcion: 'Inspección programada', sugerido: false, usuario: 'Agente Demo', fecha: '2026-11-05T18:40:00' },
     ])
-    vi.mocked(portalApi.obtenerMiDespacho).mockResolvedValue(DETALLE)
+    vi.mocked(documentosApi.listarDocumentos).mockResolvedValue(DOCUMENTOS)
   })
 
-  it('avisa de qué empresa son los despachos y que la información es de solo lectura', async () => {
+  it('el aviso usa la empresa de GET /portal/mi-empresa', async () => {
     renderEnRuta(<MisDespachosPage />, { ruta: RUTA, patron: RUTA })
 
-    const aviso = await screen.findByText(/Solo se muestran los despachos de/)
-    expect(aviso).toHaveTextContent(
-      'Solo se muestran los despachos de Importadora Andina SAC (RUC 20100047218). La información es de solo lectura.',
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Solo se muestran los despachos de Importadora Andina S.A.C. (RUC 20512345671). La información es de solo lectura.',
     )
   })
 
-  it('lista los despachos con N° despacho, BL, ETA, estado, canal, última actualización y Ver detalle', async () => {
+  it('sin empresa asignada (clienteId nulo) lo indica y no pide despachos', async () => {
+    vi.mocked(portalApi.obtenerMiEmpresa).mockResolvedValue({ clienteId: null, ruc: null, razonSocial: null })
     renderEnRuta(<MisDespachosPage />, { ruta: RUTA, patron: RUTA })
-    await screen.findByText('DESP-2026-0001')
 
-    const tabla = screen.getByRole('table', { name: 'Mis despachos' })
-    expect(within(tabla).getAllByRole('columnheader').map((c) => c.textContent)).toEqual([
-      'N° despacho',
-      'BL',
-      'ETA',
-      'Estado',
-      'Canal',
-      'Última actualización',
-      'Acciones',
-    ])
-    const celdas = within(screen.getByText('DESP-2026-0001').closest('tr')!).getAllByRole('cell')
+    expect(await screen.findByText('Aún no tiene una empresa asignada; contacte al administrador.')).toBeInTheDocument()
+    expect(portalApi.listarMisDespachos).not.toHaveBeenCalled()
+  })
+
+  it('lista los despachos con ultimaActualizacion y las columnas del prototipo', async () => {
+    renderEnRuta(<MisDespachosPage />, { ruta: RUTA, patron: RUTA })
+
+    const celdas = within((await screen.findByText('DESP-2026-0318')).closest('tr')!).getAllByRole('cell')
     expect(celdas.map((c) => c.textContent)).toEqual([
-      'DESP-2026-0001',
-      'HBL-001',
-      '20/10/2026',
+      'DESP-2026-0318',
+      'MSCU-BL-55120',
+      '21/10/2026',
       'Inspección programada',
-      'Rojo',
-      '08/11/2026 10:30',
+      'Naranja',
+      '05/11/2026 18:40',
       'Ver detalle',
     ])
+    expect(portalApi.listarMisDespachos).toHaveBeenCalledWith({ numero: '', estado: undefined, etaDesde: '', etaHasta: '' })
   })
 
-  it('es de solo lectura: no hay botones de crear, editar ni cargar', async () => {
-    renderEnRuta(<MisDespachosPage />, { ruta: RUTA, patron: RUTA })
-    await screen.findByText('DESP-2026-0001')
-
-    const botones = screen.getAllByRole('button').map((b) => b.textContent ?? '')
-    expect(botones.filter((t) => /nuevo|crear|editar|guardar|cargar|subir|eliminar|registrar/i.test(t))).toEqual([])
-    // Tampoco el filtro de «Cliente» ni «Exportar a Excel» del panel del agente.
-    expect(screen.queryByLabelText('Cliente')).not.toBeInTheDocument()
-    expect(screen.queryByText('Exportar a Excel')).not.toBeInTheDocument()
-  })
-
-  it('filtra por N° de despacho y por estado', async () => {
+  it('envía los filtros al servidor: número, estado y rango de ETA', async () => {
     const user = userEvent.setup()
     renderEnRuta(<MisDespachosPage />, { ruta: RUTA, patron: RUTA })
-    await screen.findByText('DESP-2026-0001')
+    await screen.findByText('DESP-2026-0318')
 
-    await user.type(screen.getByLabelText('N° de despacho'), '0002')
-    await user.click(screen.getByRole('button', { name: 'Buscar' }))
-    expect(numeros()).toEqual(['DESP-2026-0002'])
-
-    await user.click(screen.getByRole('button', { name: 'Limpiar' }))
+    await user.type(screen.getByLabelText('N° de despacho'), '0318')
     await user.click(screen.getByRole('combobox', { name: 'Estado' }))
-    await user.click(await screen.findByRole('option', { name: 'Apertura' }))
+    await user.click(await screen.findByRole('option', { name: 'Inspección programada' }))
+    fireEvent.change(screen.getByLabelText('ETA desde'), { target: { value: '2026-10-01' } })
+    fireEvent.change(screen.getByLabelText('ETA hasta'), { target: { value: '2026-10-31' } })
+    vi.mocked(portalApi.listarMisDespachos).mockResolvedValue([DESPACHOS[0]!])
     await user.click(screen.getByRole('button', { name: 'Buscar' }))
-    expect(numeros()).toEqual(['DESP-2026-0003'])
+
+    await waitFor(() =>
+      expect(portalApi.listarMisDespachos).toHaveBeenLastCalledWith({
+        numero: '0318',
+        estado: 'INSPECCION_PROGRAMADA',
+        etaDesde: '2026-10-01',
+        etaHasta: '2026-10-31',
+      }),
+    )
+    expect(numeros()).toEqual(['DESP-2026-0318'])
   })
 
-  it('filtra por rango de ETA y avisa si el rango está invertido', async () => {
+  it('buscar por número sin resultados muestra «Despacho no encontrado»', async () => {
     const user = userEvent.setup()
     renderEnRuta(<MisDespachosPage />, { ruta: RUTA, patron: RUTA })
-    await screen.findByText('DESP-2026-0001')
+    await screen.findByText('DESP-2026-0318')
 
-    await user.type(screen.getByLabelText('ETA desde'), '2026-11-01')
-    await user.type(screen.getByLabelText('ETA hasta'), '2026-11-30')
+    vi.mocked(portalApi.listarMisDespachos).mockResolvedValue([])
+    await user.type(screen.getByLabelText('N° de despacho'), 'DESP-2026-0342')
     await user.click(screen.getByRole('button', { name: 'Buscar' }))
-    expect(numeros()).toEqual(['DESP-2026-0002'])
 
-    await user.clear(screen.getByLabelText('ETA hasta'))
-    await user.type(screen.getByLabelText('ETA hasta'), '2026-10-01')
-    await user.click(screen.getByRole('button', { name: 'Buscar' }))
-    expect(screen.getByText('La fecha «ETA desde» no puede ser posterior a «ETA hasta».')).toBeInTheDocument()
+    expect(await screen.findByText('Despacho no encontrado')).toBeInTheDocument()
   })
 
-  it('«Ver detalle» muestra debajo la línea de tiempo y los documentos descargables', async () => {
+  it('muestra junto a cada filtro los campos del 400', async () => {
+    const user = userEvent.setup()
+    renderEnRuta(<MisDespachosPage />, { ruta: RUTA, patron: RUTA })
+    await screen.findByText('DESP-2026-0318')
+
+    vi.mocked(portalApi.listarMisDespachos).mockRejectedValue(
+      errorHttp(400, {
+        codigo: 'VALIDACION',
+        mensaje: 'Revise los campos marcados.',
+        campos: { etaHasta: 'La fecha final no puede ser anterior a la inicial', estado: 'Estado no válido' },
+      }),
+    )
+    await user.click(screen.getByRole('button', { name: 'Buscar' }))
+
+    expect(await screen.findByText('La fecha final no puede ser anterior a la inicial')).toBeInTheDocument()
+    expect(screen.getByText('Estado no válido')).toBeInTheDocument()
+    expect(screen.getByLabelText('ETA hasta')).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  it('«Ver detalle» arma el detalle con /despachos/{id}, /hitos y /documentos', async () => {
     const user = userEvent.setup()
     renderEnRuta(<MisDespachosPage />, { ruta: RUTA, patron: RUTA })
 
-    await user.click(await screen.findByRole('button', { name: 'Ver detalle del despacho DESP-2026-0002' }))
+    await user.click(await screen.findByRole('button', { name: 'Ver detalle del despacho DESP-2026-0318' }))
 
-    const titulo = await screen.findByRole('heading', { name: 'Despacho DESP-2026-0002' })
-    expect(titulo).toHaveFocus()
-    expect(portalApi.obtenerMiDespacho).toHaveBeenCalledWith(2)
-    expect(screen.getByTestId('ubicacion')).toHaveTextContent(`${RUTA}?despacho=2`)
+    expect(await screen.findByRole('heading', { name: 'Despacho DESP-2026-0318' })).toHaveFocus()
+    expect(despachosApi.obtenerDespacho).toHaveBeenCalledWith(318)
+    expect(hitosApi.listarHitos).toHaveBeenCalledWith(318)
+    expect(documentosApi.listarDocumentos).toHaveBeenCalledWith(318)
+    expect(screen.getByText('Marítima del Callao')).toBeInTheDocument()
 
     const hitos = within(screen.getByRole('list', { name: 'Línea de tiempo del despacho' })).getAllByRole('listitem')
-    expect(hitos.map((h) => h.textContent)).toEqual([
-      'Apertura del despacho 01/11/2026 09:00 · Agente Demo',
-      'Levante otorgado 08/11/2026 10:30 · Agente Demo',
-    ])
+    expect(hitos).toHaveLength(2)
     const descarga = screen.getByRole('link', { name: 'Descargar Factura comercial' })
-    expect(descarga).toHaveAttribute('href', '/api/v1/portal-cliente/despachos/2/documentos/31/archivo')
-    expect(descarga).toHaveAttribute('download')
+    expect(descarga).toHaveAttribute('href', '/api/v1/despachos/318/documentos/31/archivo')
+    // Un documento pendiente no tiene botón: solo la etiqueta.
+    expect(screen.queryByRole('link', { name: 'Descargar Póliza de seguro' })).not.toBeInTheDocument()
+    expect(screen.getByText('Pendiente')).toBeInTheDocument()
   })
 
-  it('«Despacho no encontrado» si el despacho no es de su empresa (404 del backend)', async () => {
-    vi.mocked(portalApi.obtenerMiDespacho).mockRejectedValue(errorHttp(404))
-    renderEnRuta(<MisDespachosPage />, { ruta: `${RUTA}?despacho=99`, patron: RUTA })
+  it('un despacho de otra empresa (404) muestra «Despacho no encontrado»', async () => {
+    vi.mocked(despachosApi.obtenerDespacho).mockRejectedValue(errorHttp(404))
+    renderEnRuta(<MisDespachosPage />, { ruta: `${RUTA}?despacho=342`, patron: RUTA })
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Despacho no encontrado')
     expect(screen.queryByRole('heading', { name: /Despacho DESP/ })).not.toBeInTheDocument()
   })
 
-  it('«Despacho no encontrado» también con un id que no es número, sin llamar al servidor', async () => {
-    renderEnRuta(<MisDespachosPage />, { ruta: `${RUTA}?despacho=abc`, patron: RUTA })
-
-    expect(await screen.findByRole('alert')).toHaveTextContent('Despacho no encontrado')
-    expect(portalApi.obtenerMiDespacho).not.toHaveBeenCalled()
-  })
-
-  it('sin empresa asignada lo explica y no consulta despachos', async () => {
-    vi.mocked(authApi.sesionActual).mockResolvedValue({ ...CLIENTE, empresa: null })
+  it('es de solo lectura: no hay botones de crear, editar ni cargar', async () => {
+    const user = userEvent.setup()
     renderEnRuta(<MisDespachosPage />, { ruta: RUTA, patron: RUTA })
+    await user.click(await screen.findByRole('button', { name: 'Ver detalle del despacho DESP-2026-0318' }))
+    await screen.findByRole('heading', { name: 'Despacho DESP-2026-0318' })
 
-    expect(await screen.findByText(/todavía no tiene una empresa asignada/)).toBeInTheDocument()
-    await waitFor(() => expect(portalApi.listarMisDespachos).not.toHaveBeenCalled())
-  })
-
-  it('si el servidor falla muestra el error', async () => {
-    vi.mocked(portalApi.listarMisDespachos).mockRejectedValue(new Error('red'))
-    renderEnRuta(<MisDespachosPage />, { ruta: RUTA, patron: RUTA })
-
-    expect(await screen.findByText('No se pudo conectar con el servidor.')).toBeInTheDocument()
+    const textos = [...screen.getAllByRole('button'), ...screen.getAllByRole('link')].map((b) => b.textContent ?? '')
+    expect(textos.filter((t) => /\b(nuevo|crear|editar|guardar|cargar|subir|eliminar|registrar)\b/i.test(t))).toEqual([])
   })
 })

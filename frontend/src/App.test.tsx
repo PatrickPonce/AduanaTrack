@@ -15,14 +15,17 @@ import type { UsuarioSesion } from './types'
 vi.mock('./api/auth')
 vi.mock('./api/catalogos')
 vi.mock('./api/dashboard')
-vi.mock('./api/portalCliente')
+vi.mock('./api/portalCliente', async (original) => ({
+  ...(await original<typeof import('./api/portalCliente')>()),
+  obtenerMiEmpresa: vi.fn(),
+  listarMisDespachos: vi.fn(),
+}))
 vi.mock('./api/usuariosCliente')
 
 const CLIENTE: UsuarioSesion = {
   usuario: 'rquispe',
   nombre: 'Rosa Quispe',
   rol: 'CLIENTE',
-  empresa: { id: 1, ruc: '20100047218', razonSocial: 'Importadora Andina SAC' },
 }
 
 function abrir(ruta: string) {
@@ -40,8 +43,20 @@ function abrir(ruta: string) {
 describe('App · rutas por rol (HU-16)', () => {
   beforeEach(() => {
     vi.mocked(portalApi.listarMisDespachos).mockResolvedValue([])
+    vi.mocked(portalApi.obtenerMiEmpresa).mockResolvedValue({
+      clienteId: 1,
+      ruc: '20512345671',
+      razonSocial: 'Importadora Andina S.A.C.',
+    })
     vi.mocked(usuariosApi.listarUsuariosCliente).mockResolvedValue([])
-    vi.mocked(usuariosApi.listarAccesosDenegados).mockResolvedValue([])
+    vi.mocked(usuariosApi.listarAccesosDenegados).mockResolvedValue({
+      contenido: [],
+      pagina: 0,
+      tamano: 20,
+      totalElementos: 0,
+      totalPaginas: 0,
+    })
+    vi.mocked(usuariosApi.listarEmpresasAsignables).mockResolvedValue([])
     vi.mocked(catalogosApi.listarAduanas).mockResolvedValue([])
     vi.mocked(dashboardApi.listarDespachosTablero).mockResolvedValue([])
     vi.mocked(dashboardApi.obtenerIndicadores).mockResolvedValue({

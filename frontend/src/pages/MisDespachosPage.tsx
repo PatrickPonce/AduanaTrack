@@ -17,18 +17,21 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router'
 
+import { obtenerDespacho } from '../api/despachos'
+import { listarDocumentos, urlArchivoDocumento } from '../api/documentos'
+import { listarHitos } from '../api/hitos'
 import { leerError, mensajeDeError } from '../api/http'
-import { listarMisDespachos, obtenerMiDespacho, urlDocumentoPortal } from '../api/portalCliente'
-import { useAuth } from '../auth/AuthContext'
+import { listarMisDespachos } from '../api/portalCliente'
+import { useMiEmpresa } from '../auth/useMiEmpresa'
 import { useEncabezado } from '../components/Encabezado'
 import { EstadoDespachoChip, textoEstado } from '../components/EstadoDespachoChip'
 import { CanalChip, EtiquetaColor } from '../components/EtiquetaColor'
 import { TituloSeccion } from '../components/Seccion'
 import { COLORES, fadeInUp } from '../theme'
-import type { DespachoPortal, DetalleDespachoPortal, EstadoDespacho } from '../types'
+import type { Despacho, DespachoPortal, DocumentoRequerido, EstadoDespacho, FiltrosPortal, Hito } from '../types'
 import { ESTADOS_VISIBLES } from '../utils/estados'
 import { formatoFecha, formatoFechaHora, formatoTamano } from '../utils/formato'
 
@@ -41,68 +44,61 @@ interface Filtros {
 
 const SIN_FILTROS: Filtros = { numero: '', estado: '', etaDesde: '', etaHasta: '' }
 const COLUMNAS = 7
-
-/** Filtra en pantalla: el backend ya entrega solo los despachos de la empresa del usuario. */
-function filtrar(despachos: DespachoPortal[], f: Filtros): DespachoPortal[] {
-  const numero = f.numero.trim().toLowerCase()
-  return despachos.filter(
-    (d) =>
-      (!numero || d.numero.toLowerCase().includes(numero)) &&
-      (!f.estado || d.estado === f.estado) &&
-      (!f.etaDesde || (d.fechaEta !== null && d.fechaEta.slice(0, 10) >= f.etaDesde)) &&
-      (!f.etaHasta || (d.fechaEta !== null && d.fechaEta.slice(0, 10) <= f.etaHasta)),
-  )
-}
+const NO_ENCONTRADO = 'Despacho no encontrado'
 
 /**
- * HU-16 · Portal del cliente: «Mis despachos». El usuario CLIENTE consulta, en solo lectura, los
- * despachos de su empresa con su línea de tiempo y sus documentos. No hay botones de crear,
- * editar ni cargar. Quien decide qué despachos son suyos es el backend (contrato C11).
+ * HU-16 · Portal del cliente: «Mis despachos» (contrato C11). El usuario CLIENTE consulta, en solo lectura,
+ * los despachos de su empresa con su línea de tiempo y sus documentos. No hay botones de crear, editar ni
+ * cargar. El backend filtra por la empresa de la sesión; los filtros de la tabla se envían al servidor.
  */
 export function MisDespachosPage() {
   useEncabezado('Portal del cliente', 'Mis despachos')
-  const { usuario, cargando: cargandoSesion } = useAuth()
-  const empresa = usuario?.empresa ?? null
+  const { empresa, cargando: cargandoEmpresa, error: errorEmpresa } = useMiEmpresa(true)
+  const conEmpresa = empresa?.clienteId != null
   const [params, setParams] = useSearchParams()
   const seleccionado = params.get('despacho')
 
   const [despachos, setDespachos] = useState<DespachoPortal[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [errores, setErrores] = useState<Record<string, string>>({})
   const [borrador, setBorrador] = useState<Filtros>(SIN_FILTROS)
-  const [filtros, setFiltros] = useState<Filtros>(SIN_FILTROS)
-  const [errorRango, setErrorRango] = useState<string | null>(null)
+  const [buscadoPorNumero, setBuscadoPorNumero] = useState(false)
+
+  const consultar = useCallback(async (f: Filtros) => {
+    setDespachos(null)
+    setError(null)
+    setErrores({})
+    const filtros: FiltrosPortal = {
+      numero: f.numero,
+      estado: f.estado || undefined,
+      etaDesde: f.etaDesde,
+      etaHasta: f.etaHasta,
+    }
+    try {
+      setDespachos(await listarMisDespachos(filtros))
+      setBuscadoPorNumero(Boolean(f.numero.trim()))
+    } catch (e) {
+      setDespachos([])
+      setBuscadoPorNumero(false)
+      const { status, body } = leerError(e)
+      // 400 del C11: { estado, etaDesde, etaHasta } se muestran junto a cada filtro.
+      if (status === 400 && body?.campos) setErrores(body.campos)
+      else setError(mensajeDeError(e, 'No se pudo cargar la lista de despachos.'))
+    }
+  }, [])
 
   useEffect(() => {
-    if (!empresa) return
-    let activo = true
-    listarMisDespachos()
-      .then((d) => activo && setDespachos(d))
-      .catch((e) => {
-        if (!activo) return
-        setDespachos([])
-        setError(mensajeDeError(e, 'No se pudo cargar la lista de despachos.'))
-      })
-    return () => {
-      activo = false
-    }
-  }, [empresa])
-
-  const visibles = useMemo(() => filtrar(despachos ?? [], filtros), [despachos, filtros])
+    if (conEmpresa) void consultar(SIN_FILTROS)
+  }, [conEmpresa, consultar])
 
   function buscar(evento: FormEvent) {
     evento.preventDefault()
-    if (borrador.etaDesde && borrador.etaHasta && borrador.etaDesde > borrador.etaHasta) {
-      setErrorRango('La fecha «ETA desde» no puede ser posterior a «ETA hasta».')
-      return
-    }
-    setErrorRango(null)
-    setFiltros(borrador)
+    void consultar(borrador)
   }
 
   function limpiar() {
-    setErrorRango(null)
     setBorrador(SIN_FILTROS)
-    setFiltros(SIN_FILTROS)
+    void consultar(SIN_FILTROS)
   }
 
   function verDetalle(id: number) {
@@ -111,32 +107,38 @@ export function MisDespachosPage() {
     setParams(nuevos)
   }
 
-  if (cargandoSesion) {
+  if (cargandoEmpresa) {
     return (
       <Box sx={{ display: 'grid', placeItems: 'center', py: 6 }}>
-        <CircularProgress aria-label="Cargando sesión" />
+        <CircularProgress aria-label="Cargando datos de su empresa" />
       </Box>
     )
   }
-  if (!empresa) {
-    return (
-      <Alert severity="warning">
-        Tu usuario todavía no tiene una empresa asignada, así que no hay despachos que mostrar. Solicita al
-        administrador de la agencia que te asigne tu empresa.
-      </Alert>
-    )
+  if (errorEmpresa) return <Alert severity="error">{errorEmpresa}</Alert>
+  if (!conEmpresa) {
+    return <Alert severity="warning">Aún no tiene una empresa asignada; contacte al administrador.</Alert>
   }
 
   const campo = (clave: keyof Filtros) => ({
     value: borrador[clave],
-    onChange: (e: { target: { value: string } }) => setBorrador((b) => ({ ...b, [clave]: e.target.value })),
+    onChange: (e: { target: { value: string } }) => {
+      setBorrador((b) => ({ ...b, [clave]: e.target.value }))
+      setErrores((actuales) => {
+        const { [clave]: _quitado, ...resto } = actuales
+        return resto
+      })
+    },
+    error: Boolean(errores[clave]),
+    helperText: errores[clave],
   })
+
+  const fila = despachos?.find((d) => String(d.id) === seleccionado) ?? null
 
   return (
     <Stack spacing={2.5}>
       {/* status y no alert (el de MUI por defecto): es un aviso permanente, no debe interrumpir al lector de pantalla. */}
       <Alert severity="info" role="status" sx={{ animation: `${fadeInUp} .4s ease` }}>
-        Solo se muestran los despachos de <strong>{empresa.razonSocial}</strong> (RUC {empresa.ruc}). La información es
+        Solo se muestran los despachos de <strong>{empresa!.razonSocial}</strong> (RUC {empresa!.ruc}). La información es
         de solo lectura.
       </Alert>
 
@@ -146,6 +148,7 @@ export function MisDespachosPage() {
         <Box
           component="form"
           onSubmit={buscar}
+          noValidate
           aria-label="Filtrar mis despachos"
           sx={{
             display: 'grid',
@@ -155,7 +158,7 @@ export function MisDespachosPage() {
             gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1.2fr 1.2fr 1fr 1fr auto' },
           }}
         >
-          <TextField label="N° de despacho" placeholder="DESP-2026-0001" {...campo('numero')} />
+          <TextField label="N° de despacho" placeholder="DESP-2026-0318" {...campo('numero')} />
           <TextField select label="Estado" {...campo('estado')}>
             <MenuItem value="">Todos</MenuItem>
             {ESTADOS_VISIBLES.map((e) => (
@@ -164,23 +167,10 @@ export function MisDespachosPage() {
               </MenuItem>
             ))}
           </TextField>
-          <TextField
-            type="date"
-            label="ETA desde"
-            {...campo('etaDesde')}
-            error={Boolean(errorRango)}
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
-          <TextField
-            type="date"
-            label="ETA hasta"
-            {...campo('etaHasta')}
-            error={Boolean(errorRango)}
-            helperText={errorRango}
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
+          <TextField type="date" label="ETA desde" {...campo('etaDesde')} slotProps={{ inputLabel: { shrink: true } }} />
+          <TextField type="date" label="ETA hasta" {...campo('etaHasta')} slotProps={{ inputLabel: { shrink: true } }} />
           <Stack direction="row" spacing={1} sx={{ alignSelf: { lg: 'center' } }}>
-            <Button type="submit" variant="contained">
+            <Button type="submit" variant="contained" disabled={despachos === null}>
               Buscar
             </Button>
             <Button onClick={limpiar}>Limpiar</Button>
@@ -190,6 +180,12 @@ export function MisDespachosPage() {
         {error && (
           <Alert severity="error" sx={{ mb: 1.5 }}>
             {error}
+          </Alert>
+        )}
+        {/* C11: búsqueda por número sin resultados → mensaje rojo del prototipo. */}
+        {buscadoPorNumero && despachos?.length === 0 && (
+          <Alert severity="error" sx={{ mb: 1.5 }}>
+            {NO_ENCONTRADO}
           </Alert>
         )}
         <TableContainer>
@@ -210,7 +206,7 @@ export function MisDespachosPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {visibles.map((d) => (
+              {despachos?.map((d) => (
                 <TableRow key={d.id} selected={seleccionado === String(d.id)}>
                   <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 600 }}>{d.numero}</TableCell>
                   <TableCell>{d.numeroBl ?? '—'}</TableCell>
@@ -221,7 +217,7 @@ export function MisDespachosPage() {
                   <TableCell>
                     <CanalChip canal={d.canalControl} />
                   </TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatoFechaHora(d.actualizadoEn)}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatoFechaHora(d.ultimaActualizacion)}</TableCell>
                   <TableCell align="right">
                     <Button
                       size="small"
@@ -234,12 +230,10 @@ export function MisDespachosPage() {
                   </TableCell>
                 </TableRow>
               ))}
-              {despachos !== null && visibles.length === 0 && (
+              {despachos?.length === 0 && !buscadoPorNumero && !error && Object.keys(errores).length === 0 && (
                 <TableRow>
                   <TableCell colSpan={COLUMNAS} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                    {despachos.length === 0
-                      ? 'Tu empresa todavía no tiene despachos registrados.'
-                      : 'No hay despachos que coincidan con los filtros.'}
+                    No hay despachos que coincidan con los filtros.
                   </TableCell>
                 </TableRow>
               )}
@@ -255,7 +249,7 @@ export function MisDespachosPage() {
         </TableContainer>
       </Paper>
 
-      {seleccionado && <DetalleMiDespacho key={seleccionado} idTexto={seleccionado} />}
+      {seleccionado && <DetalleMiDespacho key={seleccionado} idTexto={seleccionado} fila={fila} />}
     </Stack>
   )
 }
@@ -270,27 +264,35 @@ const visualmenteOculto = {
   whiteSpace: 'nowrap',
 } as const
 
-/** Detalle de solo lectura: datos, línea de tiempo y documentos descargables. */
-function DetalleMiDespacho({ idTexto }: { idTexto: string }) {
+interface Detalle {
+  despacho: Despacho
+  hitos: Hito[]
+  documentos: DocumentoRequerido[]
+}
+
+/**
+ * Detalle de solo lectura con las rutas de siempre (GET /despachos/{id}, /hitos y /documentos). El backend
+ * responde 404 «Despacho no encontrado» si el despacho es de otra empresa. BL, ETA y última actualización
+ * salen de la fila de la tabla cuando está a la vista (GET /despachos/{id} no los trae).
+ */
+function DetalleMiDespacho({ idTexto, fila }: { idTexto: string; fila: DespachoPortal | null }) {
   const id = Number(idTexto)
   const valido = Number.isInteger(id) && id > 0
-  const [detalle, setDetalle] = useState<DetalleDespachoPortal | null>(null)
-  const [error, setError] = useState<string | null>(valido ? null : 'Despacho no encontrado')
+  const [detalle, setDetalle] = useState<Detalle | null>(null)
+  const [error, setError] = useState<string | null>(valido ? null : NO_ENCONTRADO)
   const titulo = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
     if (!valido) return
     let activo = true
-    obtenerMiDespacho(id)
-      .then((d) => activo && setDetalle(d))
+    Promise.all([obtenerDespacho(id), listarHitos(id), listarDocumentos(id)])
+      .then(([despacho, hitos, documentos]) => activo && setDetalle({ despacho, hitos, documentos: documentos.documentos }))
       .catch((e) => {
         if (!activo) return
-        // 403 y 404 se muestran igual: no se revela si el despacho existe en otra empresa.
+        // 404 (otra empresa, borrador o inexistente) y 403 se muestran igual: no se revela si existe.
         const { status } = leerError(e)
         setError(
-          status === 404 || status === 403
-            ? 'Despacho no encontrado'
-            : mensajeDeError(e, 'No se pudo cargar el detalle del despacho.'),
+          status === 404 || status === 403 ? NO_ENCONTRADO : mensajeDeError(e, 'No se pudo cargar el detalle del despacho.'),
         )
       })
     return () => {
@@ -307,10 +309,10 @@ function DetalleMiDespacho({ idTexto }: { idTexto: string }) {
 
   if (error) {
     return (
-      <Alert severity={error === 'Despacho no encontrado' ? 'warning' : 'error'} role="alert">
-        {error === 'Despacho no encontrado' ? (
+      <Alert severity={error === NO_ENCONTRADO ? 'warning' : 'error'} role="alert">
+        {error === NO_ENCONTRADO ? (
           <>
-            <strong>Despacho no encontrado.</strong> No existe o no pertenece a tu empresa.
+            <strong>{NO_ENCONTRADO}.</strong> No existe o no pertenece a su empresa.
           </>
         ) : (
           error
@@ -326,8 +328,14 @@ function DetalleMiDespacho({ idTexto }: { idTexto: string }) {
     )
   }
 
+  const { despacho, hitos, documentos } = detalle
+
   return (
-    <Paper sx={{ p: { xs: 2, md: 2.5 }, animation: `${fadeInUp} .35s ease` }} component="section" aria-labelledby="titulo-detalle">
+    <Paper
+      sx={{ p: { xs: 2, md: 2.5 }, animation: `${fadeInUp} .35s ease` }}
+      component="section"
+      aria-labelledby="titulo-detalle"
+    >
       <Stack
         direction="row"
         sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1.25, pb: 1.25, mb: 2, borderBottom: 1, borderColor: 'divider' }}
@@ -339,10 +347,10 @@ function DetalleMiDespacho({ idTexto }: { idTexto: string }) {
           component="h2"
           sx={{ fontSize: 17, fontWeight: 700, outline: 'none' }}
         >
-          Despacho {detalle.numero}
+          Despacho {despacho.numero ?? fila?.numero}
         </Typography>
-        <EstadoDespachoChip estado={detalle.estado} />
-        <CanalChip canal={detalle.canalControl} />
+        <EstadoDespachoChip estado={despacho.estado} />
+        <CanalChip canal={despacho.canalControl} />
       </Stack>
 
       <Box
@@ -359,37 +367,35 @@ function DetalleMiDespacho({ idTexto }: { idTexto: string }) {
       >
         <div>
           <dt>N° de BL</dt>
-          <dd>{detalle.numeroBl ?? '—'}</dd>
+          <dd>{fila?.numeroBl ?? '—'}</dd>
         </div>
         <div>
           <dt>ETA</dt>
-          <dd>{formatoFecha(detalle.fechaEta)}</dd>
+          <dd>{formatoFecha(fila?.fechaEta)}</dd>
         </div>
         <div>
           <dt>Aduana</dt>
-          <dd>{detalle.aduana ?? '—'}</dd>
+          <dd>{despacho.aduana?.descripcion ?? '—'}</dd>
         </div>
         <div>
           <dt>Última actualización</dt>
-          <dd>{formatoFechaHora(detalle.actualizadoEn)}</dd>
+          <dd>{formatoFechaHora(fila?.ultimaActualizacion)}</dd>
         </div>
       </Box>
 
       <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' } }}>
         <Box>
           <TituloSeccion>Línea de tiempo</TituloSeccion>
-          {detalle.hitos.length === 0 ? (
-            <Alert severity="info" role="status">Todavía no hay hitos registrados.</Alert>
+          {hitos.length === 0 ? (
+            <Alert severity="info" role="status">
+              Todavía no hay hitos registrados.
+            </Alert>
           ) : (
             <Box component="ol" aria-label="Línea de tiempo del despacho" sx={{ listStyle: 'none', m: 0, p: 0 }}>
-              {detalle.hitos.map((h, i) => {
-                const ultimo = i === detalle.hitos.length - 1
+              {hitos.map((h, i) => {
+                const ultimo = i === hitos.length - 1
                 return (
-                  <Box
-                    component="li"
-                    key={`${h.fecha}-${i}`}
-                    sx={{ position: 'relative', pl: 3.5, pb: ultimo ? 0 : 2.25 }}
-                  >
+                  <Box component="li" key={`${h.fecha}-${i}`} sx={{ position: 'relative', pl: 3.5, pb: ultimo ? 0 : 2.25 }}>
                     {/* Punto y línea de la línea de tiempo (decorativos). */}
                     <Box
                       aria-hidden
@@ -425,40 +431,41 @@ function DetalleMiDespacho({ idTexto }: { idTexto: string }) {
 
         <Box>
           <TituloSeccion>Documentos</TituloSeccion>
-          {detalle.documentos.length === 0 ? (
-            <Alert severity="info" role="status">Todavía no hay documentos cargados.</Alert>
-          ) : (
-            <Stack component="ul" spacing={1} aria-label="Documentos del despacho" sx={{ listStyle: 'none', m: 0, p: 0 }}>
-              {detalle.documentos.map((doc) => (
-                <Stack
-                  component="li"
-                  key={doc.id}
-                  direction="row"
-                  spacing={1.5}
-                  sx={{ alignItems: 'center', p: 1.25, border: 1, borderColor: 'divider', borderRadius: 2 }}
-                >
-                  <InsertDriveFileOutlinedIcon aria-hidden sx={{ color: COLORES.azul }} />
-                  <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                    <Typography sx={{ fontSize: 13.5, fontWeight: 600 }}>{doc.tipo}</Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', overflowWrap: 'anywhere' }}>
-                      {doc.nombreArchivo}
-                      {doc.tamanoBytes !== null && ` · ${formatoTamano(doc.tamanoBytes)}`} · {formatoFecha(doc.cargadoEn)}
-                    </Typography>
-                  </Box>
+          <Stack component="ul" spacing={1} aria-label="Documentos del despacho" sx={{ listStyle: 'none', m: 0, p: 0 }}>
+            {documentos.map((doc) => (
+              <Stack
+                component="li"
+                key={doc.tipo}
+                direction="row"
+                spacing={1.5}
+                sx={{ alignItems: 'center', p: 1.25, border: 1, borderColor: 'divider', borderRadius: 2 }}
+              >
+                <InsertDriveFileOutlinedIcon aria-hidden sx={{ color: doc.documentoId ? COLORES.azul : 'text.disabled' }} />
+                <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                  <Typography sx={{ fontSize: 13.5, fontWeight: 600 }}>{doc.nombre}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', overflowWrap: 'anywhere' }}>
+                    {doc.documentoId
+                      ? `${doc.archivo ?? ''}${doc.tamanoBytes !== null ? ` · ${formatoTamano(doc.tamanoBytes)}` : ''} · ${formatoFecha(doc.cargadoEn)}`
+                      : 'Aún no se ha cargado'}
+                  </Typography>
+                </Box>
+                {doc.documentoId ? (
                   <Button
                     component="a"
-                    href={urlDocumentoPortal(detalle.id, doc.id)}
+                    href={urlArchivoDocumento(despacho.id, doc.documentoId)}
                     download
                     size="small"
                     startIcon={<DownloadOutlinedIcon />}
-                    aria-label={`Descargar ${doc.tipo}`}
+                    aria-label={`Descargar ${doc.nombre}`}
                   >
                     Descargar
                   </Button>
-                </Stack>
-              ))}
-            </Stack>
-          )}
+                ) : (
+                  <EtiquetaColor texto="Pendiente" tono="gris" />
+                )}
+              </Stack>
+            ))}
+          </Stack>
         </Box>
       </Box>
     </Paper>

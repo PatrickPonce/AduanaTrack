@@ -1,14 +1,19 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as authApi from '../api/auth'
+import * as portalApi from '../api/portalCliente'
 import { AuthProvider } from '../auth/AuthContext'
 import { UbicacionActual } from '../test/utils'
 import type { Rol } from '../types'
 import { Layout } from './Layout'
 
 vi.mock('../api/auth')
+vi.mock('../api/portalCliente', async (original) => ({
+  ...(await original<typeof import('../api/portalCliente')>()),
+  obtenerMiEmpresa: vi.fn(),
+}))
 
 function renderizar(rol: Rol = 'AGENTE', ruta = '/dashboard') {
   vi.mocked(authApi.sesionActual).mockResolvedValue({ usuario: 'usuario', nombre: 'Lucía Ramos', rol })
@@ -90,6 +95,10 @@ describe('Layout (menú lateral y barra superior)', () => {
 })
 
 describe('Layout · menú por rol (HU-16)', () => {
+  beforeEach(() => {
+    vi.mocked(portalApi.obtenerMiEmpresa).mockResolvedValue({ clienteId: null, ruc: null, razonSocial: null })
+  })
+
   const MENU_AGENTE = [
     'Dashboard',
     'Despachos',
@@ -146,28 +155,27 @@ describe('Layout · menú por rol (HU-16)', () => {
     )
   })
 
-  it('muestra al CLIENTE su empresa y RUC en el pie de la barra lateral', async () => {
-    vi.mocked(authApi.sesionActual).mockResolvedValue({
-      usuario: 'cliente',
-      nombre: 'Lucía Ramos',
-      rol: 'CLIENTE',
-      empresa: { id: 1, ruc: '20100047218', razonSocial: 'Importadora Andina SAC' },
+  it('muestra al CLIENTE su empresa y RUC (de GET /portal/mi-empresa) en el pie de la barra lateral', async () => {
+    vi.mocked(portalApi.obtenerMiEmpresa).mockResolvedValue({
+      clienteId: 1,
+      ruc: '20512345671',
+      razonSocial: 'Importadora Andina S.A.C.',
     })
-    render(
-      <MemoryRouter initialEntries={['/portal-cliente/mis-despachos']}>
-        <AuthProvider>
-          <Routes>
-            <Route element={<Layout />}>
-              <Route path="*" element={<p>Contenido</p>} />
-            </Route>
-          </Routes>
-        </AuthProvider>
-      </MemoryRouter>,
-    )
+    renderizar('CLIENTE', '/portal-cliente/mis-despachos')
 
     const empresa = await screen.findByRole('group', { name: 'Empresa' })
-    expect(empresa).toHaveTextContent('Importadora Andina SAC')
-    expect(empresa).toHaveTextContent('RUC 20100047218')
+    await waitFor(() => expect(empresa).toHaveTextContent('Importadora Andina S.A.C.'))
+    expect(empresa).toHaveTextContent('RUC 20512345671')
+  })
+
+  it('al CLIENTE sin empresa le indica «Sin empresa asignada»', async () => {
+    vi.mocked(portalApi.obtenerMiEmpresa).mockResolvedValue({ clienteId: null, ruc: null, razonSocial: null })
+    renderizar('CLIENTE', '/portal-cliente/mis-despachos')
+
+    const empresa = await screen.findByRole('group', { name: 'Empresa' })
+    await waitFor(() => expect(portalApi.obtenerMiEmpresa).toHaveBeenCalled())
+    expect(empresa).toHaveTextContent('Sin empresa asignada')
+    expect(empresa).not.toHaveTextContent('RUC')
   })
 
   it('el agente no ve el bloque de empresa', async () => {
@@ -175,5 +183,6 @@ describe('Layout · menú por rol (HU-16)', () => {
     await screen.findByText('Lucía Ramos')
 
     expect(screen.queryByRole('group', { name: 'Empresa' })).not.toBeInTheDocument()
+    expect(portalApi.obtenerMiEmpresa).not.toHaveBeenCalled()
   })
 })

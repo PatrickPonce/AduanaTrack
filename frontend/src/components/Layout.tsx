@@ -31,6 +31,7 @@ import { useState, type ReactNode } from 'react'
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router'
 
 import { useAuth } from '../auth/AuthContext'
+import { useMiEmpresa } from '../auth/useMiEmpresa'
 import { ROLES_AGENCIA } from '../auth/roles'
 import { COLORES, fadeIn } from '../theme'
 import type { Rol } from '../types'
@@ -173,7 +174,9 @@ export function Layout() {
   const [menuMovil, setMenuMovil] = useState(false)
   const [anclaCuenta, setAnclaCuenta] = useState<HTMLElement | null>(null)
   const secciones = usuario ? menuDe(usuario.rol) : []
-  const empresa = usuario?.rol === 'CLIENTE' ? usuario.empresa : null
+  // HU-16: la empresa del CLIENTE sale de GET /portal/mi-empresa (/auth/me no la trae).
+  const { empresa: miEmpresa } = useMiEmpresa(usuario?.rol === 'CLIENTE')
+  const empresa = miEmpresa?.clienteId != null ? miEmpresa : null
 
   async function salir() {
     setAnclaCuenta(null)

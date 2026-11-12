@@ -6,18 +6,6 @@ export interface UsuarioSesion {
   usuario: string
   nombre: string
   rol: Rol
-  /**
-   * HU-16 (contrato C11, SUPUESTO): empresa asignada al usuario CLIENTE; nula si el administrador
-   * aún no se la asigna, y ausente para ADMIN y AGENTE.
-   */
-  empresa?: EmpresaCliente | null
-}
-
-/** HU-16: empresa importadora (un cliente registrado) a la que pertenece un usuario CLIENTE. */
-export interface EmpresaCliente {
-  id: number
-  ruc: string
-  razonSocial: string
 }
 
 export interface Pagina<T> {
@@ -427,10 +415,17 @@ export interface ApiErrorBody {
 }
 
 // ---------------------------------------------------------------------------------------------
-// HU-16 · Portal del cliente (contrato C11, SUPUESTO hasta que Patrick lo publique).
+// HU-16 · Portal del cliente (contrato C11, docs/sprint-3/contratos/C11-portal-cliente.md).
 // ---------------------------------------------------------------------------------------------
 
-/** Fila de «Mis despachos»: solo los despachos de la empresa del usuario CLIENTE. */
+/** GET /portal/mi-empresa: empresa del usuario CLIENTE; los tres campos son nulos si aún no tiene una. */
+export interface MiEmpresa {
+  clienteId: number | null
+  ruc: string | null
+  razonSocial: string | null
+}
+
+/** Fila de GET /portal/despachos: solo los despachos de la empresa del usuario CLIENTE. */
 export interface DespachoPortal {
   id: number
   numero: string
@@ -439,43 +434,53 @@ export interface DespachoPortal {
   estado: EstadoDespacho
   /** VERDE, NARANJA o ROJO; nulo mientras no se asigna. */
   canalControl: string | null
-  /** Fecha y hora del último cambio del despacho (último hito). */
-  actualizadoEn: string
+  /** Fecha y hora del último hito. */
+  ultimaActualizacion: string
 }
 
-/** Documento del despacho que el cliente puede descargar (solo la versión vigente). */
-export interface DocumentoPortal {
-  id: number
-  /** Nombre legible del tipo: «Factura comercial», «Bill of Lading»… */
-  tipo: string
-  nombreArchivo: string
-  tamanoBytes: number | null
-  cargadoEn: string
+/** Filtros de GET /portal/despachos; todos opcionales (fechas AAAA-MM-DD, ambos extremos incluidos). */
+export interface FiltrosPortal {
+  numero?: string
+  estado?: EstadoDespacho
+  etaDesde?: string
+  etaHasta?: string
 }
 
-/** Detalle de un despacho del portal, con su línea de tiempo y sus documentos. */
-export interface DetalleDespachoPortal extends DespachoPortal {
-  aduana: string | null
-  hitos: Hito[]
-  documentos: DocumentoPortal[]
-}
-
-/** Usuario con rol CLIENTE y la empresa que tiene asignada (nula = «Sin asignar»). */
+/** Fila plana de GET /administracion/usuarios-cliente; empresa y asignación son nulas si está SIN_ASIGNAR. */
 export interface UsuarioCliente {
   id: number
   usuario: string
+  correo: string
   nombre: string
-  empresa: EmpresaCliente | null
+  activo: boolean
+  clienteId: number | null
+  ruc: string | null
+  razonSocial: string | null
+  /** Fecha y hora de la última asignación (la fija el servidor). */
+  asignadoEn: string | null
+  estado: 'ASIGNADO' | 'SIN_ASIGNAR'
 }
 
-/** Intento de un usuario CLIENTE de ver algo que no es de su empresa (lo registra el backend). */
+/** GET /administracion/empresas-asignables: empresas activas con RUC válido. */
+export interface EmpresaAsignable {
+  id: number
+  ruc: string
+  razonSocial: string
+}
+
+/** Motivo del bloqueo: despacho de otra empresa, usuario sin empresa o despacho en borrador. */
+export type ResultadoAcceso = 'OTRA_EMPRESA' | 'SIN_EMPRESA' | 'BORRADOR'
+
+/** Fila de GET /administracion/accesos-denegados (paginado). */
 export interface AccesoDenegado {
   id: number
   fecha: string
   usuario: string
-  /** Razón social de la empresa del usuario; nula si no tenía empresa asignada. */
-  empresa: string | null
-  /** Ruta solicitada, p. ej. «/api/v1/portal-cliente/despachos/12». */
-  recurso: string
-  motivo: string
+  despachoId: number | null
+  /** Nulo si el despacho estaba en borrador. */
+  numeroDespacho: string | null
+  clienteId: number | null
+  empresaDespacho: string | null
+  resultado: ResultadoAcceso
+  mensaje: string
 }
