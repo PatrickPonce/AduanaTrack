@@ -119,3 +119,79 @@ describe('DashboardPage (HU-02)', () => {
     expect(dashboardApi.obtenerIndicadores).toHaveBeenLastCalledWith({ aduanaId: 1 })
   })
 })
+
+describe('DashboardPage · Flujo del despacho', () => {
+  beforeEach(() => {
+    vi.mocked(authApi.sesionActual).mockResolvedValue({ usuario: 'agente', nombre: 'Agente', rol: 'AGENTE' })
+    vi.mocked(catalogosApi.listarAduanas).mockResolvedValue([])
+    vi.mocked(dashboardApi.obtenerIndicadores).mockResolvedValue({
+      despachosActivos: 2,
+      enCanalNaranjaRojo: 1,
+      conLevante: 2,
+      conAlertasCriticas: 0,
+    })
+    vi.mocked(dashboardApi.listarDespachosTablero).mockResolvedValue([
+      { ...fila(1, 'DESP-2026-0001', '2026-10-15'), estado: 'CANAL_ASIGNADO', canalControl: 'VERDE' },
+      { ...fila(2, 'DESP-2026-0002', '2026-10-16'), estado: 'INSPECCION_PROGRAMADA', canalControl: 'ROJO' },
+      { ...fila(3, 'DESP-2026-0003', '2026-10-17'), estado: 'LEVANTE_OTORGADO', canalControl: 'VERDE' },
+      { ...fila(4, 'DESP-2026-0004', '2026-10-18'), estado: 'RETIRO_PROGRAMADO', canalControl: 'NARANJA' },
+    ])
+  })
+
+  it('se titula «Flujo del despacho» sin mencionar sprints ni HU', async () => {
+    renderEnRuta(<DashboardPage />, { ruta: '/dashboard', patron: '/dashboard' })
+
+    expect(await screen.findByText('Flujo del despacho')).toBeInTheDocument()
+    expect(screen.queryByText(/sprint/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/HU-\d/)).not.toBeInTheDocument()
+  })
+
+  it('cubre las 11 etapas en el orden real, de Apertura a Retiro programado', async () => {
+    renderEnRuta(<DashboardPage />, { ruta: '/dashboard', patron: '/dashboard' })
+    await screen.findByText('DESP-2026-0001')
+
+    const etapas = within(screen.getByRole('list', { name: 'Etapas del despacho' })).getAllByRole('button')
+    expect(etapas.map((b) => b.getAttribute('aria-label'))).toEqual([
+      'Paso 1, Apertura: 0',
+      'Paso 2, Documentación completa: 0',
+      'Paso 3, Clasificado: 0',
+      'Paso 4, Liquidado: 0',
+      'Paso 5, Tributos pagados: 0',
+      'Paso 6, DAM numerada: 0',
+      'Paso 7, Canal asignado: 1',
+      'Paso 8, Inspección programada: 1',
+      'Paso 9, Inspección conforme: 0',
+      'Paso 10, Levante otorgado: 1',
+      'Paso 11, Retiro programado: 1',
+    ])
+  })
+
+  it('cada etapa nueva lleva al módulo donde se trabaja el paso siguiente', async () => {
+    const user = userEvent.setup()
+    renderEnRuta(<DashboardPage />, { ruta: '/dashboard', patron: '/dashboard' })
+    await screen.findByText('DESP-2026-0001')
+
+    await user.click(screen.getByRole('button', { name: /^Paso 8, Inspección programada/ }))
+    expect(screen.getByTestId('ubicacion')).toHaveTextContent('/inspecciones')
+  })
+
+  it('«Inspección conforme» lleva a Levante, el paso que sigue', async () => {
+    const user = userEvent.setup()
+    renderEnRuta(<DashboardPage />, { ruta: '/dashboard', patron: '/dashboard' })
+    await screen.findByText('DESP-2026-0001')
+
+    await user.click(screen.getByRole('button', { name: /^Paso 9, Inspección conforme/ }))
+    expect(screen.getByTestId('ubicacion')).toHaveTextContent('/levante')
+  })
+
+  it('la tabla muestra los estados nuevos con su texto (un retiro programado ya tiene levante)', async () => {
+    renderEnRuta(<DashboardPage />, { ruta: '/dashboard', patron: '/dashboard' })
+
+    const estado = async (numero: string) =>
+      within((await screen.findByText(numero)).closest('tr')!).getAllByRole('cell')[5].textContent
+    expect(await estado('DESP-2026-0002')).toBe('Inspección programada')
+    expect(await estado('DESP-2026-0004')).toBe('Retiro programado')
+    expect(screen.getByLabelText('Con levante registrado')).toHaveTextContent('2')
+    expect(screen.getByLabelText('Despachos activos')).toHaveTextContent('2')
+  })
+})

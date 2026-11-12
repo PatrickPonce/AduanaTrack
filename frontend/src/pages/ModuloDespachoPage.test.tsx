@@ -83,4 +83,37 @@ describe('ModuloDespachoPage (menú de los módulos del Sprint 2)', () => {
     expect(ubicacion).toHaveTextContent('/despachos/3')
     expect(JSON.parse(ubicacion.dataset.state!)).toEqual({ pestana: 'dam', volverA: '/dam' })
   })
+
+  it('«Inspecciones» (HU-12): por gestionar con cita programada, completados desde la conformidad y en espera sin cita', async () => {
+    vi.mocked(dashboardApi.listarDespachosTablero).mockResolvedValue([
+      fila(1, 'CANAL_ASIGNADO'),
+      fila(2, 'INSPECCION_PROGRAMADA'),
+      fila(3, 'INSPECCION_CONFORME'),
+      fila(4, 'LEVANTE_OTORGADO'),
+      fila(5, 'RETIRO_PROGRAMADO'),
+      fila(6, 'DAM_NUMERADA'),
+    ])
+    renderEnRuta(<ModuloDespachoPage modulo="inspeccion" />, { ruta: '/inspecciones', patron: '/inspecciones' })
+
+    expect(await screen.findByRole('heading', { name: 'Inspecciones' })).toBeInTheDocument()
+    expect(await screen.findByText('DESP-2026-0002')).toBeInTheDocument()
+    expect(screen.getByLabelText('Por gestionar')).toHaveTextContent('1')
+    expect(screen.getByLabelText('Completados')).toHaveTextContent('3')
+    expect(screen.getByLabelText('En espera')).toHaveTextContent('2')
+    expect(screen.getByText('Aún no llegan a «Inspección programada»')).toBeInTheDocument()
+    // Pantalla de usuario final: sin códigos de historia de usuario.
+    expect(screen.queryByText(/HU-\d/)).not.toBeInTheDocument()
+  })
+
+  it('«Inspecciones» abre el despacho en la pestaña Inspección y vuelve al módulo', async () => {
+    vi.mocked(dashboardApi.listarDespachosTablero).mockResolvedValue([fila(7, 'INSPECCION_PROGRAMADA')])
+    const user = userEvent.setup()
+    renderEnRuta(<ModuloDespachoPage modulo="inspeccion" />, { ruta: '/inspecciones', patron: '/inspecciones' })
+
+    await user.click(await screen.findByText('DESP-2026-0007'))
+
+    const ubicacion = screen.getByTestId('ubicacion')
+    expect(ubicacion).toHaveTextContent('/despachos/7')
+    expect(JSON.parse(ubicacion.dataset.state!)).toEqual({ pestana: 'inspeccion', volverA: '/inspecciones' })
+  })
 })
