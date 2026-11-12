@@ -24,7 +24,7 @@ import { obtenerDespacho } from '../api/despachos'
 import { listarDocumentos, urlArchivoDocumento } from '../api/documentos'
 import { listarHitos } from '../api/hitos'
 import { leerError, mensajeDeError } from '../api/http'
-import { listarMisDespachos } from '../api/portalCliente'
+import { listarMisDespachos, obtenerMiDespacho } from '../api/portalCliente'
 import { useMiEmpresa } from '../auth/useMiEmpresa'
 import { useEncabezado } from '../components/Encabezado'
 import { EstadoDespachoChip, textoEstado } from '../components/EstadoDespachoChip'
@@ -131,8 +131,6 @@ export function MisDespachosPage() {
     error: Boolean(errores[clave]),
     helperText: errores[clave],
   })
-
-  const fila = despachos?.find((d) => String(d.id) === seleccionado) ?? null
 
   return (
     <Stack spacing={2.5}>
@@ -249,7 +247,7 @@ export function MisDespachosPage() {
         </TableContainer>
       </Paper>
 
-      {seleccionado && <DetalleMiDespacho key={seleccionado} idTexto={seleccionado} fila={fila} />}
+      {seleccionado && <DetalleMiDespacho key={seleccionado} idTexto={seleccionado} />}
     </Stack>
   )
 }
@@ -265,17 +263,18 @@ const visualmenteOculto = {
 } as const
 
 interface Detalle {
+  cabecera: DespachoPortal
   despacho: Despacho
   hitos: Hito[]
   documentos: DocumentoRequerido[]
 }
 
 /**
- * Detalle de solo lectura con las rutas de siempre (GET /despachos/{id}, /hitos y /documentos). El backend
- * responde 404 «Despacho no encontrado» si el despacho es de otra empresa. BL, ETA y última actualización
- * salen de la fila de la tabla cuando está a la vista (GET /despachos/{id} no los trae).
+ * Detalle de solo lectura (C11): la cabecera (BL, ETA y última actualización) sale de GET /portal/despachos/{id}
+ * y el resto de las rutas de siempre (GET /despachos/{id}, /hitos y /documentos). El backend responde 404
+ * «Despacho no encontrado» si el despacho es de otra empresa; funciona igual con un enlace directo.
  */
-function DetalleMiDespacho({ idTexto, fila }: { idTexto: string; fila: DespachoPortal | null }) {
+function DetalleMiDespacho({ idTexto }: { idTexto: string }) {
   const id = Number(idTexto)
   const valido = Number.isInteger(id) && id > 0
   const [detalle, setDetalle] = useState<Detalle | null>(null)
@@ -285,8 +284,11 @@ function DetalleMiDespacho({ idTexto, fila }: { idTexto: string; fila: DespachoP
   useEffect(() => {
     if (!valido) return
     let activo = true
-    Promise.all([obtenerDespacho(id), listarHitos(id), listarDocumentos(id)])
-      .then(([despacho, hitos, documentos]) => activo && setDetalle({ despacho, hitos, documentos: documentos.documentos }))
+    Promise.all([obtenerMiDespacho(id), obtenerDespacho(id), listarHitos(id), listarDocumentos(id)])
+      .then(
+        ([cabecera, despacho, hitos, documentos]) =>
+          activo && setDetalle({ cabecera, despacho, hitos, documentos: documentos.documentos }),
+      )
       .catch((e) => {
         if (!activo) return
         // 404 (otra empresa, borrador o inexistente) y 403 se muestran igual: no se revela si existe.
@@ -328,7 +330,7 @@ function DetalleMiDespacho({ idTexto, fila }: { idTexto: string; fila: DespachoP
     )
   }
 
-  const { despacho, hitos, documentos } = detalle
+  const { cabecera, despacho, hitos, documentos } = detalle
 
   return (
     <Paper
@@ -347,7 +349,7 @@ function DetalleMiDespacho({ idTexto, fila }: { idTexto: string; fila: DespachoP
           component="h2"
           sx={{ fontSize: 17, fontWeight: 700, outline: 'none' }}
         >
-          Despacho {despacho.numero ?? fila?.numero}
+          Despacho {cabecera.numero}
         </Typography>
         <EstadoDespachoChip estado={despacho.estado} />
         <CanalChip canal={despacho.canalControl} />
@@ -367,11 +369,11 @@ function DetalleMiDespacho({ idTexto, fila }: { idTexto: string; fila: DespachoP
       >
         <div>
           <dt>N° de BL</dt>
-          <dd>{fila?.numeroBl ?? '—'}</dd>
+          <dd>{cabecera.numeroBl ?? '—'}</dd>
         </div>
         <div>
           <dt>ETA</dt>
-          <dd>{formatoFecha(fila?.fechaEta)}</dd>
+          <dd>{formatoFecha(cabecera.fechaEta)}</dd>
         </div>
         <div>
           <dt>Aduana</dt>
@@ -379,7 +381,7 @@ function DetalleMiDespacho({ idTexto, fila }: { idTexto: string; fila: DespachoP
         </div>
         <div>
           <dt>Última actualización</dt>
-          <dd>{formatoFechaHora(fila?.ultimaActualizacion)}</dd>
+          <dd>{formatoFechaHora(cabecera.ultimaActualizacion)}</dd>
         </div>
       </Box>
 

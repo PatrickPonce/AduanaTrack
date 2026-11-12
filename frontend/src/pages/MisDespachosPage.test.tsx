@@ -23,6 +23,7 @@ vi.mock('../api/portalCliente', async (original) => ({
   ...(await original<typeof import('../api/portalCliente')>()),
   obtenerMiEmpresa: vi.fn(),
   listarMisDespachos: vi.fn(),
+  obtenerMiDespacho: vi.fn(),
 }))
 
 const RUTA = '/portal-cliente/mis-despachos'
@@ -110,6 +111,7 @@ describe('MisDespachosPage (HU-16 · contrato C11)', () => {
     vi.mocked(authApi.sesionActual).mockResolvedValue({ usuario: 'jperez', nombre: 'Jorge Pérez', rol: 'CLIENTE' })
     vi.mocked(portalApi.obtenerMiEmpresa).mockResolvedValue(ANDINA)
     vi.mocked(portalApi.listarMisDespachos).mockResolvedValue(DESPACHOS)
+    vi.mocked(portalApi.obtenerMiDespacho).mockResolvedValue(DESPACHOS[0]!)
     vi.mocked(despachosApi.obtenerDespacho).mockResolvedValue(DESPACHO_318)
     vi.mocked(hitosApi.listarHitos).mockResolvedValue([
       { tipo: 'APERTURA', descripcion: 'Apertura del despacho', sugerido: false, usuario: 'Agente Demo', fecha: '2026-10-01T09:00:00' },
@@ -205,13 +207,14 @@ describe('MisDespachosPage (HU-16 · contrato C11)', () => {
     expect(screen.getByLabelText('ETA hasta')).toHaveAttribute('aria-invalid', 'true')
   })
 
-  it('«Ver detalle» arma el detalle con /despachos/{id}, /hitos y /documentos', async () => {
+  it('«Ver detalle» arma el detalle con /portal/despachos/{id}, /despachos/{id}, /hitos y /documentos', async () => {
     const user = userEvent.setup()
     renderEnRuta(<MisDespachosPage />, { ruta: RUTA, patron: RUTA })
 
     await user.click(await screen.findByRole('button', { name: 'Ver detalle del despacho DESP-2026-0318' }))
 
     expect(await screen.findByRole('heading', { name: 'Despacho DESP-2026-0318' })).toHaveFocus()
+    expect(portalApi.obtenerMiDespacho).toHaveBeenCalledWith(318)
     expect(despachosApi.obtenerDespacho).toHaveBeenCalledWith(318)
     expect(hitosApi.listarHitos).toHaveBeenCalledWith(318)
     expect(documentosApi.listarDocumentos).toHaveBeenCalledWith(318)
@@ -226,7 +229,20 @@ describe('MisDespachosPage (HU-16 · contrato C11)', () => {
     expect(screen.getByText('Pendiente')).toBeInTheDocument()
   })
 
+  it('con un enlace directo la cabecera trae BL, ETA y última actualización aunque no esté en la lista', async () => {
+    // La lista filtrada no incluye el 318: los datos salen de GET /portal/despachos/{id}.
+    vi.mocked(portalApi.listarMisDespachos).mockResolvedValue([DESPACHOS[1]!])
+    renderEnRuta(<MisDespachosPage />, { ruta: `${RUTA}?despacho=318`, patron: RUTA })
+
+    const detalle = (await screen.findByRole('heading', { name: 'Despacho DESP-2026-0318' })).closest('section')!
+    const datos = within(detalle)
+    expect(datos.getByText('MSCU-BL-55120')).toBeInTheDocument()
+    expect(datos.getByText('21/10/2026')).toBeInTheDocument()
+    expect(datos.getByText('05/11/2026 18:40')).toBeInTheDocument()
+  })
+
   it('un despacho de otra empresa (404) muestra «Despacho no encontrado»', async () => {
+    vi.mocked(portalApi.obtenerMiDespacho).mockRejectedValue(errorHttp(404))
     vi.mocked(despachosApi.obtenerDespacho).mockRejectedValue(errorHttp(404))
     renderEnRuta(<MisDespachosPage />, { ruta: `${RUTA}?despacho=342`, patron: RUTA })
 
