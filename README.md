@@ -37,6 +37,7 @@ Diseño e Implementación de Sistemas · **Grupo 2** · Docente: Mg. Juan Manuel
 | Base de datos | Neon (PostgreSQL), plan gratuito | no es pública |
 
 Usuarios demo: `agente`, `admin` y `cliente`. La contraseña se comparte por el grupo, no se guarda en el repositorio.
+Para la demostración hay un script de datos de ejemplo (despachos en cada etapa, dos empresas con su usuario cliente y notificaciones): ver «Datos de demostración» en [`docs/despliegue.md`](docs/despliegue.md).
 
 - Se despliega desde la rama `develop`: cada push la vuelve a publicar.
 - Se duerme tras 15 minutos sin uso; la primera visita puede tardar hasta un minuto.

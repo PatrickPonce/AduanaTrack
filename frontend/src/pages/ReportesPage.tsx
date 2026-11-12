@@ -255,12 +255,18 @@ export function ReportesPage() {
             <CircularProgress aria-label="Cargando indicadores" />
           </Box>
         )}
-        {!cargando && indicadores && indicadores.despachosPorMes.length === 0 && (
+        {/* Sin indicadores (servidor caído o no publicado) el panel lo dice en vez de quedar en blanco. */}
+        {!cargando && !indicadores && (
+          <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+            El gráfico se mostrará cuando el servidor entregue los indicadores del rango.
+          </Typography>
+        )}
+        {!cargando && indicadores && indicadores.despachosPorMes.every((m) => m.cantidad === 0) && (
           <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
             No hay despachos abiertos en el rango.
           </Typography>
         )}
-        {!cargando && indicadores && indicadores.despachosPorMes.length > 0 && (
+        {!cargando && indicadores && indicadores.despachosPorMes.some((m) => m.cantidad > 0) && (
           <Box
             role="list"
             aria-label="Gráfico de despachos por mes"

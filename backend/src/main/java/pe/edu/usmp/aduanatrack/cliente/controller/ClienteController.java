@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
+import pe.edu.usmp.aduanatrack.acceso.service.AccesoClienteService;
 import pe.edu.usmp.aduanatrack.cliente.dto.ClienteExisteResponse;
 import pe.edu.usmp.aduanatrack.cliente.dto.ClienteHistorialResponse;
 import pe.edu.usmp.aduanatrack.cliente.dto.ClienteRequest;
@@ -29,14 +30,21 @@ import pe.edu.usmp.aduanatrack.seguridad.UsuarioAutenticado;
 public class ClienteController {
 
     private final ClienteService clienteService;
+    private final AccesoClienteService acceso;
 
-    public ClienteController(ClienteService clienteService) {
+    public ClienteController(ClienteService clienteService, AccesoClienteService acceso) {
         this.clienteService = clienteService;
+        this.acceso = acceso;
     }
 
+    /** HU-16: al usuario CLIENTE solo le devuelve su empresa. */
     @GetMapping
     public PaginaResponse<ClienteResumen> buscar(@RequestParam(required = false) String q,
-            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal UsuarioAutenticado usuario) {
+        if (AccesoClienteService.esCliente(usuario)) {
+            return clienteService.soloEmpresa(acceso.clienteIdDe(usuario));
+        }
         return clienteService.buscar(q, page, size);
     }
 

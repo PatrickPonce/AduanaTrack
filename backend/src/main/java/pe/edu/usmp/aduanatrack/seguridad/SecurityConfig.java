@@ -45,6 +45,12 @@ public class SecurityConfig {
                         // clientes, cartas poder, despachos y embarques; el perfil Cliente solo consulta.
                         .requestMatchers(HttpMethod.POST, RUTAS_REGISTRO).hasAnyRole(ROLES_REGISTRO)
                         .requestMatchers(HttpMethod.PUT, RUTAS_REGISTRO).hasAnyRole(ROLES_REGISTRO)
+                        // HU-16: «existe» consulta el padrón de RUC de todas las empresas; el perfil Cliente no lo usa.
+                        .requestMatchers(HttpMethod.GET, "/api/v1/clientes/existe").hasAnyRole(ROLES_REGISTRO)
+                        // HU-16: asignación de empresas a usuarios cliente e intentos denegados, solo el administrador.
+                        .requestMatchers("/api/v1/administracion/**").hasRole("ADMIN")
+                        // HU-16: el portal es del perfil Cliente.
+                        .requestMatchers("/api/v1/portal/**").hasRole("CLIENTE")
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, e) -> escribirError(response, objectMapper,

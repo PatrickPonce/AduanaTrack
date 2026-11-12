@@ -1,5 +1,6 @@
 package pe.edu.usmp.aduanatrack.cita.service;
 
+import pe.edu.usmp.aduanatrack.notificacion.service.AvisoClienteService;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -57,6 +58,7 @@ class CitaDespachoServiceTest {
     private HitoDespachoService hitos;
     private Deposito deposito;
     private Despacho despacho;
+    private AvisoClienteService avisosCliente;
     private CitaDespachoService servicio;
 
     @BeforeEach
@@ -81,9 +83,10 @@ class CitaDespachoServiceTest {
         despacho.asignarCanal(CanalControl.ROJO);
         when(despachoRepository.findById(DESPACHO)).thenReturn(Optional.of(despacho));
 
+        avisosCliente = mock(AvisoClienteService.class);
         Clock reloj = Clock.fixed(AHORA.atZone(ZoneId.of("America/Lima")).toInstant(), ZoneId.of("America/Lima"));
         servicio = new CitaDespachoService(despachoRepository, depositoRepository, citaRepository, usuarioRepository,
-                hitos, reloj);
+                hitos, avisosCliente, reloj);
     }
 
     private static CitaRequest inspeccion(LocalDateTime fecha) {
@@ -193,6 +196,14 @@ class CitaDespachoServiceTest {
         assertThat(respuesta.transportista().conductor()).isEqualTo("Juan Pérez");
         assertThat(despacho.getEstado()).isEqualTo(EstadoDespacho.RETIRO_PROGRAMADO);
         verify(hitos).registrar(any(), eq(TipoHito.RETIRO_PROGRAMADO), anyString());
+        verify(avisosCliente).retiroProgramado(eq(despacho), anyString());
+    }
+
+    @Test
+    void citaDeInspeccion_noAvisaAlClientePorRetiro() {
+        servicio.registrar(DESPACHO, inspeccion(FECHA_CITA), USUARIO);
+
+        verify(avisosCliente, never()).retiroProgramado(any(), anyString());
     }
 
     @Test

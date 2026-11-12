@@ -75,6 +75,17 @@ public class ClienteService {
         return PaginaResponse.de(resultado, c -> ClienteResumen.de(c, estados.get(c.getId())));
     }
 
+    /** HU-16: el usuario CLIENTE solo ve su empresa (nada si todavía no tiene una asignada). */
+    @Transactional(readOnly = true)
+    public PaginaResponse<ClienteResumen> soloEmpresa(Long clienteId) {
+        List<Cliente> propias = clienteId == null ? List.of()
+                : clienteRepository.findById(clienteId).filter(Cliente::isActivo).stream().toList();
+        Map<Long, EstadoCartaPoder> estados = cartaPoderEstado.estados(propias.stream().map(Cliente::getId).toList());
+        List<ClienteResumen> contenido = propias.stream()
+                .map(c -> ClienteResumen.de(c, estados.get(c.getId()))).toList();
+        return new PaginaResponse<>(contenido, 0, TAMANO_MAXIMO_PAGINA, contenido.size(), contenido.isEmpty() ? 0 : 1);
+    }
+
     @Transactional(readOnly = true)
     public ClienteExisteResponse existe(String ruc) {
         return clienteRepository.findByRuc(ruc == null ? "" : ruc.trim())

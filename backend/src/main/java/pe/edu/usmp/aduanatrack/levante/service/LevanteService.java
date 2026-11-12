@@ -28,6 +28,7 @@ import pe.edu.usmp.aduanatrack.despacho.repository.DespachoRepository;
 import pe.edu.usmp.aduanatrack.despacho.service.HitoDespachoService;
 import pe.edu.usmp.aduanatrack.levante.dto.LevanteRequest;
 import pe.edu.usmp.aduanatrack.levante.dto.LevanteResponse;
+import pe.edu.usmp.aduanatrack.notificacion.service.AvisoClienteService;
 
 /**
  * Registro manual del levante de la mercancía (HU-13 · T-13.1 y T-13.2, contrato C8). El agente obtiene
@@ -49,13 +50,15 @@ public class LevanteService {
 
     private final DespachoRepository despachoRepository;
     private final HitoDespachoService hitos;
+    private final AvisoClienteService avisosCliente;
     private final Clock clock;
     private final Path directorio;
 
-    public LevanteService(DespachoRepository despachoRepository, HitoDespachoService hitos, Clock clock,
-            DocumentoProperties propiedades) {
+    public LevanteService(DespachoRepository despachoRepository, HitoDespachoService hitos,
+            AvisoClienteService avisosCliente, Clock clock, DocumentoProperties propiedades) {
         this.despachoRepository = despachoRepository;
         this.hitos = hitos;
+        this.avisosCliente = avisosCliente;
         this.clock = clock;
         this.directorio = Path.of(propiedades.directorio()).toAbsolutePath().normalize();
     }
@@ -115,6 +118,7 @@ public class LevanteService {
                 hitos.registrar(despachoId, TipoHito.LEVANTE_CON_ADVERTENCIA,
                         "Levante registrado con requisitos pendientes: " + String.join(", ", pendientes));
             }
+            avisosCliente.levanteOtorgado(despacho, numero, fecha);
             return LevanteResponse.de(despacho);
         } catch (DataIntegrityViolationException e) {
             borrarConstancia(guardado);
