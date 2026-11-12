@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -34,5 +35,12 @@ public class PortalController {
             @RequestParam(required = false) String estado, @RequestParam(required = false) String etaDesde,
             @RequestParam(required = false) String etaHasta, @AuthenticationPrincipal UsuarioAutenticado usuario) {
         return portalService.despachos(usuario, numero, estado, etaDesde, etaHasta);
+    }
+
+    /** Cabecera del detalle (BL, ETA, última actualización) aunque el despacho no esté en la lista filtrada. */
+    @GetMapping("/despachos/{id}")
+    public PortalDespachoResponse despacho(@PathVariable Long id,
+            @AuthenticationPrincipal UsuarioAutenticado usuario) {
+        return portalService.despacho(usuario, id);
     }
 }
