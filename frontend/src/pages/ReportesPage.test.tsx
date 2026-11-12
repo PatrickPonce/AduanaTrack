@@ -220,6 +220,25 @@ describe('ReportesPage (HU-15 · T-15.4)', () => {
 
     expect(await screen.findByText('No se pudieron cargar los indicadores del rango.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Exportar a Excel' })).toBeEnabled()
+    // El panel del gráfico no queda en blanco.
+    expect(
+      screen.getByText('El gráfico se mostrará cuando el servidor entregue los indicadores del rango.'),
+    ).toBeInTheDocument()
+  })
+
+  it('con todos los meses en 0 dice que no hay despachos en vez de dibujar barras vacías', async () => {
+    vi.mocked(reportesApi.obtenerIndicadoresGestion).mockResolvedValue({
+      ...INDICADORES,
+      totalDespachos: 0,
+      despachosPorMes: [
+        { mes: '2026-09', cantidad: 0 },
+        { mes: '2026-10', cantidad: 0 },
+      ],
+    })
+    mostrar()
+
+    expect(await screen.findByText('No hay despachos abiertos en el rango.')).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Gráfico de despachos por mes' })).not.toBeInTheDocument()
   })
 
   it('mientras los indicadores no estén publicados (404) lo explica y deja exportar', async () => {
