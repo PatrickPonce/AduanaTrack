@@ -21,6 +21,9 @@ const ReportesPage = lazy(() => import('./pages/ReportesPage').then((m) => ({ de
 const ModuloDespachoPage = lazy(() =>
   import('./pages/ModuloDespachoPage').then((m) => ({ default: m.ModuloDespachoPage })),
 )
+const NotificacionesPage = lazy(() =>
+  import('./pages/NotificacionesPage').then((m) => ({ default: m.NotificacionesPage })),
+)
 
 const cargando = (
   <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
@@ -50,9 +53,11 @@ export function App() {
             <Route path="/dam" element={<ModuloDespachoPage modulo="dam" />} />
             <Route path="/canal-control" element={<ModuloDespachoPage modulo="canal" />} />
             <Route path="/citas" element={<ModuloDespachoPage modulo="citas" />} />
+            <Route path="/inspecciones" element={<ModuloDespachoPage modulo="inspeccion" />} />
             <Route path="/levante" element={<ModuloDespachoPage modulo="levante" />} />
             <Route path="/levante/:despachoId" element={<LevantePage />} />
             <Route path="/reportes" element={<ReportesPage />} />
+            <Route path="/notificaciones" element={<NotificacionesPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

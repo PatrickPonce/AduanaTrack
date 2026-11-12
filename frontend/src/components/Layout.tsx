@@ -32,14 +32,14 @@ import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-rout
 import { useAuth } from '../auth/AuthContext'
 import { COLORES, fadeIn } from '../theme'
 import type { Rol } from '../types'
+import { CampanaNotificaciones } from './CampanaNotificaciones'
 import { EncabezadoContext, type Encabezado } from './Encabezado'
 
 interface ItemMenu {
   texto: string
   icono: ReactNode
-  /** Sin ruta: módulo del Sprint 3, se muestra deshabilitado con la marca «Pronto». */
-  a?: string
-  prefijo?: string
+  a: string
+  prefijo: string
   /** Solo para quien registra datos (administrador y agente). */
   soloRegistro?: boolean
 }
@@ -74,6 +74,7 @@ const MENU: SeccionMenu[] = [
       { texto: 'DAM (Registro)', icono: <ReceiptLongOutlinedIcon />, a: '/dam', prefijo: '/dam' },
       { texto: 'Canal de Control', icono: <TrafficOutlinedIcon />, a: '/canal-control', prefijo: '/canal-control' },
       { texto: 'Depósitos / Citas', icono: <WarehouseOutlinedIcon />, a: '/citas', prefijo: '/citas' },
+      { texto: 'Inspecciones', icono: <ManageSearchOutlinedIcon />, a: '/inspecciones', prefijo: '/inspecciones' },
       { texto: 'Levante', icono: <FactCheckOutlinedIcon />, a: '/levante', prefijo: '/levante' },
     ],
   },
@@ -87,13 +88,12 @@ const MENU: SeccionMenu[] = [
         prefijo: '/reportes',
         soloRegistro: true,
       },
-    ],
-  },
-  {
-    titulo: 'Próximamente',
-    items: [
-      { texto: 'Inspecciones', icono: <ManageSearchOutlinedIcon /> },
-      { texto: 'Notificaciones', icono: <NotificationsNoneOutlinedIcon /> },
+      {
+        texto: 'Notificaciones',
+        icono: <NotificationsNoneOutlinedIcon />,
+        a: '/notificaciones',
+        prefijo: '/notificaciones',
+      },
     ],
   },
 ]
@@ -202,8 +202,8 @@ export function Layout() {
               {seccion.titulo}
             </Typography>
             {seccion.items.map((item) => {
-              const habilitado = item.a && (!item.soloRegistro || registra)
-              const activo = Boolean(item.prefijo && ruta.startsWith(item.prefijo))
+              const habilitado = !item.soloRegistro || registra
+              const activo = ruta.startsWith(item.prefijo)
               const contenido = (
                 <>
                   <Box component="span" aria-hidden className="icono">
@@ -219,26 +219,10 @@ export function Layout() {
                   <Box
                     key={item.texto}
                     aria-disabled
-                    title={item.a ? 'Solo para administrador y agente' : 'Disponible en el Sprint 3'}
+                    title="Solo para administrador y agente"
                     sx={{ ...estiloItem, opacity: 0.45, cursor: 'default' }}
                   >
                     {contenido}
-                    {!item.a && (
-                      <Box
-                        component="span"
-                        sx={{
-                          fontSize: 9.5,
-                          fontWeight: 700,
-                          letterSpacing: 0.5,
-                          px: 0.75,
-                          py: 0.25,
-                          borderRadius: 1,
-                          bgcolor: 'rgba(255,255,255,0.12)',
-                        }}
-                      >
-                        PRONTO
-                      </Box>
-                    )}
                   </Box>
                 )
               }
@@ -246,7 +230,7 @@ export function Layout() {
                 <ButtonBase
                   key={item.texto}
                   component={RouterLink}
-                  to={item.a!}
+                  to={item.a}
                   onClick={() => setMenuMovil(false)}
                   aria-current={activo ? 'page' : undefined}
                   sx={{
@@ -287,7 +271,7 @@ export function Layout() {
 
       <Box sx={{ px: 2.75, py: 2, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
         <Typography sx={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
-          v0.2.0 · Sprint 2 · Grupo 2 USMP
+          v{__APP_VERSION__} · Sprint 3 · Grupo 2 USMP
         </Typography>
       </Box>
     </Box>
@@ -358,6 +342,7 @@ export function Layout() {
             </Box>
             {usuario && (
               <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
+                <CampanaNotificaciones />
                 <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'right' }}>
                   <Typography sx={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.2 }}>{usuario.nombre}</Typography>
                   <Typography sx={{ fontSize: 11.5, color: 'text.secondary' }}>
