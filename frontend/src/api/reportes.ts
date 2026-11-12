@@ -45,10 +45,62 @@ export interface EnvioProgramado extends EnvioProgramadoRequest {
   ultimoEnvio?: string | null
 }
 
+/** Respuesta tal como puede llegar del servidor, antes de normalizarla. */
+interface IndicadoresCrudos {
+  totalDespachos?: number | null
+  conLevante?: number | null
+  tiempoPromedioDias?: number | string | null
+  /** Lista del C10, u objeto { "AAAA-MM": n } si el backend serializa un Map<YearMonth, Long>. */
+  despachosPorMes?: DespachosPorMes[] | Record<string, number> | null
+  porCanal?: Record<string, number> | null
+}
+
+/** Meses AAAA-MM de `desde` a `hasta`, ambos incluidos. */
+function mesesDelRango({ desde, hasta }: RangoFechas): string[] {
+  const meses: string[] = []
+  let [anio, mes] = desde.slice(0, 7).split('-').map(Number) as [number, number]
+  const fin = hasta.slice(0, 7)
+  // Tope de 24 por seguridad: el rango válido es de 12 meses como máximo.
+  for (let i = 0; i < 24; i++) {
+    const actual = `${anio}-${String(mes).padStart(2, '0')}`
+    if (actual > fin) break
+    meses.push(actual)
+    mes++
+    if (mes > 12) {
+      mes = 1
+      anio++
+    }
+  }
+  return meses
+}
+
+/**
+ * Deja los indicadores como los espera la página: `despachosPorMes` como lista ordenada con todos los meses
+ * del rango (0 en los meses sin despachos, que el backend puede omitir) y los números siempre numéricos.
+ */
+export function normalizarIndicadores(crudos: IndicadoresCrudos, rango: RangoFechas): IndicadoresGestion {
+  const porMes = new Map<string, number>()
+  const fuente = crudos.despachosPorMes
+  if (Array.isArray(fuente)) {
+    for (const m of fuente) porMes.set(String(m.mes).slice(0, 7), Number(m.cantidad) || 0)
+  } else if (fuente && typeof fuente === 'object') {
+    for (const [mes, cantidad] of Object.entries(fuente)) porMes.set(mes.slice(0, 7), Number(cantidad) || 0)
+  }
+  const meses = [...new Set([...mesesDelRango(rango), ...porMes.keys()])].sort()
+  const promedio = crudos.tiempoPromedioDias
+  return {
+    totalDespachos: Number(crudos.totalDespachos) || 0,
+    conLevante: Number(crudos.conLevante) || 0,
+    tiempoPromedioDias: promedio === null || promedio === undefined || promedio === '' ? null : Number(promedio),
+    despachosPorMes: meses.map((mes) => ({ mes, cantidad: porMes.get(mes) ?? 0 })),
+    porCanal: crudos.porCanal ?? {},
+  }
+}
+
 /** 400 con `campos.desde` o `campos.hasta` si falta una fecha, «desde» es mayor que «hasta» o el rango pasa de 12 meses. */
 export async function obtenerIndicadoresGestion(rango: RangoFechas): Promise<IndicadoresGestion> {
-  const { data } = await http.get<IndicadoresGestion>('/reportes/indicadores', { params: rango })
-  return data
+  const { data } = await http.get<IndicadoresCrudos>('/reportes/indicadores', { params: rango })
+  return normalizarIndicadores(data, rango)
 }
 
 /**
