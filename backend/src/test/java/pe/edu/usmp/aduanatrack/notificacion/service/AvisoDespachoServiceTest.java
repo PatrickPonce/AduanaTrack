@@ -28,18 +28,20 @@ class AvisoDespachoServiceTest {
     private NotificacionService notificaciones;
     private CorreoService correos;
     private Despacho despacho;
+    private AvisoClienteService avisosCliente;
     private AvisoDespachoService servicio;
 
     @BeforeEach
     void preparar() {
         notificaciones = mock(NotificacionService.class);
         correos = mock(CorreoService.class);
+        avisosCliente = mock(AvisoClienteService.class);
         Usuario agente = mock(Usuario.class);
         when(agente.getCanalNotificacion()).thenReturn(CanalNotificacion.AMBOS);
         when(agente.getCorreo()).thenReturn("agente@ejemplo.pe");
         despacho = new Despacho(new Cliente("20787789324", AHORA), agente, AHORA);
         despacho.abrir("DESP-2026-0007");
-        servicio = new AvisoDespachoService(notificaciones, correos);
+        servicio = new AvisoDespachoService(notificaciones, correos, avisosCliente);
     }
 
     // CA1: un despacho con 2 días de almacenaje restantes genera una alerta «Crítica»
@@ -60,6 +62,7 @@ class AvisoDespachoServiceTest {
 
         verify(notificaciones).notificarAgente(despacho, TipoNotificacion.CAMBIO_ESTADO, Severidad.ALTA,
                 "Canal de control asignado", "DESP-2026-0007: canal rojo, programe la inspección en el depósito");
+        verify(avisosCliente).canalAsignado(despacho, CanalControl.ROJO);
     }
 
     @Test

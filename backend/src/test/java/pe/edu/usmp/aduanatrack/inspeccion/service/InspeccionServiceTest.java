@@ -1,5 +1,6 @@
 package pe.edu.usmp.aduanatrack.inspeccion.service;
 
+import pe.edu.usmp.aduanatrack.notificacion.service.AvisoClienteService;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -66,6 +67,7 @@ class InspeccionServiceTest {
     private HitoDespachoService hitos;
     private NotificacionService notificaciones;
     private Despacho despacho;
+    private AvisoClienteService avisosCliente;
     private InspeccionService servicio;
 
     @BeforeEach
@@ -83,9 +85,10 @@ class InspeccionServiceTest {
         Usuario agente = mock(Usuario.class);
         when(agente.getNombre()).thenReturn("Agente Demo");
         when(usuarioRepository.getReferenceById(USUARIO)).thenReturn(agente);
+        avisosCliente = mock(AvisoClienteService.class);
         Clock reloj = Clock.fixed(AHORA.atZone(ZoneId.of("America/Lima")).toInstant(), ZoneId.of("America/Lima"));
         servicio = new InspeccionService(despachoRepository, inspeccionRepository, usuarioRepository, hitos,
-                notificaciones, reloj, new DocumentoProperties(carpeta.toString()));
+                notificaciones, avisosCliente, reloj, new DocumentoProperties(carpeta.toString()));
     }
 
     private static List<InspeccionRequest.Item> todosConformes() {
@@ -160,6 +163,8 @@ class InspeccionServiceTest {
                 Severidad.ALTA, "Inspección con observaciones",
                 "DESP-2026-0001: Rotulado y marcas (Rotulado incompleto)");
         verify(hitos, never()).registrar(any(), eq(TipoHito.INSPECCION_CONFORME), anyString());
+        verify(avisosCliente).inspeccionConObservaciones(despacho, "Rotulado y marcas (Rotulado incompleto)");
+        verify(avisosCliente, never()).inspeccionConforme(any());
     }
 
     @Test
@@ -194,6 +199,8 @@ class InspeccionServiceTest {
         verify(notificaciones).notificarAgente(despacho, TipoNotificacion.INSPECCION_CONFORME, Severidad.INFO,
                 "Inspección conforme", "DESP-2026-0001: el levante quedó habilitado.");
         verify(hitos, never()).registrar(any(), eq(TipoHito.INSPECCION_CON_OBSERVACIONES), anyString());
+        verify(avisosCliente).inspeccionConforme(despacho);
+        verify(avisosCliente, never()).inspeccionConObservaciones(any(), anyString());
     }
 
     // CA4: el acta en PDF es opcional
