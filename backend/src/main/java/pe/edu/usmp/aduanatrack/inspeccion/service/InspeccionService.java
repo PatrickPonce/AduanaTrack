@@ -35,6 +35,7 @@ import pe.edu.usmp.aduanatrack.inspeccion.entity.ResultadoInspeccion;
 import pe.edu.usmp.aduanatrack.inspeccion.repository.InspeccionDespachoRepository;
 import pe.edu.usmp.aduanatrack.notificacion.entity.Severidad;
 import pe.edu.usmp.aduanatrack.notificacion.entity.TipoNotificacion;
+import pe.edu.usmp.aduanatrack.notificacion.service.AvisoClienteService;
 import pe.edu.usmp.aduanatrack.notificacion.service.NotificacionService;
 
 /**
@@ -63,18 +64,21 @@ public class InspeccionService {
     private final UsuarioRepository usuarioRepository;
     private final HitoDespachoService hitos;
     private final NotificacionService notificaciones;
+    private final AvisoClienteService avisosCliente;
     private final Clock clock;
     private final Path directorio;
 
     public InspeccionService(DespachoRepository despachoRepository,
             InspeccionDespachoRepository inspeccionRepository, UsuarioRepository usuarioRepository,
-            HitoDespachoService hitos, NotificacionService notificaciones, Clock clock,
+            HitoDespachoService hitos, NotificacionService notificaciones, AvisoClienteService avisosCliente,
+            Clock clock,
             DocumentoProperties propiedades) {
         this.despachoRepository = despachoRepository;
         this.inspeccionRepository = inspeccionRepository;
         this.usuarioRepository = usuarioRepository;
         this.hitos = hitos;
         this.notificaciones = notificaciones;
+        this.avisosCliente = avisosCliente;
         this.clock = clock;
         this.directorio = Path.of(propiedades.directorio()).toAbsolutePath().normalize();
     }
@@ -153,6 +157,7 @@ public class InspeccionService {
                     "Inspección conforme: el levante queda habilitado.");
             notificaciones.notificarAgente(despacho, TipoNotificacion.INSPECCION_CONFORME, Severidad.INFO,
                     "Inspección conforme", numero + ": el levante quedó habilitado.");
+            avisosCliente.inspeccionConforme(despacho);
             return;
         }
         List<String> noConformes = items.stream().filter(i -> !i.isConforme())
@@ -161,6 +166,7 @@ public class InspeccionService {
         hitos.registrar(despachoId, TipoHito.INSPECCION_CON_OBSERVACIONES, "Inspección con observaciones: " + detalle);
         notificaciones.notificarAgente(despacho, TipoNotificacion.INSPECCION_CON_OBSERVACIONES, Severidad.ALTA,
                 "Inspección con observaciones", numero + ": " + detalle);
+        avisosCliente.inspeccionConObservaciones(despacho, detalle);
     }
 
     private static void validarEstado(Despacho despacho) {
