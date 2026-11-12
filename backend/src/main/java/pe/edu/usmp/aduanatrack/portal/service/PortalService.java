@@ -73,6 +73,23 @@ public class PortalService {
                 .toList();
     }
 
+    /**
+     * Cabecera del detalle de un despacho (BL, ETA y última actualización), la misma fila de la lista.
+     * La regla de acceso es la del resto del portal: otra empresa, sin empresa, borrador o inexistente
+     * responden 404 «Despacho no encontrado»; los tres primeros quedan en {@code acceso_denegado}
+     * (ese registro va en su propia transacción).
+     */
+    @Transactional(readOnly = true)
+    public PortalDespachoResponse despacho(UsuarioAutenticado usuario, Long id) {
+        acceso.exigirDespacho(usuario, id);
+        Long clienteId = acceso.clienteIdDe(usuario);
+        if (clienteId == null) {
+            throw ApiException.noEncontrado(AccesoClienteService.DESPACHO_NO_ENCONTRADO);
+        }
+        return portalRepository.despachoDe(clienteId, id, EstadoDespacho.BORRADOR)
+                .orElseThrow(() -> ApiException.noEncontrado(AccesoClienteService.DESPACHO_NO_ENCONTRADO));
+    }
+
     private static EstadoDespacho parsearEstado(String valor, Map<String, String> errores) {
         if (valor == null || valor.isBlank()) {
             return null;

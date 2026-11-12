@@ -65,9 +65,25 @@ Del más reciente al más antiguo. Lista vacía si no hay coincidencias o si el 
                   "etaHasta": "La fecha final no puede ser anterior a la inicial" } }
 ```
 
+### GET `/api/v1/portal/despachos/{id}`
+
+Cabecera del detalle de un despacho: la misma fila de la lista, para un solo despacho. Sirve cuando el detalle se abre con un enlace directo (`/portal-cliente/mis-despachos?despacho=318`) y el despacho no está en la lista filtrada. `numeroBl` y `fechaEta` vienen del embarque (`null` si no tiene); `ultimaActualizacion` es la fecha del último hito.
+
+```json
+200 { "id": 318, "numero": "DESP-2026-0318", "numeroBl": "MSCU-BL-55120", "fechaEta": "2026-10-21",
+      "estado": "INSPECCION_PROGRAMADA", "canalControl": "NARANJA",
+      "ultimaActualizacion": "2026-11-05T18:40:00" }
+```
+
+Misma regla de acceso que el resto del contrato: si el despacho es de otra empresa, no existe, es un borrador o el usuario no tiene empresa, la respuesta es idéntica. Los intentos por otra empresa, sin empresa o borrador quedan en `acceso_denegado`; un despacho inexistente no se registra.
+
+```json
+404 { "codigo": "NO_ENCONTRADO", "mensaje": "Despacho no encontrado", "campos": null }
+```
+
 ### Detalle, línea de tiempo y documentos
 
-Se usan las rutas que ya existen; el filtro por empresa se aplica solo:
+Los datos de cabecera (BL, ETA y última actualización) salen de `GET /api/v1/portal/despachos/{id}`, porque `GET /api/v1/despachos/{id}` no los trae. Para el resto se usan las rutas que ya existen; el filtro por empresa se aplica solo:
 
 - `GET /api/v1/despachos/{id}` · `GET /api/v1/despachos/{id}/hitos` (stepper «Apertura … Levante»).
 - `GET /api/v1/despachos/{id}/documentos` y `GET /api/v1/despachos/{id}/documentos/{documentoId}/archivo` (botón «Descargar»).

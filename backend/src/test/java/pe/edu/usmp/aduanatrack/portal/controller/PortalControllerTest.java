@@ -85,10 +85,51 @@ class PortalControllerTest {
     }
 
     @Test
+    void detalle_clienteVeLaCabeceraConBlEtaYUltimaActualizacion() throws Exception {
+        when(servicio.despacho(CLIENTE, 318L)).thenReturn(new PortalDespachoResponse(318L, "DESP-2026-0318",
+                "MSCU-BL-55120", LocalDate.of(2026, 10, 21), EstadoDespacho.INSPECCION_PROGRAMADA, "NARANJA",
+                LocalDateTime.of(2026, 11, 5, 18, 40)));
+
+        mvc.perform(get("/api/v1/portal/despachos/318").cookie(sesion(CLIENTE)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(318))
+                .andExpect(jsonPath("$.numero").value("DESP-2026-0318"))
+                .andExpect(jsonPath("$.numeroBl").value("MSCU-BL-55120"))
+                .andExpect(jsonPath("$.fechaEta").value("2026-10-21"))
+                .andExpect(jsonPath("$.estado").value("INSPECCION_PROGRAMADA"))
+                .andExpect(jsonPath("$.canalControl").value("NARANJA"))
+                .andExpect(jsonPath("$.ultimaActualizacion").value("2026-11-05T18:40:00"));
+    }
+
+    @Test
+    void detalle_sinEmbarque_blYEtaSalenNulos() throws Exception {
+        when(servicio.despacho(CLIENTE, 355L)).thenReturn(new PortalDespachoResponse(355L, "DESP-2026-0355",
+                null, null, EstadoDespacho.DOCUMENTACION_COMPLETA, null, LocalDateTime.of(2026, 11, 4, 9, 12)));
+
+        mvc.perform(get("/api/v1/portal/despachos/355").cookie(sesion(CLIENTE)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.numeroBl").doesNotExist())
+                .andExpect(jsonPath("$.fechaEta").doesNotExist());
+    }
+
+    @Test
+    void detalle_ajenoBorradorOInexistente_responde404Generico() throws Exception {
+        when(servicio.despacho(CLIENTE, 320L)).thenThrow(ApiException.noEncontrado("Despacho no encontrado"));
+
+        mvc.perform(get("/api/v1/portal/despachos/320").cookie(sesion(CLIENTE)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.codigo").value("NO_ENCONTRADO"))
+                .andExpect(jsonPath("$.mensaje").value("Despacho no encontrado"));
+    }
+
+    @Test
     void adminYAgente_recibenAcceso403() throws Exception {
         for (String rol : List.of("ADMIN", "AGENTE")) {
             UsuarioAutenticado u = new UsuarioAutenticado(1L, rol.toLowerCase(), rol, rol);
             mvc.perform(get("/api/v1/portal/despachos").cookie(sesion(u))).andExpect(status().isForbidden());
+            mvc.perform(get("/api/v1/portal/despachos/318").cookie(sesion(u)))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.codigo").value("ACCESO_DENEGADO"));
             mvc.perform(get("/api/v1/portal/mi-empresa").cookie(sesion(u))).andExpect(status().isForbidden());
         }
         verifyNoInteractions(servicio);
