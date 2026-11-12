@@ -88,3 +88,92 @@ describe('Layout (menú lateral y barra superior)', () => {
     expect(__APP_VERSION__).toBe('0.3.0')
   })
 })
+
+describe('Layout · menú por rol (HU-16)', () => {
+  const MENU_AGENTE = [
+    'Dashboard',
+    'Despachos',
+    'Clientes',
+    'Embarques',
+    'Documentos',
+    'Clasificación',
+    'Tributos',
+    'DAM (Registro)',
+    'Canal de Control',
+    'Depósitos / Citas',
+    'Inspecciones',
+    'Levante',
+    'Reportes',
+    'Notificaciones',
+  ]
+
+  const enlaces = () =>
+    within(menuPrincipal())
+      .getAllByRole('link')
+      .map((a) => a.textContent)
+
+  it('el CLIENTE solo ve «Mis despachos» y «Notificaciones» bajo «Portal del cliente»', async () => {
+    renderizar('CLIENTE', '/portal-cliente/mis-despachos')
+    await screen.findByText('Lucía Ramos')
+
+    expect(enlaces()).toEqual(['Mis despachos', 'Notificaciones'])
+    expect(within(menuPrincipal()).getByRole('heading', { name: 'Portal del cliente' })).toBeInTheDocument()
+    for (const texto of ['Clientes', 'Embarques', 'Documentos', 'Clasificación', 'Tributos', 'Levante']) {
+      expect(within(menuPrincipal()).queryByText(texto)).not.toBeInTheDocument()
+    }
+    expect(within(menuPrincipal()).getByRole('link', { name: 'Mis despachos' })).toHaveAttribute(
+      'href',
+      '/portal-cliente/mis-despachos',
+    )
+  })
+
+  it('el AGENTE conserva su menú y no ve el portal ni la administración', async () => {
+    renderizar('AGENTE')
+    await screen.findByText('Lucía Ramos')
+
+    expect(enlaces()).toEqual(MENU_AGENTE)
+  })
+
+  it('el ADMIN ve el menú del agente y suma «Administración → Usuarios cliente»', async () => {
+    renderizar('ADMIN')
+    await screen.findByText('Lucía Ramos')
+
+    expect(enlaces()).toEqual([...MENU_AGENTE, 'Usuarios cliente'])
+    expect(within(menuPrincipal()).getByRole('heading', { name: 'Administración' })).toBeInTheDocument()
+    expect(within(menuPrincipal()).getByRole('link', { name: 'Usuarios cliente' })).toHaveAttribute(
+      'href',
+      '/administracion/usuarios-cliente',
+    )
+  })
+
+  it('muestra al CLIENTE su empresa y RUC en el pie de la barra lateral', async () => {
+    vi.mocked(authApi.sesionActual).mockResolvedValue({
+      usuario: 'cliente',
+      nombre: 'Lucía Ramos',
+      rol: 'CLIENTE',
+      empresa: { id: 1, ruc: '20100047218', razonSocial: 'Importadora Andina SAC' },
+    })
+    render(
+      <MemoryRouter initialEntries={['/portal-cliente/mis-despachos']}>
+        <AuthProvider>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="*" element={<p>Contenido</p>} />
+            </Route>
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    )
+
+    const empresa = await screen.findByRole('group', { name: 'Empresa' })
+    expect(empresa).toHaveTextContent('Importadora Andina SAC')
+    expect(empresa).toHaveTextContent('RUC 20100047218')
+  })
+
+  it('el agente no ve el bloque de empresa', async () => {
+    renderizar('AGENTE')
+    await screen.findByText('Lucía Ramos')
+
+    expect(screen.queryByRole('group', { name: 'Empresa' })).not.toBeInTheDocument()
+  })
+})
