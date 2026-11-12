@@ -413,3 +413,74 @@ export interface ApiErrorBody {
   campos?: Record<string, string>
   [extra: string]: unknown
 }
+
+// ---------------------------------------------------------------------------------------------
+// HU-16 · Portal del cliente (contrato C11, docs/sprint-3/contratos/C11-portal-cliente.md).
+// ---------------------------------------------------------------------------------------------
+
+/** GET /portal/mi-empresa: empresa del usuario CLIENTE; los tres campos son nulos si aún no tiene una. */
+export interface MiEmpresa {
+  clienteId: number | null
+  ruc: string | null
+  razonSocial: string | null
+}
+
+/** Fila de GET /portal/despachos: solo los despachos de la empresa del usuario CLIENTE. */
+export interface DespachoPortal {
+  id: number
+  numero: string
+  numeroBl: string | null
+  fechaEta: string | null
+  estado: EstadoDespacho
+  /** VERDE, NARANJA o ROJO; nulo mientras no se asigna. */
+  canalControl: string | null
+  /** Fecha y hora del último hito. */
+  ultimaActualizacion: string
+}
+
+/** Filtros de GET /portal/despachos; todos opcionales (fechas AAAA-MM-DD, ambos extremos incluidos). */
+export interface FiltrosPortal {
+  numero?: string
+  estado?: EstadoDespacho
+  etaDesde?: string
+  etaHasta?: string
+}
+
+/** Fila plana de GET /administracion/usuarios-cliente; empresa y asignación son nulas si está SIN_ASIGNAR. */
+export interface UsuarioCliente {
+  id: number
+  usuario: string
+  correo: string
+  nombre: string
+  activo: boolean
+  clienteId: number | null
+  ruc: string | null
+  razonSocial: string | null
+  /** Fecha y hora de la última asignación (la fija el servidor). */
+  asignadoEn: string | null
+  estado: 'ASIGNADO' | 'SIN_ASIGNAR'
+}
+
+/** GET /administracion/empresas-asignables: empresas activas con RUC válido. */
+export interface EmpresaAsignable {
+  id: number
+  ruc: string
+  razonSocial: string
+}
+
+/** Motivo del bloqueo: despacho de otra empresa, usuario sin empresa o despacho en borrador. */
+export type ResultadoAcceso = 'OTRA_EMPRESA' | 'SIN_EMPRESA' | 'BORRADOR'
+
+/** Fila de GET /administracion/accesos-denegados (paginado). */
+export interface AccesoDenegado {
+  id: number
+  fecha: string
+  usuario: string
+  despachoId: number | null
+  /** Nulo si el despacho estaba en borrador. */
+  numeroDespacho: string | null
+  clienteId: number | null
+  empresaDespacho: string | null
+  resultado: ResultadoAcceso
+  mensaje: string
+}

@@ -1,20 +1,20 @@
 import { Alert, Box, Button, Checkbox, FormControlLabel, Link, Paper, Stack, TextField, Typography } from '@mui/material'
 import { useEffect, useState, type FormEvent } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router'
+import { Navigate, useLocation } from 'react-router'
 
 import { leerError } from '../api/http'
 import { useAuth } from '../auth/AuthContext'
+import { inicioDe, rutaPermitida } from '../auth/roles'
 import { COLORES, fadeInUp } from '../theme'
 
 export const MENSAJE_CREDENCIALES = 'Usuario o contraseña incorrectos'
 export const MENSAJE_BLOQUEO = 'Cuenta bloqueada temporalmente. Intente nuevamente en 15 minutos.'
 const MENSAJE_OLVIDO = 'Solicite el restablecimiento de su contraseña al administrador del sistema.'
-const VERSION = 'v0.1.0'
+const VERSION = `v${__APP_VERSION__}`
 
 /** HU-01 · T-01.3: inicio de sesión con «Recordarme» (sesión de 8 h). */
 export function LoginPage() {
   const { usuario: sesion, iniciarSesion } = useAuth()
-  const navegar = useNavigate()
   const ubicacion = useLocation()
   const [usuario, setUsuario] = useState('')
   const [password, setPassword] = useState('')
@@ -28,7 +28,13 @@ export function LoginPage() {
     document.title = 'Iniciar sesión · AduanaTrack'
   }, [])
 
-  if (sesion) return <Navigate to="/dashboard" replace />
+  // Vuelve a la pantalla que pidió antes del login solo si es de su rol (HU-16: el CLIENTE aterriza
+  // en «Mis despachos»). Al iniciar sesión, este Navigate es el que redirige.
+  const desde = (ubicacion.state as { desde?: string } | null)?.desde
+  if (sesion) {
+    const destino = desde && desde !== '/login' && rutaPermitida(sesion.rol, desde) ? desde : inicioDe(sesion.rol)
+    return <Navigate to={destino} replace />
+  }
 
   async function enviar(evento: FormEvent) {
     evento.preventDefault()
@@ -38,9 +44,8 @@ export function LoginPage() {
     setEnviando(true)
     setError(null)
     try {
+      // Con la sesión iniciada, el componente se vuelve a dibujar y el Navigate de arriba redirige.
       await iniciarSesion(usuario.trim(), password, recordarme)
-      const desde = (ubicacion.state as { desde?: string } | null)?.desde
-      navegar(desde && desde !== '/login' ? desde : '/dashboard', { replace: true })
     } catch (e) {
       const { status } = leerError(e)
       if (status === 423) setError(MENSAJE_BLOQUEO)

@@ -16,6 +16,9 @@ const ORDEN: EstadoDespacho[] = [
   'RETIRO_PROGRAMADO',
 ]
 
+/** Estados que ve quien consulta despachos ya abiertos (sin BORRADOR), en su orden: filtros por estado. */
+export const ESTADOS_VISIBLES: readonly EstadoDespacho[] = ORDEN.filter((e) => e !== 'BORRADOR')
+
 /**
  * true si el despacho ya está en `minimo` o en un estado posterior: decide qué pestañas se ven
  * (p. ej. «Clasificación» desde DOCUMENTACION_COMPLETA). Un estado que no está en la lista

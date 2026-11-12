@@ -7,6 +7,7 @@ import DirectionsBoatOutlinedIcon from '@mui/icons-material/DirectionsBoatOutlin
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined'
 import InventoryOutlinedIcon from '@mui/icons-material/InventoryOutlined'
 import LogoutIcon from '@mui/icons-material/Logout'
+import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined'
 import ManageSearchOutlinedIcon from '@mui/icons-material/ManageSearchOutlined'
 import MenuIcon from '@mui/icons-material/Menu'
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined'
@@ -30,6 +31,8 @@ import { useState, type ReactNode } from 'react'
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router'
 
 import { useAuth } from '../auth/AuthContext'
+import { useMiEmpresa } from '../auth/useMiEmpresa'
+import { ROLES_AGENCIA } from '../auth/roles'
 import { COLORES, fadeIn } from '../theme'
 import type { Rol } from '../types'
 import { CampanaNotificaciones } from './CampanaNotificaciones'
@@ -40,8 +43,8 @@ interface ItemMenu {
   icono: ReactNode
   a: string
   prefijo: string
-  /** Solo para quien registra datos (administrador y agente). */
-  soloRegistro?: boolean
+  /** Roles que ven el ítem (HU-16). Ocultarlo no es seguridad: el backend filtra los datos. */
+  roles: Rol[]
 }
 
 interface SeccionMenu {
@@ -49,54 +52,101 @@ interface SeccionMenu {
   items: ItemMenu[]
 }
 
+const AGENCIA = ROLES_AGENCIA
+
 const MENU: SeccionMenu[] = [
   {
     titulo: 'General',
     items: [
-      { texto: 'Dashboard', icono: <DashboardOutlinedIcon />, a: '/dashboard', prefijo: '/dashboard' },
-      {
-        texto: 'Despachos',
-        icono: <InventoryOutlinedIcon />,
-        a: '/despachos/nuevo',
-        prefijo: '/despachos',
-        soloRegistro: true,
-      },
-      { texto: 'Clientes', icono: <BusinessOutlinedIcon />, a: '/clientes', prefijo: '/clientes' },
-      { texto: 'Embarques', icono: <DirectionsBoatOutlinedIcon />, a: '/embarques', prefijo: '/embarques' },
+      { texto: 'Dashboard', icono: <DashboardOutlinedIcon />, a: '/dashboard', prefijo: '/dashboard', roles: AGENCIA },
+      { texto: 'Despachos', icono: <InventoryOutlinedIcon />, a: '/despachos/nuevo', prefijo: '/despachos', roles: AGENCIA },
+      { texto: 'Clientes', icono: <BusinessOutlinedIcon />, a: '/clientes', prefijo: '/clientes', roles: AGENCIA },
+      { texto: 'Embarques', icono: <DirectionsBoatOutlinedIcon />, a: '/embarques', prefijo: '/embarques', roles: AGENCIA },
     ],
   },
   {
     titulo: 'Operación aduanera',
     items: [
-      { texto: 'Documentos', icono: <DescriptionOutlinedIcon />, a: '/documentos', prefijo: '/documentos' },
-      { texto: 'Clasificación', icono: <CategoryOutlinedIcon />, a: '/clasificacion', prefijo: '/clasificacion' },
-      { texto: 'Tributos', icono: <PaymentsOutlinedIcon />, a: '/tributos', prefijo: '/tributos' },
-      { texto: 'DAM (Registro)', icono: <ReceiptLongOutlinedIcon />, a: '/dam', prefijo: '/dam' },
-      { texto: 'Canal de Control', icono: <TrafficOutlinedIcon />, a: '/canal-control', prefijo: '/canal-control' },
-      { texto: 'Depósitos / Citas', icono: <WarehouseOutlinedIcon />, a: '/citas', prefijo: '/citas' },
-      { texto: 'Inspecciones', icono: <ManageSearchOutlinedIcon />, a: '/inspecciones', prefijo: '/inspecciones' },
-      { texto: 'Levante', icono: <FactCheckOutlinedIcon />, a: '/levante', prefijo: '/levante' },
+      { texto: 'Documentos', icono: <DescriptionOutlinedIcon />, a: '/documentos', prefijo: '/documentos', roles: AGENCIA },
+      {
+        texto: 'Clasificación',
+        icono: <CategoryOutlinedIcon />,
+        a: '/clasificacion',
+        prefijo: '/clasificacion',
+        roles: AGENCIA,
+      },
+      { texto: 'Tributos', icono: <PaymentsOutlinedIcon />, a: '/tributos', prefijo: '/tributos', roles: AGENCIA },
+      { texto: 'DAM (Registro)', icono: <ReceiptLongOutlinedIcon />, a: '/dam', prefijo: '/dam', roles: AGENCIA },
+      {
+        texto: 'Canal de Control',
+        icono: <TrafficOutlinedIcon />,
+        a: '/canal-control',
+        prefijo: '/canal-control',
+        roles: AGENCIA,
+      },
+      { texto: 'Depósitos / Citas', icono: <WarehouseOutlinedIcon />, a: '/citas', prefijo: '/citas', roles: AGENCIA },
+      {
+        texto: 'Inspecciones',
+        icono: <ManageSearchOutlinedIcon />,
+        a: '/inspecciones',
+        prefijo: '/inspecciones',
+        roles: AGENCIA,
+      },
+      { texto: 'Levante', icono: <FactCheckOutlinedIcon />, a: '/levante', prefijo: '/levante', roles: AGENCIA },
     ],
   },
   {
     titulo: 'Gestión',
     items: [
+      { texto: 'Reportes', icono: <AssessmentOutlinedIcon />, a: '/reportes', prefijo: '/reportes', roles: AGENCIA },
       {
-        texto: 'Reportes',
-        icono: <AssessmentOutlinedIcon />,
-        a: '/reportes',
-        prefijo: '/reportes',
-        soloRegistro: true,
+        texto: 'Notificaciones',
+        icono: <NotificationsNoneOutlinedIcon />,
+        a: '/notificaciones',
+        prefijo: '/notificaciones',
+        roles: AGENCIA,
+      },
+    ],
+  },
+  {
+    titulo: 'Portal del cliente',
+    items: [
+      {
+        texto: 'Mis despachos',
+        icono: <InventoryOutlinedIcon />,
+        a: '/portal-cliente/mis-despachos',
+        prefijo: '/portal-cliente/mis-despachos',
+        roles: ['CLIENTE'],
       },
       {
         texto: 'Notificaciones',
         icono: <NotificationsNoneOutlinedIcon />,
         a: '/notificaciones',
         prefijo: '/notificaciones',
+        roles: ['CLIENTE'],
+      },
+    ],
+  },
+  {
+    titulo: 'Administración',
+    items: [
+      {
+        texto: 'Usuarios cliente',
+        icono: <ManageAccountsOutlinedIcon />,
+        a: '/administracion/usuarios-cliente',
+        prefijo: '/administracion/usuarios-cliente',
+        roles: ['ADMIN'],
       },
     ],
   },
 ]
+
+/** Secciones con los ítems que ve el rol; una sección sin ítems no se muestra. */
+export function menuDe(rol: Rol): SeccionMenu[] {
+  return MENU.map((s) => ({ ...s, items: s.items.filter((i) => i.roles.includes(rol)) })).filter(
+    (s) => s.items.length > 0,
+  )
+}
 
 export const ROLES: Record<Rol, string> = {
   ADMIN: 'Administrador',
@@ -123,7 +173,10 @@ export function Layout() {
   const [encabezado, setEncabezado] = useState<Encabezado>({ migas: '', titulo: '' })
   const [menuMovil, setMenuMovil] = useState(false)
   const [anclaCuenta, setAnclaCuenta] = useState<HTMLElement | null>(null)
-  const registra = usuario?.rol !== 'CLIENTE'
+  const secciones = usuario ? menuDe(usuario.rol) : []
+  // HU-16: la empresa del CLIENTE sale de GET /portal/mi-empresa (/auth/me no la trae).
+  const { empresa: miEmpresa } = useMiEmpresa(usuario?.rol === 'CLIENTE')
+  const empresa = miEmpresa?.clienteId != null ? miEmpresa : null
 
   async function salir() {
     setAnclaCuenta(null)
@@ -186,9 +239,10 @@ export function Layout() {
       </Stack>
 
       <Box component="nav" aria-label="Menú principal" sx={{ flexGrow: 1, pb: 2 }}>
-        {MENU.map((seccion) => (
+        {secciones.map((seccion) => (
           <Box key={seccion.titulo} sx={{ mt: 1.5 }}>
             <Typography
+              component="h2"
               sx={{
                 px: 2.75,
                 pb: 0.75,
@@ -196,13 +250,13 @@ export function Layout() {
                 fontWeight: 700,
                 letterSpacing: 1.2,
                 textTransform: 'uppercase',
-                color: 'rgba(255,255,255,0.4)',
+                // 0.62 y no 0.4: el texto chico necesita contraste 4.5:1 sobre el azul marino.
+                color: 'rgba(255,255,255,0.62)',
               }}
             >
               {seccion.titulo}
             </Typography>
             {seccion.items.map((item) => {
-              const habilitado = !item.soloRegistro || registra
               const activo = ruta.startsWith(item.prefijo)
               const contenido = (
                 <>
@@ -214,18 +268,6 @@ export function Layout() {
                   </Box>
                 </>
               )
-              if (!habilitado) {
-                return (
-                  <Box
-                    key={item.texto}
-                    aria-disabled
-                    title="Solo para administrador y agente"
-                    sx={{ ...estiloItem, opacity: 0.45, cursor: 'default' }}
-                  >
-                    {contenido}
-                  </Box>
-                )
-              }
               return (
                 <ButtonBase
                   key={item.texto}
@@ -270,7 +312,18 @@ export function Layout() {
       </Box>
 
       <Box sx={{ px: 2.75, py: 2, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-        <Typography sx={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
+        {/* HU-16: el cliente ve a qué empresa pertenece la información que consulta. */}
+        {usuario?.rol === 'CLIENTE' && (
+          <Box aria-label="Empresa" role="group" sx={{ mb: 1.25 }}>
+            <Typography sx={{ fontSize: 12.5, fontWeight: 700, lineHeight: 1.3 }}>
+              {empresa?.razonSocial ?? 'Sin empresa asignada'}
+            </Typography>
+            {empresa && (
+              <Typography sx={{ fontSize: 11.5, color: 'rgba(255,255,255,0.72)' }}>RUC {empresa.ruc}</Typography>
+            )}
+          </Box>
+        )}
+        <Typography sx={{ fontSize: 11, color: 'rgba(255,255,255,0.62)' }}>
           v{__APP_VERSION__} · Sprint 3 · Grupo 2 USMP
         </Typography>
       </Box>

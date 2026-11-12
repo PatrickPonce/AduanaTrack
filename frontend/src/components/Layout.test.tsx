@@ -1,14 +1,19 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as authApi from '../api/auth'
+import * as portalApi from '../api/portalCliente'
 import { AuthProvider } from '../auth/AuthContext'
 import { UbicacionActual } from '../test/utils'
 import type { Rol } from '../types'
 import { Layout } from './Layout'
 
 vi.mock('../api/auth')
+vi.mock('../api/portalCliente', async (original) => ({
+  ...(await original<typeof import('../api/portalCliente')>()),
+  obtenerMiEmpresa: vi.fn(),
+}))
 
 function renderizar(rol: Rol = 'AGENTE', ruta = '/dashboard') {
   vi.mocked(authApi.sesionActual).mockResolvedValue({ usuario: 'usuario', nombre: 'Lucía Ramos', rol })
@@ -86,5 +91,98 @@ describe('Layout (menú lateral y barra superior)', () => {
 
     expect(screen.getAllByText(`v${__APP_VERSION__} · Sprint 3 · Grupo 2 USMP`)[0]).toBeInTheDocument()
     expect(__APP_VERSION__).toBe('0.3.0')
+  })
+})
+
+describe('Layout · menú por rol (HU-16)', () => {
+  beforeEach(() => {
+    vi.mocked(portalApi.obtenerMiEmpresa).mockResolvedValue({ clienteId: null, ruc: null, razonSocial: null })
+  })
+
+  const MENU_AGENTE = [
+    'Dashboard',
+    'Despachos',
+    'Clientes',
+    'Embarques',
+    'Documentos',
+    'Clasificación',
+    'Tributos',
+    'DAM (Registro)',
+    'Canal de Control',
+    'Depósitos / Citas',
+    'Inspecciones',
+    'Levante',
+    'Reportes',
+    'Notificaciones',
+  ]
+
+  const enlaces = () =>
+    within(menuPrincipal())
+      .getAllByRole('link')
+      .map((a) => a.textContent)
+
+  it('el CLIENTE solo ve «Mis despachos» y «Notificaciones» bajo «Portal del cliente»', async () => {
+    renderizar('CLIENTE', '/portal-cliente/mis-despachos')
+    await screen.findByText('Lucía Ramos')
+
+    expect(enlaces()).toEqual(['Mis despachos', 'Notificaciones'])
+    expect(within(menuPrincipal()).getByRole('heading', { name: 'Portal del cliente' })).toBeInTheDocument()
+    for (const texto of ['Clientes', 'Embarques', 'Documentos', 'Clasificación', 'Tributos', 'Levante']) {
+      expect(within(menuPrincipal()).queryByText(texto)).not.toBeInTheDocument()
+    }
+    expect(within(menuPrincipal()).getByRole('link', { name: 'Mis despachos' })).toHaveAttribute(
+      'href',
+      '/portal-cliente/mis-despachos',
+    )
+  })
+
+  it('el AGENTE conserva su menú y no ve el portal ni la administración', async () => {
+    renderizar('AGENTE')
+    await screen.findByText('Lucía Ramos')
+
+    expect(enlaces()).toEqual(MENU_AGENTE)
+  })
+
+  it('el ADMIN ve el menú del agente y suma «Administración → Usuarios cliente»', async () => {
+    renderizar('ADMIN')
+    await screen.findByText('Lucía Ramos')
+
+    expect(enlaces()).toEqual([...MENU_AGENTE, 'Usuarios cliente'])
+    expect(within(menuPrincipal()).getByRole('heading', { name: 'Administración' })).toBeInTheDocument()
+    expect(within(menuPrincipal()).getByRole('link', { name: 'Usuarios cliente' })).toHaveAttribute(
+      'href',
+      '/administracion/usuarios-cliente',
+    )
+  })
+
+  it('muestra al CLIENTE su empresa y RUC (de GET /portal/mi-empresa) en el pie de la barra lateral', async () => {
+    vi.mocked(portalApi.obtenerMiEmpresa).mockResolvedValue({
+      clienteId: 1,
+      ruc: '20512345671',
+      razonSocial: 'Importadora Andina S.A.C.',
+    })
+    renderizar('CLIENTE', '/portal-cliente/mis-despachos')
+
+    const empresa = await screen.findByRole('group', { name: 'Empresa' })
+    await waitFor(() => expect(empresa).toHaveTextContent('Importadora Andina S.A.C.'))
+    expect(empresa).toHaveTextContent('RUC 20512345671')
+  })
+
+  it('al CLIENTE sin empresa le indica «Sin empresa asignada»', async () => {
+    vi.mocked(portalApi.obtenerMiEmpresa).mockResolvedValue({ clienteId: null, ruc: null, razonSocial: null })
+    renderizar('CLIENTE', '/portal-cliente/mis-despachos')
+
+    const empresa = await screen.findByRole('group', { name: 'Empresa' })
+    await waitFor(() => expect(portalApi.obtenerMiEmpresa).toHaveBeenCalled())
+    expect(empresa).toHaveTextContent('Sin empresa asignada')
+    expect(empresa).not.toHaveTextContent('RUC')
+  })
+
+  it('el agente no ve el bloque de empresa', async () => {
+    renderizar('AGENTE')
+    await screen.findByText('Lucía Ramos')
+
+    expect(screen.queryByRole('group', { name: 'Empresa' })).not.toBeInTheDocument()
+    expect(portalApi.obtenerMiEmpresa).not.toHaveBeenCalled()
   })
 })

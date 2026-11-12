@@ -28,6 +28,18 @@ server {
         proxy_set_header X-Forwarded-Proto $proto_cliente;
     }
 
+    # Los archivos de /assets llevan el hash en el nombre: se cachean un año. Si no existe (p. ej. una pestaña abierta con
+    # una versión anterior) responde 404 y no el index.html, para que el navegador no lo confunda con un módulo JavaScript.
+    location /assets/ {
+        try_files $uri =404;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    # El index.html nunca se guarda en caché: cada despliegue cambia los nombres de los archivos que referencia.
+    location = /index.html {
+        add_header Cache-Control "no-cache";
+    }
+
     # SPA: las rutas de React Router (/dashboard, /clientes/...) devuelven index.html.
     location / {
         try_files $uri $uri/ /index.html;
