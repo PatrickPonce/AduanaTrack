@@ -1,5 +1,5 @@
 # Plantilla: la imagen de nginx sustituye ${BACKEND_URL} al arrancar (por defecto http://backend:8080 en Docker Compose;
-# en Render es la URL pública del backend). Las variables propias de nginx ($host, $scheme...) no se tocan.
+# en Render es la URL pública del backend). Las demás variables propias de nginx no se tocan.
 
 # Si hay un proxy HTTPS delante (Render), se conserva su protocolo; si no, el del propio nginx.
 map $http_x_forwarded_proto $proto_cliente {

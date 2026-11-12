@@ -14,4 +14,7 @@ RUN groupadd --system aduana && useradd --system --gid aduana --no-create-home a
 COPY --from=build --chown=aduana:aduana /app/app.jar app.jar
 USER aduana
 EXPOSE 8080
+# Responde cuando el puerto del backend acepta conexiones (la imagen no trae curl ni wget).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD ["bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080"]
 ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "/app/app.jar"]
