@@ -45,6 +45,8 @@ public final class CodigoError {
     public static final String LEVANTE_YA_REGISTRADO = "LEVANTE_YA_REGISTRADO";
     /** HU-13: el N° de levante ya está registrado en otro despacho. */
     public static final String LEVANTE_DUPLICADO = "LEVANTE_DUPLICADO";
+    /** HU-12: el despacho no está en INSPECCION_PROGRAMADA, así que no admite registrar una inspección. */
+    public static final String INSPECCION_NO_PROGRAMADA = "INSPECCION_NO_PROGRAMADA";
     public static final String ERROR_INTERNO = "ERROR_INTERNO";
 
     private CodigoError() {
