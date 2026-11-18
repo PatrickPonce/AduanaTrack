@@ -65,6 +65,9 @@ export function DespachoFormPage() {
       .then(([r, a]) => {
         setRegimenes(r)
         setAduanas(a)
+        if (r.length === 0 || a.length === 0) {
+          setErrorCatalogos('Las listas de régimen aduanero o aduana están vacías. Avise al administrador.')
+        }
       })
       .catch(() => setErrorCatalogos('No se pudieron cargar las listas de régimen aduanero y aduana.'))
   }, [])

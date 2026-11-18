@@ -484,3 +484,19 @@ export interface AccesoDenegado {
   resultado: ResultadoAcceso
   mensaje: string
 }
+
+export type SeveridadNotificacion = 'CRITICA' | 'ALTA' | 'INFO'
+
+/** Fila de GET /notificaciones (contrato C9). */
+export interface NotificacionBandeja {
+  id: number
+  tipo: string
+  severidad: SeveridadNotificacion
+  titulo: string
+  mensaje: string
+  despachoId: number | null
+  numeroDespacho: string | null
+  leida: boolean
+  creadaEn: string
+  leidaEn: string | null
+}
