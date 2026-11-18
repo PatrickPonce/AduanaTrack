@@ -1,10 +1,12 @@
 package pe.edu.usmp.aduanatrack.cliente.service;
 
+import java.text.Normalizer;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiConsumer;
@@ -66,13 +68,18 @@ public class ClienteService {
 
     @Transactional(readOnly = true)
     public PaginaResponse<ClienteResumen> buscar(String q, int pagina, int tamano) {
-        String filtro = q == null ? "" : q.trim();
+        String filtro = q == null ? "" : sinTildes(q.trim());
         PageRequest pageable = PageRequest.of(Math.max(pagina, 0), Math.clamp(tamano, 1, TAMANO_MAXIMO_PAGINA),
                 Sort.by("razonSocial"));
         Page<Cliente> resultado = clienteRepository.buscar(filtro, pageable);
         Map<Long, EstadoCartaPoder> estados = cartaPoderEstado.estados(
                 resultado.getContent().stream().map(Cliente::getId).toList());
         return PaginaResponse.de(resultado, c -> ClienteResumen.de(c, estados.get(c.getId())));
+    }
+
+    /** Minúsculas y sin tildes: «Pacífico» y «pacifico» buscan lo mismo (la consulta aplica lo mismo a la razón social). */
+    static String sinTildes(String texto) {
+        return Normalizer.normalize(texto, Normalizer.Form.NFD).replaceAll("\\p{M}", "").toLowerCase(Locale.ROOT);
     }
 
     /** HU-16: el usuario CLIENTE solo ve su empresa (nada si todavía no tiene una asignada). */

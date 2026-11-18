@@ -36,6 +36,7 @@ import { formatoFechaHora, formatoTamano } from '../utils/formato'
 import { validarArchivoPdf } from '../utils/validaciones'
 import { EtiquetaColor } from './EtiquetaColor'
 import { DOS_COLUMNAS, TituloSeccion } from './Seccion'
+import { useDescarga } from './useDescarga'
 
 export const MAX_OBSERVACION_ITEM = 255
 export const MAX_OBSERVACIONES = 500
@@ -101,6 +102,7 @@ interface Props {
  * conforme habilita el levante (CA3) y el acta en PDF es opcional (CA4). Contrato C7.
  */
 export function InspeccionDespacho({ despachoId, estado, puedeEditar, onInspeccionRegistrada }: Props) {
+  const { alDescargar, aviso } = useDescarga()
   const [filas, setFilas] = useState<FilaChecklist[]>([])
   const [registrada, setRegistrada] = useState<InspeccionRegistrada | null>(null)
   const [observaciones, setObservaciones] = useState('')
@@ -204,6 +206,7 @@ export function InspeccionDespacho({ despachoId, estado, puedeEditar, onInspecci
 
   return (
     <Box>
+      {aviso}
       <TituloSeccion
         accion={
           puedeEditar &&
@@ -242,7 +245,7 @@ export function InspeccionDespacho({ despachoId, estado, puedeEditar, onInspecci
             </Dato>
             <Dato titulo="Acta de inspección">
               {registrada.actaNombre ? (
-                <Link href={urlActaInspeccion(despachoId)} target="_blank" rel="noopener">
+                <Link href={urlActaInspeccion(despachoId)} target="_blank" rel="noopener" onClick={alDescargar(urlActaInspeccion(despachoId))}>
                   Descargar acta · {registrada.actaNombre}
                 </Link>
               ) : (

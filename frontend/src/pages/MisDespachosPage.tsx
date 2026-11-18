@@ -27,6 +27,7 @@ import { leerError, mensajeDeError } from '../api/http'
 import { listarMisDespachos, obtenerMiDespacho } from '../api/portalCliente'
 import { useMiEmpresa } from '../auth/useMiEmpresa'
 import { useEncabezado } from '../components/Encabezado'
+import { useDescarga } from '../components/useDescarga'
 import { EstadoDespachoChip, textoEstado } from '../components/EstadoDespachoChip'
 import { CanalChip, EtiquetaColor } from '../components/EtiquetaColor'
 import { TituloSeccion } from '../components/Seccion'
@@ -275,6 +276,7 @@ interface Detalle {
  * «Despacho no encontrado» si el despacho es de otra empresa; funciona igual con un enlace directo.
  */
 function DetalleMiDespacho({ idTexto }: { idTexto: string }) {
+  const { alDescargar, aviso } = useDescarga()
   const id = Number(idTexto)
   const valido = Number.isInteger(id) && id > 0
   const [detalle, setDetalle] = useState<Detalle | null>(null)
@@ -338,6 +340,7 @@ function DetalleMiDespacho({ idTexto }: { idTexto: string }) {
       component="section"
       aria-labelledby="titulo-detalle"
     >
+      {aviso}
       <Stack
         direction="row"
         sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1.25, pb: 1.25, mb: 2, borderBottom: 1, borderColor: 'divider' }}
@@ -362,7 +365,7 @@ function DetalleMiDespacho({ idTexto }: { idTexto: string }) {
           gap: 2,
           m: 0,
           mb: 3,
-          gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' },
+          gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' },
           '& dt': { fontSize: 12, color: 'text.secondary' },
           '& dd': { m: 0, fontSize: 14, fontWeight: 600, overflowWrap: 'anywhere' },
         }}
@@ -385,7 +388,7 @@ function DetalleMiDespacho({ idTexto }: { idTexto: string }) {
         </div>
       </Box>
 
-      <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' } }}>
+      <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 3fr) minmax(0, 2fr)' } }}>
         <Box>
           <TituloSeccion>Línea de tiempo</TituloSeccion>
           {hitos.length === 0 ? (
@@ -444,7 +447,7 @@ function DetalleMiDespacho({ idTexto }: { idTexto: string }) {
               >
                 <InsertDriveFileOutlinedIcon aria-hidden sx={{ color: doc.documentoId ? COLORES.azul : 'text.disabled' }} />
                 <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                  <Typography sx={{ fontSize: 13.5, fontWeight: 600 }}>{doc.nombre}</Typography>
+                  <Typography sx={{ fontSize: 13.5, fontWeight: 600, overflowWrap: 'anywhere' }}>{doc.nombre}</Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', overflowWrap: 'anywhere' }}>
                     {doc.documentoId
                       ? `${doc.archivo ?? ''}${doc.tamanoBytes !== null ? ` · ${formatoTamano(doc.tamanoBytes)}` : ''} · ${formatoFecha(doc.cargadoEn)}`
@@ -455,6 +458,7 @@ function DetalleMiDespacho({ idTexto }: { idTexto: string }) {
                   <Button
                     component="a"
                     href={urlArchivoDocumento(despacho.id, doc.documentoId)}
+                    onClick={alDescargar(urlArchivoDocumento(despacho.id, doc.documentoId))}
                     download
                     size="small"
                     startIcon={<DownloadOutlinedIcon />}
