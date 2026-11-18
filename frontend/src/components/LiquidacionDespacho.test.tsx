@@ -241,7 +241,7 @@ describe('LiquidacionDespacho (HU-08)', () => {
     vi.mocked(liquidacionApi.obtenerLiquidacion).mockResolvedValue(GUARDADA)
     render(<LiquidacionDespacho despachoId={7} estado="TRIBUTOS_PAGADOS" puedeEditar />)
 
-    expect(screen.getByText(/Los tributos ya fueron pagados/)).toBeInTheDocument()
+    expect(screen.getByText(/Los tributos de este despacho ya fueron pagados/)).toBeInTheDocument()
     expect(await screen.findByLabelText('Valor CIF')).toHaveTextContent('10,950.00')
     const pago = screen.getByRole('table', { name: 'Pago registrado' })
     expect(within(pago).getByLabelText('Medio de pago')).toHaveTextContent('Ventanilla')

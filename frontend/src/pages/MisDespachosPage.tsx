@@ -197,7 +197,8 @@ export function MisDespachosPage() {
                 <TableCell>Estado</TableCell>
                 <TableCell>Canal</TableCell>
                 <TableCell>Última actualización</TableCell>
-                <TableCell>
+                {/* position: relative: el texto oculto es absolute y, sin un ancestro posicionado, ensancha la página. */}
+                <TableCell sx={{ position: 'relative' }}>
                   <Box component="span" sx={visualmenteOculto}>
                     Acciones
                   </Box>
