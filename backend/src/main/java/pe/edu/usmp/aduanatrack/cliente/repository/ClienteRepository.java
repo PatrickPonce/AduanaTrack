@@ -14,11 +14,14 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
 
     Optional<Cliente> findByRuc(String ruc);
 
-    /** Búsqueda por inicio de RUC o por parte de la razón social (autocompletar de HU-03, CA4 de HU-04). */
+    /**
+     * Búsqueda por inicio de RUC o por parte de la razón social (autocompletar de HU-03, CA4 de HU-04). Ignora
+     * mayúsculas y tildes: {@code q} llega ya normalizado (minúsculas y sin tildes) desde {@code ClienteService}.
+     */
     @Query("""
             select c from Cliente c
             where c.activo = true
-              and (:q = '' or c.ruc like concat(:q, '%') or lower(c.razonSocial) like lower(concat('%', :q, '%')))
+              and (:q = '' or c.ruc like concat(:q, '%') or function('translate', lower(c.razonSocial), 'áéíóúüñ', 'aeiouun') like concat('%', :q, '%'))
             """)
     Page<Cliente> buscar(@Param("q") String q, Pageable pageable);
 }

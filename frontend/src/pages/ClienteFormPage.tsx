@@ -41,6 +41,7 @@ import type { CambioCliente, CartaPoderResumen, Cliente, ClienteRequest } from '
 import { formatoFecha, formatoFechaHora } from '../utils/formato'
 import { tipoContribuyente } from '../utils/opciones'
 import { validarArchivoPdf, validarRuc } from '../utils/validaciones'
+import { useDescarga } from '../components/useDescarga'
 
 const VACIO: ClienteRequest = { ruc: '', razonSocial: '', direccion: '', correo: '', telefono: '', contacto: '' }
 
@@ -68,6 +69,7 @@ const CARTA_VACIA: CartaPoderForm = { archivo: null, fechaEmision: '', fechaVenc
 
 /** HU-04 · T-04.4: alta y edición del cliente con detección de duplicados, carta poder e historial. */
 export function ClienteFormPage() {
+  const { alDescargar, aviso } = useDescarga()
   const { id } = useParams()
   const clienteId = id ? Number(id) : null
   const esEdicion = clienteId !== null
@@ -251,6 +253,7 @@ export function ClienteFormPage() {
 
   return (
     <Stack spacing={2}>
+      {aviso}
       <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
         {esEdicion ? (
           <Tabs value={pestana} onChange={(_, v: number) => setPestana(v)}>
@@ -340,6 +343,7 @@ export function ClienteFormPage() {
                           size="small"
                           component="a"
                           href={urlArchivoCartaPoder(clienteId!, c.id)}
+                          onClick={alDescargar(urlArchivoCartaPoder(clienteId!, c.id))}
                           aria-label={`Descargar ${c.nombreArchivo}`}
                         >
                           <DownloadIcon fontSize="small" />

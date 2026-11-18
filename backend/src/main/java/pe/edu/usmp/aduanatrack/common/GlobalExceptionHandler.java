@@ -9,9 +9,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -65,6 +69,26 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleNoEncontrado(NoResourceFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ErrorResponse.of(CodigoError.NO_ENCONTRADO, "Recurso no encontrado."));
+    }
+
+    /** Un método HTTP que la ruta no admite (p. ej. PUT donde va PATCH) es un 405, no un error del servidor. */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMetodoNoPermitido(HttpRequestMethodNotSupportedException ex) {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .body(ErrorResponse.of(CodigoError.METODO_NO_PERMITIDO, "Método HTTP no permitido para esta ruta."));
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleTipoNoSoportado(HttpMediaTypeNotSupportedException ex) {
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .body(ErrorResponse.of(CodigoError.FORMATO_NO_PERMITIDO, "Tipo de contenido no soportado."));
+    }
+
+    /** Parámetro de la URL ausente o con un tipo que no corresponde (p. ej. un id no numérico): 400, no 500. */
+    @ExceptionHandler({ MissingServletRequestParameterException.class, MethodArgumentTypeMismatchException.class })
+    public ResponseEntity<ErrorResponse> handleParametro(Exception ex) {
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of(CodigoError.VALIDACION, "Revise los parámetros de la solicitud."));
     }
 
     @ExceptionHandler(Exception.class)

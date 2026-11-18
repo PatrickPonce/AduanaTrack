@@ -25,6 +25,7 @@ import { formatoFecha, formatoTamano, hoyIso } from '../utils/formato'
 import { validarArchivoPdf } from '../utils/validaciones'
 import { EtiquetaColor } from './EtiquetaColor'
 import { DOS_COLUMNAS, TituloSeccion } from './Seccion'
+import { useDescarga } from './useDescarga'
 
 const MAX_NUMERO_LEVANTE = 30
 const FORMATO_LEVANTE = /^[A-Za-z0-9][A-Za-z0-9/-]*$/
@@ -71,6 +72,7 @@ interface Props {
  * otorgado, se habilita la cita de retiro (CA4). Contrato C8.
  */
 export function LevanteDespacho({ despachoId, estado, puedeEditar, onLevanteRegistrado, onRegistrarRetiro }: Props) {
+  const { alDescargar, aviso } = useDescarga()
   const [levante, setLevante] = useState<Levante | null>(null)
   const [form, setForm] = useState<FormLevante>({ numeroLevante: '', fechaLevante: hoyIso() })
   const [constancia, setConstancia] = useState<File | null>(null)
@@ -164,6 +166,7 @@ export function LevanteDespacho({ despachoId, estado, puedeEditar, onLevanteRegi
 
   return (
     <Box>
+      {aviso}
       <TituloSeccion>Levante de la mercancía</TituloSeccion>
 
       <Stack spacing={2} sx={{ mb: 2 }}>
@@ -188,7 +191,7 @@ export function LevanteDespacho({ despachoId, estado, puedeEditar, onLevanteRegi
             <Dato titulo="Fecha del levante">{formatoFecha(levante.fechaLevante)}</Dato>
             <Dato titulo="Constancia de levante">
               {levante.constanciaNombre ? (
-                <Link href={urlConstanciaLevante(despachoId)} target="_blank" rel="noopener">
+                <Link href={urlConstanciaLevante(despachoId)} target="_blank" rel="noopener" onClick={alDescargar(urlConstanciaLevante(despachoId))}>
                   Descargar constancia · {levante.constanciaNombre}
                 </Link>
               ) : (

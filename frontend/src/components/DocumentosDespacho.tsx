@@ -22,7 +22,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type MouseEvent } from 'react'
 
 import { listarDocumentos, listarVersiones, urlArchivoDocumento } from '../api/documentos'
 import { mensajeDeError } from '../api/http'
@@ -31,6 +31,7 @@ import { formatoFechaHora, formatoTamano } from '../utils/formato'
 import { CargaDocumentoDialog } from './CargaDocumentoDialog'
 import { EtiquetaColor } from './EtiquetaColor'
 import { TituloSeccion } from './Seccion'
+import { useDescarga } from './useDescarga'
 
 interface Props {
   despachoId: number
@@ -42,6 +43,7 @@ interface Props {
 
 /** HU-06 · T-06.4: pestaña «Documentos» del despacho (contrato C1). */
 export function DocumentosDespacho({ despachoId, puedeCargar, onDocumentacionCompleta }: Props) {
+  const { alDescargar, aviso } = useDescarga()
   const [datos, setDatos] = useState<Documentos | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [mensaje, setMensaje] = useState<string | null>(null)
@@ -88,6 +90,7 @@ export function DocumentosDespacho({ despachoId, puedeCargar, onDocumentacionCom
 
   return (
     <Box>
+      {aviso}
       <TituloSeccion
         accion={
           <Stack
@@ -196,6 +199,7 @@ export function DocumentosDespacho({ despachoId, puedeCargar, onDocumentacionCom
                         size="small"
                         component="a"
                         href={urlArchivoDocumento(despachoId, d.documentoId)}
+                        onClick={alDescargar(urlArchivoDocumento(despachoId, d.documentoId))}
                         aria-label={`Descargar ${d.nombre}`}
                       >
                         <DownloadIcon fontSize="small" />
@@ -209,7 +213,12 @@ export function DocumentosDespacho({ despachoId, puedeCargar, onDocumentacionCom
         </Table>
       </TableContainer>
 
-      <VersionesDialog despachoId={despachoId} documento={versionesDe} onCerrar={() => setVersionesDe(null)} />
+      <VersionesDialog
+        despachoId={despachoId}
+        documento={versionesDe}
+        onCerrar={() => setVersionesDe(null)}
+        alDescargar={alDescargar}
+      />
       <CargaDocumentoDialog
         despachoId={despachoId}
         documento={cargaDe}
@@ -225,10 +234,12 @@ function VersionesDialog({
   despachoId,
   documento,
   onCerrar,
+  alDescargar,
 }: {
   despachoId: number
   documento: DocumentoRequerido | null
   onCerrar: () => void
+  alDescargar: (url: string) => (evento: MouseEvent) => void
 }) {
   const [versiones, setVersiones] = useState<VersionDocumento[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -294,6 +305,7 @@ function VersionesDialog({
                           size="small"
                           component="a"
                           href={urlArchivoDocumento(despachoId, v.documentoId)}
+                          onClick={alDescargar(urlArchivoDocumento(despachoId, v.documentoId))}
                           aria-label={`Descargar versión ${v.version}`}
                         >
                           <DownloadIcon fontSize="small" />

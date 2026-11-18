@@ -24,6 +24,7 @@ import type { Dam, EstadoDespacho, RectificacionDam } from '../types'
 import { formatoFecha, formatoFechaHora, formatoTamano, hoyIso } from '../utils/formato'
 import { validarArchivoPdf } from '../utils/validaciones'
 import { DOS_COLUMNAS, TituloSeccion } from './Seccion'
+import { useDescarga } from './useDescarga'
 
 const MAX_NUMERO_DAM = 30
 const MAX_MOTIVO = 200
@@ -69,6 +70,7 @@ interface Props {
  * Contrato C4.
  */
 export function NumeracionDam({ despachoId, estado, puedeEditar, onDamNumerada }: Props) {
+  const { alDescargar, aviso } = useDescarga()
   const [dam, setDam] = useState<Dam | null>(null)
   const [rectificaciones, setRectificaciones] = useState<RectificacionDam[]>([])
   const [cargando, setCargando] = useState(true)
@@ -178,6 +180,7 @@ export function NumeracionDam({ despachoId, estado, puedeEditar, onDamNumerada }
 
   return (
     <Box>
+      {aviso}
       <TituloSeccion
         accion={
           puedeEditar &&
@@ -207,7 +210,7 @@ export function NumeracionDam({ despachoId, estado, puedeEditar, onDamNumerada }
           <Dato titulo="Fecha de numeración">{formatoFecha(dam.fechaNumeracion)}</Dato>
           <Dato titulo="Cargo de numeración">
             {dam.nombreCargo ? (
-              <Link href={urlCargoDam(despachoId)} target="_blank" rel="noopener">
+              <Link href={urlCargoDam(despachoId)} target="_blank" rel="noopener" onClick={alDescargar(urlCargoDam(despachoId))}>
                 Descargar cargo · {dam.nombreCargo}
               </Link>
             ) : (
