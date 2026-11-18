@@ -21,6 +21,24 @@ async function mensajeDeDescarga(error: unknown): Promise<string> {
   return 'No se pudo descargar el archivo.'
 }
 
+/** Decodifica un nombre en RFC 2047 (=?UTF-8?B?...?= o =?UTF-8?Q?...?=), que Spring usa con tildes. */
+export function decodificarNombre(valor: string): string {
+  return valor.replace(/=\?UTF-8\?([BbQq])\?([^?]*)\?=/g, (_, codigo: string, texto: string) => {
+    try {
+      if (codigo.toUpperCase() === 'B') {
+        const binario = atob(texto)
+        return new TextDecoder().decode(Uint8Array.from(binario, (c) => c.charCodeAt(0)))
+      }
+      const bytes = texto
+        .replace(/_/g, ' ')
+        .replace(/=([0-9A-Fa-f]{2})/g, (_m, h: string) => String.fromCharCode(parseInt(h, 16)))
+      return new TextDecoder().decode(Uint8Array.from(bytes, (c) => c.charCodeAt(0)))
+    } catch {
+      return texto
+    }
+  })
+}
+
 /** Descarga un archivo de la API con la sesión actual; si falla lanza un Error con un mensaje claro. */
 export async function descargarArchivo(url: string): Promise<void> {
   let respuesta
@@ -32,7 +50,7 @@ export async function descargarArchivo(url: string): Promise<void> {
   const disposicion = String(respuesta.headers['content-disposition'] ?? '')
   const codificado = /filename\*=UTF-8''([^;]+)/i.exec(disposicion)?.[1]
   const simple = /filename="?([^";]+)"?/i.exec(disposicion)?.[1]
-  const nombre = codificado ? decodeURIComponent(codificado) : (simple ?? 'archivo')
+  const nombre = codificado ? decodeURIComponent(codificado) : decodificarNombre(simple ?? 'archivo')
   const objeto = URL.createObjectURL(respuesta.data)
   const enlace = document.createElement('a')
   enlace.href = objeto

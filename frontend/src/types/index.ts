@@ -500,3 +500,5 @@ export interface NotificacionBandeja {
   creadaEn: string
   leidaEn: string | null
 }
+
+export type CanalNotificacion = 'SISTEMA' | 'CORREO' | 'AMBOS'

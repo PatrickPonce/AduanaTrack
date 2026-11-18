@@ -237,6 +237,13 @@ export function MisDespachosPage() {
                   </TableCell>
                 </TableRow>
               )}
+              {despachos?.length === 0 && !buscadoPorNumero && !error && Object.keys(errores).length > 0 && (
+                <TableRow>
+                  <TableCell colSpan={COLUMNAS} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                    Corrija los filtros marcados para ver los despachos.
+                  </TableCell>
+                </TableRow>
+              )}
               {despachos === null && (
                 <TableRow>
                   <TableCell colSpan={COLUMNAS} align="center" sx={{ py: 4, color: 'text.secondary' }}>

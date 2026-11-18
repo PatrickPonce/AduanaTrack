@@ -97,7 +97,9 @@ export function ClienteFormPage() {
 
   // /clientes/nuevo → /clientes/:id reutiliza este componente: el aviso se lee en cada navegación.
   useEffect(() => {
-    setMensaje((ubicacion.state as { mensaje?: string } | null)?.mensaje ?? null)
+    const estado = ubicacion.state as { mensaje?: string; error?: string | null } | null
+    setMensaje(estado?.mensaje ?? null)
+    setError(estado?.error ?? null)
   }, [ubicacion.key, ubicacion.state])
 
   const cargar = useCallback(async () => {
@@ -203,20 +205,22 @@ export function ClienteFormPage() {
     try {
       const guardado = clienteId !== null ? await actualizarCliente(clienteId, form) : await crearCliente(form)
       let aviso = esEdicion ? 'Cliente actualizado correctamente.' : 'Cliente registrado correctamente.'
+      let falloCarta: string | null = null
       if (carta.archivo) {
         try {
           await subirCartaPoder(guardado.id, carta.archivo, carta.fechaEmision, carta.fechaVencimiento)
           aviso += ' Carta poder cargada.'
         } catch (e) {
-          aviso += ` La carta poder no se pudo cargar: ${mensajeCartaPoder(e)}`
+          falloCarta = `La carta poder no se pudo cargar: ${mensajeCartaPoder(e)}`
         }
       }
       setCarta(CARTA_VACIA)
       if (esEdicion) {
         setMensaje(aviso)
+        setError(falloCarta)
         await cargar()
       } else {
-        navegar(`/clientes/${guardado.id}`, { replace: true, state: { mensaje: aviso } })
+        navegar(`/clientes/${guardado.id}`, { replace: true, state: { mensaje: aviso, error: falloCarta } })
       }
     } catch (e) {
       const { status, body } = leerError(e)
