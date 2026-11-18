@@ -47,17 +47,19 @@ Guía de configuración: [`docs/despliegue.md`](docs/despliegue.md).
 
 ## Sprint actual
 
-**Sprint 1 (S7–S10, 14/09 – 10/10; S8 parciales) · 23 SP** — *Habilitar el flujo base de apertura y seguimiento inicial de despachos de importación marítima: acceso seguro al sistema, registro de clientes/importadores, apertura de un nuevo despacho y registro de la información de embarque (BL), con visibilidad centralizada del estado de los despachos en el Dashboard.*
+**Sprint 3 (S14–S16, 02/11 – 21/11) · 28 SP** — *Completar el ciclo del despacho después del canal de control: citas en depósito, inspección, levante, notificaciones y alertas, reportes de gestión y portal del cliente con acceso por empresa.*
 
-| HU | Historia | SP | Rama | Jira |
-|---|---|---|---|---|
-| HU-01 | Inicio de sesión al sistema | 3 | `feature/HU-01-inicio-sesion` | SCRUM-2 |
-| HU-04 | Registro de datos del importador (cliente) | 5 | `feature/HU-04-registro-importador` | SCRUM-9 |
-| HU-03 | Registro de nuevo despacho de importación | 5 | `feature/HU-03-registro-despacho` | SCRUM-10 |
-| HU-02 | Panel de seguimiento de despachos (Dashboard) | 5 | `feature/HU-02-dashboard` | SCRUM-11 |
-| HU-05 | Registro de información del embarque marítimo (BL) | 5 | `feature/HU-05-registro-embarque-bl` | SCRUM-12 |
+| HU | Historia | SP | Jira |
+|---|---|---|---|
+| HU-11 | Registro de citas en depósito temporal o almacén | 5 | SCRUM-18 |
+| HU-12 | Registro del resultado de la inspección aduanera | 5 | SCRUM-19 |
+| HU-13 | Registro manual del levante de mercancía | 5 | SCRUM-20 |
+| HU-14 | Notificaciones y alertas de estado del despacho | 5 | SCRUM-21 |
+| HU-15 | Reportes e indicadores de gestión aduanera | 8 | SCRUM-22 |
 
-Detalle: [`docs/product-backlog.md`](docs/product-backlog.md) · [`docs/sprint-1/sprint-backlog.md`](docs/sprint-1/sprint-backlog.md)
+También se trabaja en este sprint la HU-16 · Portal del cliente y acceso por empresa (contrato C11).
+
+Detalle: [`docs/product-backlog.md`](docs/product-backlog.md) · contratos del sprint en [`docs/sprint-3/contratos/`](docs/sprint-3/contratos/). Los sprints 1 y 2 están cerrados: [`docs/sprint-1/sprint-backlog.md`](docs/sprint-1/sprint-backlog.md) · [`docs/sprint-2/contratos/`](docs/sprint-2/contratos/).
 
 ### Calendario de sprints
 

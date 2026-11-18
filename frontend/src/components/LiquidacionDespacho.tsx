@@ -206,7 +206,7 @@ export function LiquidacionDespacho({ despachoId, estado, puedeEditar, onEstadoC
         {mensaje && <Alert severity="success">{mensaje}</Alert>}
         {error && <Alert severity="error">{error}</Alert>}
         {pagado && !mensaje && (
-          <Alert severity="success">Los tributos ya fueron pagados. El despacho está en «Tributos pagados».</Alert>
+          <Alert severity="success">Los tributos de este despacho ya fueron pagados.</Alert>
         )}
         {!puedeEditar && !pagado && (
           <Alert severity="info">Solo el agente de aduana puede generar la liquidación y registrar el pago.</Alert>
