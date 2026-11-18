@@ -363,10 +363,10 @@ export function Layout() {
             sx={{
               position: 'sticky',
               top: 0,
-              zIndex: 1,
+              zIndex: 1100,
               alignItems: 'center',
-              bgcolor: 'rgba(255,255,255,0.82)',
-              backdropFilter: 'blur(10px)',
+              // Fondo opaco: con transparencia el contenido se ve a través de la barra al desplazar.
+              bgcolor: 'background.paper',
               borderBottom: 1,
               borderColor: 'divider',
               boxShadow: '0 1px 12px rgba(15,31,58,0.05)',

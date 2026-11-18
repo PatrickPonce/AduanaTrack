@@ -27,6 +27,7 @@ const NOTIFICACION: NotificacionBandeja = {
 describe('NotificacionesPage (HU-14)', () => {
   beforeEach(() => {
     vi.mocked(authApi.sesionActual).mockResolvedValue({ usuario: 'agente', nombre: 'Agente', rol: 'AGENTE' })
+    vi.mocked(notificacionesApi.obtenerPreferencia).mockResolvedValue('SISTEMA')
     vi.mocked(notificacionesApi.listarNotificaciones).mockResolvedValue({
       contenido: [NOTIFICACION],
       pagina: 0,
@@ -48,6 +49,8 @@ describe('NotificacionesPage (HU-14)', () => {
     renderEnRuta(<NotificacionesPage />, { ruta: '/notificaciones', patron: '/notificaciones' })
     await user.click(await screen.findByRole('button', { name: 'Marcar como leída' }))
     await waitFor(() => expect(notificacionesApi.marcarLeida).toHaveBeenCalledWith(7))
+    // La campana se entera sin esperar a que el usuario cambie de pantalla.
+    expect(notificacionesApi.avisarCambioNotificaciones).toHaveBeenCalled()
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Marcar como leída' })).not.toBeInTheDocument())
   })
 
@@ -55,5 +58,17 @@ describe('NotificacionesPage (HU-14)', () => {
     vi.mocked(notificacionesApi.listarNotificaciones).mockRejectedValue(new Error('x'))
     renderEnRuta(<NotificacionesPage />, { ruta: '/notificaciones', patron: '/notificaciones' })
     expect(await screen.findByText('No se pudo conectar con el servidor.')).toBeInTheDocument()
+  })
+
+  it('permite elegir el canal de aviso y lo guarda', async () => {
+    vi.mocked(notificacionesApi.guardarPreferencia).mockResolvedValue('AMBOS')
+    const user = userEvent.setup()
+    renderEnRuta(<NotificacionesPage />, { ruta: '/notificaciones', patron: '/notificaciones' })
+
+    await user.click(await screen.findByRole('combobox', { name: /cómo quiere recibir los avisos/i }))
+    await user.click(await screen.findByRole('option', { name: 'Dentro del sistema y por correo' }))
+
+    await waitFor(() => expect(notificacionesApi.guardarPreferencia).toHaveBeenCalledWith('AMBOS'))
+    expect(await screen.findByText('Preferencia guardada.')).toBeInTheDocument()
   })
 })

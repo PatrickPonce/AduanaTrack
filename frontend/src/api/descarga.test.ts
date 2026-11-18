@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosHeaders } from 'axios'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { descargarArchivo } from './descarga'
+import { decodificarNombre, descargarArchivo } from './descarga'
 
 function errorHttp(status: number, data?: unknown) {
   const respuesta = { status, data, headers: {}, statusText: '', config: { headers: new AxiosHeaders() } }
@@ -24,5 +24,16 @@ describe('descargarArchivo', () => {
   it('sin respuesta del servidor avisa de la conexión', async () => {
     vi.spyOn(axios, 'get').mockRejectedValue(new AxiosError('red'))
     await expect(descargarArchivo('/api/v1/x')).rejects.toThrow('No se pudo conectar con el servidor.')
+  })
+})
+
+describe('decodificarNombre', () => {
+  it('decodifica RFC 2047 en base64 y en quoted-printable', () => {
+    expect(decodificarNombre('=?UTF-8?B?RmFjdHVyYSBjb21lcmNpYWwgbsO6bWVybyAxLnBkZg==?=')).toBe('Factura comercial número 1.pdf')
+    expect(decodificarNombre('=?UTF-8?Q?Informe_a=C3=B1o.pdf?=')).toBe('Informe año.pdf')
+  })
+
+  it('deja igual un nombre sin codificar', () => {
+    expect(decodificarNombre('factura.pdf')).toBe('factura.pdf')
   })
 })
