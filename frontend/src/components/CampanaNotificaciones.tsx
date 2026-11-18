@@ -1,16 +1,35 @@
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined'
-import { IconButton, Tooltip } from '@mui/material'
-import { Link as RouterLink } from 'react-router'
+import { Badge, IconButton, Tooltip } from '@mui/material'
+import { useEffect, useState } from 'react'
+import { Link as RouterLink, useLocation } from 'react-router'
 
-/**
- * STUB TEMPORAL (Sprint 3): lo reemplaza la campana de Fabio (HU-14 · T-14.3) con el contador de
- * no leídas del contrato C9. Borrar este archivo al integrar su PR «Centro de notificaciones».
- */
+import { cantidadNoLeidas } from '../api/notificaciones'
+
+/** Campana del encabezado con el contador de no leídas (HU-14 · contrato C9). Se actualiza al cambiar de pantalla. */
 export function CampanaNotificaciones() {
+  const { pathname } = useLocation()
+  const [cantidad, setCantidad] = useState(0)
+
+  useEffect(() => {
+    let activo = true
+    cantidadNoLeidas()
+      .then((n) => activo && setCantidad(n))
+      .catch(() => activo && setCantidad(0))
+    return () => {
+      activo = false
+    }
+  }, [pathname])
+
   return (
     <Tooltip title="Notificaciones">
-      <IconButton component={RouterLink} to="/notificaciones" aria-label="Notificaciones">
-        <NotificationsNoneOutlinedIcon />
+      <IconButton
+        component={RouterLink}
+        to="/notificaciones"
+        aria-label={cantidad > 0 ? `Notificaciones (${cantidad} sin leer)` : 'Notificaciones'}
+      >
+        <Badge badgeContent={cantidad} color="error" max={99}>
+          <NotificationsNoneOutlinedIcon />
+        </Badge>
       </IconButton>
     </Tooltip>
   )

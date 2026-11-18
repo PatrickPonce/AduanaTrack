@@ -18,14 +18,23 @@ export function ClienteAutocomplete({ label, value, onChange, error, required, s
   const [texto, setTexto] = useState('')
   const [opciones, setOpciones] = useState<ClienteResumen[]>([])
   const [cargando, setCargando] = useState(false)
+  const [fallo, setFallo] = useState(false)
 
   useEffect(() => {
     let activo = true
     const espera = setTimeout(() => {
       setCargando(true)
       buscarClientes(texto, 0, 20)
-        .then((pagina) => activo && setOpciones(pagina.contenido))
-        .catch(() => activo && setOpciones([]))
+        .then((pagina) => {
+          if (!activo) return
+          setFallo(false)
+          setOpciones(pagina.contenido)
+        })
+        .catch(() => {
+          if (!activo) return
+          setFallo(true)
+          setOpciones([])
+        })
         .finally(() => activo && setCargando(false))
     }, 300)
     return () => {
@@ -42,7 +51,7 @@ export function ClienteAutocomplete({ label, value, onChange, error, required, s
       filterOptions={(x) => x}
       getOptionLabel={(c) => `${c.razonSocial} — RUC ${c.ruc}`}
       isOptionEqualToValue={(a, b) => a.id === b.id}
-      noOptionsText="Sin coincidencias"
+      noOptionsText={fallo ? 'No se pudo cargar la lista de clientes. Recargue la página o inicie sesión de nuevo.' : 'Sin coincidencias'}
       loadingText="Buscando…"
       onChange={(_, nuevo) => onChange(nuevo)}
       onInputChange={(_, nuevoTexto, razon) => {
