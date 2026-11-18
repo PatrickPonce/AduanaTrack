@@ -14,8 +14,8 @@ import java.util.function.Function;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -66,18 +66,30 @@ public class ClienteService {
         this.clock = clock;
     }
 
+    /**
+     * Búsqueda por inicio de RUC o por parte de la razón social (autocompletar de HU-03, CA4 de HU-04). Ignora
+     * mayúsculas y tildes («pacifico» encuentra «Pacífico Trade»). Se filtra en memoria porque la cartera de
+     * clientes de una agencia es pequeña y así no se depende de funciones SQL de un motor concreto.
+     */
     @Transactional(readOnly = true)
     public PaginaResponse<ClienteResumen> buscar(String q, int pagina, int tamano) {
         String filtro = q == null ? "" : sinTildes(q.trim());
-        PageRequest pageable = PageRequest.of(Math.max(pagina, 0), Math.clamp(tamano, 1, TAMANO_MAXIMO_PAGINA),
-                Sort.by("razonSocial"));
-        Page<Cliente> resultado = clienteRepository.buscar(filtro, pageable);
+        List<Cliente> coincidencias = clienteRepository.findByActivoTrueOrderByRazonSocialAsc().stream()
+                .filter(c -> filtro.isEmpty() || c.getRuc().startsWith(filtro)
+                        || sinTildes(c.getRazonSocial()).contains(filtro))
+                .toList();
+        int numero = Math.max(pagina, 0);
+        int tam = Math.clamp(tamano, 1, TAMANO_MAXIMO_PAGINA);
+        int desde = (int) Math.min((long) numero * tam, coincidencias.size());
+        int hasta = Math.min(desde + tam, coincidencias.size());
+        Page<Cliente> resultado = new PageImpl<>(coincidencias.subList(desde, hasta),
+                PageRequest.of(numero, tam), coincidencias.size());
         Map<Long, EstadoCartaPoder> estados = cartaPoderEstado.estados(
                 resultado.getContent().stream().map(Cliente::getId).toList());
         return PaginaResponse.de(resultado, c -> ClienteResumen.de(c, estados.get(c.getId())));
     }
 
-    /** Minúsculas y sin tildes: «Pacífico» y «pacifico» buscan lo mismo (la consulta aplica lo mismo a la razón social). */
+    /** Minúsculas y sin tildes: «Pacífico» y «pacifico» buscan lo mismo . */
     static String sinTildes(String texto) {
         return Normalizer.normalize(texto, Normalizer.Form.NFD).replaceAll("\\p{M}", "").toLowerCase(Locale.ROOT);
     }
